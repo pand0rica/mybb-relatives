@@ -30,6 +30,10 @@ $l['relatives_field_origin'] = "Herkunft";
 
 // Verwandtschaftsgrade
 $l['relatives_acp_add_relationship_type'] = "Verwandtschaftsgrad hinzufügen";
+$l['relatives_acp_seed_defaults_button'] = "Standard-Verwandtschaftsgrade anlegen";
+$l['relatives_acp_seed_defaults_desc'] = "Legt die üblichen Verwandtschaftsarten (Eltern, Geschwister, Kinder, Großeltern, Enkel, Onkel/Tante, Nichte/Neffe, Cousin/Cousine, Ehepartner, Ex-Partner, Stief- und Adoptivvarianten) jeweils in allen drei Geschlechtsvarianten an. Bereits vorhandene Kombinationen aus Konzept und Geschlecht werden übersprungen, nichts wird dupliziert oder verändert.";
+$l['relatives_acp_seed_defaults_done'] = "%d Verwandtschaftsgrad(e) angelegt.";
+$l['relatives_acp_seed_defaults_nothing'] = "Alle Standard-Verwandtschaftsgrade waren bereits vorhanden, es wurde nichts angelegt.";
 $l['relatives_acp_edit_relationship_type'] = "Verwandtschaftsgrad bearbeiten";
 $l['relatives_acp_field_concept_key'] = "Konzept-Schlüssel";
 $l['relatives_acp_field_concept_key_desc'] = "Gruppiert die männliche/weibliche/neutrale Variante derselben Verwandtschaft (z. B. 'parent', 'sibling'). Für alle drei Geschlechter derselben Verwandtschaft denselben Konzept-Schlüssel verwenden.";

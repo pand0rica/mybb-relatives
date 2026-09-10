@@ -25,6 +25,19 @@ if ($do === 'delete' && $mybb->request_method === 'post') {
     admin_redirect('index.php?module=tools-relatives&action=relationship-types');
 }
 
+// --- do=seed_defaults (POST) ------------------------------------------------------------
+
+if ($do === 'seed_defaults' && $mybb->request_method === 'post') {
+    verify_post_check($mybb->get_input('my_post_key'));
+    $created = Relatives_RelationshipTypes::create_common_defaults();
+    if ($created > 0) {
+        flash_message(sprintf($lang->relatives_acp_seed_defaults_done, $created), 'success');
+    } else {
+        flash_message($lang->relatives_acp_seed_defaults_nothing, 'success');
+    }
+    admin_redirect('index.php?module=tools-relatives&action=relationship-types');
+}
+
 // --- do=add / do=edit -------------------------------------------------------------------
 
 if ($do === 'add' || $do === 'edit') {
@@ -101,6 +114,12 @@ $page->output_header($lang->relatives_acp_title);
 relatives_acp_nav_tabs('relationship-types');
 
 echo '<p><a href="index.php?module=tools-relatives&action=relationship-types&do=add" class="button">' . $lang->relatives_acp_add_relationship_type . '</a></p>';
+
+echo '<form action="index.php?module=tools-relatives&action=relationship-types&do=seed_defaults" method="post" style="margin-bottom:10px">'
+    . '<input type="hidden" name="my_post_key" value="' . $mybb->post_code . '" />'
+    . '<input type="submit" class="button" value="' . htmlspecialchars_uni($lang->relatives_acp_seed_defaults_button) . '" />'
+    . ' <span class="smalltext">' . $lang->relatives_acp_seed_defaults_desc . '</span>'
+    . '</form>';
 
 $table = new Table();
 $table->construct_header($lang->relatives_acp_col_concept_key);

@@ -30,6 +30,10 @@ $l['relatives_field_origin'] = "Origin";
 
 // Relationship types
 $l['relatives_acp_add_relationship_type'] = "Add relationship type";
+$l['relatives_acp_seed_defaults_button'] = "Create default relationship types";
+$l['relatives_acp_seed_defaults_desc'] = "Creates the usual relationship types (parent, sibling, child, grandparent, grandchild, aunt/uncle, niece/nephew, cousin, spouse, ex-spouse, step- and adoptive variants) in all three gender variants each. Combinations of concept and gender that already exist are skipped -- nothing is duplicated or changed.";
+$l['relatives_acp_seed_defaults_done'] = "%d relationship type(s) created.";
+$l['relatives_acp_seed_defaults_nothing'] = "All default relationship types already existed, nothing was created.";
 $l['relatives_acp_edit_relationship_type'] = "Edit relationship type";
 $l['relatives_acp_field_concept_key'] = "Concept key";
 $l['relatives_acp_field_concept_key_desc'] = "Groups the male/female/neutral variant of the same relationship (e.g. 'parent', 'sibling'). Use the same concept key for all three genders of one relationship.";

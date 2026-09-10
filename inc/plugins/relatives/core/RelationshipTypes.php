@@ -18,6 +18,34 @@ class Relatives_RelationshipTypes
     public const LABEL_FEMALE = 1;
     public const LABEL_NEUTRAL = 2;
 
+    /**
+     * Fest kuratiertes Set der gaengigsten Verwandtschaftskonzepte, je Konzept mit
+     * allen drei Gender-Varianten (maennlich/weiblich/neutral) und generation_offset
+     * gemaess PROJECT_CONTEXT.md ("Interaktiver Stammbaum": -2 Großeltern, -1 Eltern/
+     * Onkel-Tante, 0 Geschwister/Ehepartner/Cousin, +1 Kinder/Nichte-Neffe, +2 Enkel).
+     * Bewusst kein automatischer Insert in install() (siehe "What NOT to change") --
+     * nur ueber den expliziten ACP-Button in create_common_defaults().
+     * Format je Zeile: concept_key, generation_offset, [maennlich, weiblich, neutral].
+     */
+    private const COMMON_DEFAULTS = [
+        ['parent',          -1, ['Vater', 'Mutter', 'Elternteil']],
+        ['sibling',          0, ['Bruder', 'Schwester', 'Geschwisterteil']],
+        ['child',            1, ['Sohn', 'Tochter', 'Kind']],
+        ['grandparent',     -2, ['Großvater', 'Großmutter', 'Großelternteil']],
+        ['grandchild',       2, ['Enkel', 'Enkelin', 'Enkelkind']],
+        ['aunt_uncle',      -1, ['Onkel', 'Tante', 'Tante oder Onkel']],
+        ['niece_nephew',     1, ['Neffe', 'Nichte', 'Nichte oder Neffe']],
+        ['cousin',           0, ['Cousin', 'Cousine', 'Cousin oder Cousine']],
+        ['spouse',           0, ['Ehemann', 'Ehefrau', 'Ehepartner:in']],
+        ['ex_spouse',        0, ['Ex-Mann', 'Ex-Frau', 'Ex-Partner:in']],
+        ['partner',          0, ['Partner', 'Partnerin', 'Partner:in']],
+        ['step_parent',     -1, ['Stiefvater', 'Stiefmutter', 'Stiefelternteil']],
+        ['step_sibling',     0, ['Stiefbruder', 'Stiefschwester', 'Stiefgeschwisterteil']],
+        ['step_child',       1, ['Stiefsohn', 'Stieftochter', 'Stiefkind']],
+        ['adoptive_parent', -1, ['Adoptivvater', 'Adoptivmutter', 'Adoptivelternteil']],
+        ['adoptive_child',   1, ['Adoptivsohn', 'Adoptivtochter', 'Adoptivkind']],
+    ];
+
     public static function get_all(bool $active_only = true): array
     {
         global $db;
@@ -176,6 +204,50 @@ class Relatives_RelationshipTypes
         }
         $db->update_query('relatives_relationship_types', $update, "id = " . (int)$id, 1);
         return true;
+    }
+
+    /**
+     * Legt das kuratierte Standard-Set (COMMON_DEFAULTS) an -- Knopfdruck-Funktion fuer
+     * den ACP-Tab "Verwandtschaftsgrade". Idempotent wie der Migrations-Import: eine
+     * bereits vorhandene concept_key+gender-Kombination wird uebersprungen, nie
+     * dupliziert oder ueberschrieben (bestehende Labels/Sort-Order/Aktiv-Status bleiben
+     * unangetastet, auch bei mehrfachem Klick oder nach manuellen Anpassungen).
+     * Laeuft daher auch gut als Luecken-Fueller nach einer Legacy-Migration, die nur
+     * maennliche/weibliche Varianten kennt (siehe Migration::RELATIONSHIP_MAP).
+     *
+     * @return int Anzahl tatsaechlich neu angelegter Zeilen.
+     */
+    public static function create_common_defaults(): int
+    {
+        global $db;
+
+        $created = 0;
+        $sort_order = 0;
+        foreach (self::COMMON_DEFAULTS as [$concept_key, $generation_offset, $labels]) {
+            foreach ([self::LABEL_MALE, self::LABEL_FEMALE, self::LABEL_NEUTRAL] as $gender) {
+                $existing = $db->fetch_array($db->simple_select(
+                    'relatives_relationship_types',
+                    'id',
+                    "concept_key = '" . $db->escape_string($concept_key) . "' AND gender = " . (int)$gender,
+                    ['limit' => 1]
+                ));
+                if ($existing) {
+                    continue;
+                }
+                self::create([
+                    'concept_key'       => $concept_key,
+                    'gender'            => $gender,
+                    'label'             => $labels[$gender],
+                    'generation_offset' => $generation_offset,
+                    'sort_order'        => $sort_order,
+                    'is_active'         => 1,
+                ]);
+                $created++;
+            }
+            $sort_order++;
+        }
+
+        return $created;
     }
 
     public static function delete(int $id): bool
