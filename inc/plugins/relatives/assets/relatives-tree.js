@@ -134,21 +134,50 @@
 		};
 	}
 
-	function drawEdge(from, to) {
-		var p1 = nodePixel(from);
-		var p2 = nodePixel(to);
-		var dx = p2.x - p1.x;
-		var dy = p2.y - p1.y;
+	var NODE_HALF_WIDTH = 75;   // haelfte von .relatives_tree_node width (150px)
+	var NODE_HALF_HEIGHT = 30;  // haelfte der ungefaehren Kastenhoehe (margin-top: -30px)
+
+	function drawSegment(x1, y1, x2, y2) {
+		var dx = x2 - x1;
+		var dy = y2 - y1;
 		var length = Math.sqrt(dx * dx + dy * dy);
+		if (length < 1) { return; }
 		var angle = Math.atan2(dy, dx) * (180 / Math.PI);
 
 		var el = document.createElement("div");
 		el.className = "relatives_tree_edge";
 		el.style.width = length + "px";
-		el.style.left = p1.x + "px";
-		el.style.top = p1.y + "px";
+		el.style.left = x1 + "px";
+		el.style.top = y1 + "px";
 		el.style.transform = "rotate(" + angle + "deg)";
 		canvas.appendChild(el);
+	}
+
+	function drawEdge(from, to) {
+		var p1 = nodePixel(from);
+		var p2 = nodePixel(to);
+
+		if (p1.y === p2.y) {
+			// Gleiche Generation (z.B. Ehepartner/Geschwister der Bezugsperson): gerade
+			// horizontale Linie zwischen den Kastenraendern -- wie eine Partnerschaft in
+			// einem echten Stammbaum.
+			var leftX = Math.min(p1.x, p2.x) + NODE_HALF_WIDTH;
+			var rightX = Math.max(p1.x, p2.x) - NODE_HALF_WIDTH;
+			drawSegment(leftX, p1.y, rightX, p1.y);
+			return;
+		}
+
+		// Verschiedene Generationen: rechtwinklige Eltern-Kind-Verbindung (runter, quer,
+		// runter) statt einer schraegen Linie -- der ueblichen Darstellung in einem
+		// echten Stammbaum. Mehrere Kinder derselben Bezugsperson teilen sich dadurch
+		// optisch dieselbe Querlinie.
+		var top = p1.y < p2.y ? p1 : p2;
+		var bottom = p1.y < p2.y ? p2 : p1;
+		var midY = (top.y + bottom.y) / 2;
+
+		drawSegment(top.x, top.y + NODE_HALF_HEIGHT, top.x, midY);
+		drawSegment(top.x, midY, bottom.x, midY);
+		drawSegment(bottom.x, midY, bottom.x, bottom.y - NODE_HALF_HEIGHT);
 	}
 
 	function drawNode(node) {
