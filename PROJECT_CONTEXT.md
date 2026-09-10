@@ -61,7 +61,7 @@ Plugin `anschluss suchmaschine` gebaut (siehe „Abhängigkeiten" unten), nicht 
 
 | Tabelle (`TABLE_PREFIX .`) | Zweck | Wichtige Spalten |
 |---|---|---|
-| `relatives_persons` | Ein Verwandter/eine verbundene Person eines Charakters | `id, owner_uid, name, gender (tinyint: -1 egal, 0 männlich, 1 weiblich, 2 divers), relationship_type_id (FK relatives_relationship_types, nullable), relationship_custom_label (varchar, nullable – Pflicht wenn Typ „Sonstiges"), age (int, nullable), origin (varchar, nullable – Quelle je nach `relatives_origin_mode`), avatar (varchar, nullable), description (text, nullable), is_wanted (tinyint(1) default 0), wanted_thread_link (varchar, nullable), linked_uid (int, nullable), link_status (tinyint: 0 keine, 1 angefragt, 2 bestätigt), link_requested_by (int, nullable), link_confirmed_at (int, nullable), legacy_id (int, nullable), legacy_source (varchar, nullable: 'relatives'\|'wanted'), created_at (int), updated_at (int)` |
+| `relatives_persons` | Ein Verwandter/eine verbundene Person eines Charakters | `id, owner_uid, name, gender (tinyint: -1 egal, 0 männlich, 1 weiblich, 2 divers), relationship_type_id (FK relatives_relationship_types, nullable), relationship_custom_label (varchar, nullable – Pflicht wenn Typ „Sonstiges"), age (int, nullable), origin (varchar, nullable – Quelle je nach `relatives_origin_mode`), avatar (varchar, nullable), description (text, nullable), is_wanted (tinyint(1) default 0), wanted_thread_link (varchar, nullable), linked_uid (int, nullable), link_status (tinyint: 0 keine, 1 angefragt, 2 bestätigt), link_requested_by (int, nullable), link_confirmed_at (int, nullable), related_to_person_id (int, nullable, FK relatives_persons.id – siehe „Interaktiver Stammbaum": setzt eine Person in Bezug zu einer anderen Person desselben Besitzers statt direkt zum Account, z.B. „Geschwister der Mutter"; beim Löschen der referenzierten Person wird das Feld auf NULL zurückgesetzt, nicht die referenzierende Person mitgelöscht), legacy_id (int, nullable), legacy_source (varchar, nullable: 'relatives'\|'wanted'), created_at (int), updated_at (int)` |
 | `relatives_relationship_types` | ACP-verwaltete, **genderspezifische** Verwandtschaftsgrade | `id, concept_key (varchar – gruppiert männliche/weibliche/neutrale Variante desselben Verhältnisses, z.B. 'parent','sibling','child','grandparent','aunt_uncle','cousin','spouse','ex_spouse','other'), gender (tinyint: 0 männlich-Label, 1 weiblich-Label, 2 neutrales Label), label (varchar), generation_offset (int: -2 Großeltern, -1 Eltern/Onkel-Tante, 0 Geschwister/Ehepartner/Cousin, +1 Kinder, +2 Enkel), sort_order (int), is_active (tinyint(1) default 1)` |
 | `relatives_attribute_groups` | ACP-verwaltete Attribut-Kategorien (z.B. Haarfarbe) | `id, label, sort_order, is_active` |
 | `relatives_attribute_options` | Werte je Gruppe | `id, group_id (FK), label, sort_order, is_active` |
@@ -99,6 +99,17 @@ auf die zum gewählten Geschlecht passenden `gender`-Zeilen gefiltert:
   Verwandtschaftsgrad, Schritt 3 restliche Felder), das denselben Save-Endpunkt wie das
   klassische Formular nutzt.
 - Klick auf einen **verlinkten, bestätigten** fremden Knoten → Navigation in dessen Stammbaum.
+- **„+ Verwandte/n hinzufügen"-Ghost neben jeder eigenen Person** (nicht nur neben sich
+  selbst): legt eine neue Person mit `related_to_person_id` = der angeklickten Person an
+  (z.B. Geschwister der Mutter eintragen, während man auf den Mutter-Knoten klickt).
+  **Wichtig:** Der gewählte Verwandtschaftsgrad wird weiterhin relativ zum eigenen Account
+  interpretiert, nicht relativ zur angeklickten Person – z.B. „Geschwister der Mutter"
+  eintragen heißt konkret: Typ „Tante"/„Onkel" wählen (das eigene Verhältnis dazu), der
+  Klick auf die Mutter bestimmt nur, von welcher Person aus im Baum eine Verbindungslinie
+  gezogen wird. `related_to_person_id` ist nur im Baum-Klick-Add-Interface verfügbar,
+  bewusst **nicht** im klassischen Formular – ein Edit über das klassische Formular lässt
+  eine bestehende Verknüpfung unangetastet (das Feld wird beim Bearbeiten nie ins
+  Update-Array aufgenommen, siehe `Relatives_Database::prepare_row()`).
 - Zusätzlich existiert eine einfache Listenansicht (`action=list`) als barrierearme Fallback-
   Übersicht der eigenen Personen (kein Ersatz, sondern Ergänzung zum Baum).
 - **Sichtbarkeit:** Stammbäume sind für alle eingeloggten Nutzer:innen öffentlich einsehbar

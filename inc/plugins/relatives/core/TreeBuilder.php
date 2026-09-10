@@ -59,6 +59,12 @@ class Relatives_TreeBuilder
         }
 
         $persons = Relatives_Database::get_persons_by_owner($uid);
+
+        // Erster Durchlauf: alle Knoten dieses Besitzers anlegen, bevor irgendeine Kante
+        // gezogen wird. Noetig, weil "Geschwister der Mutter" auf eine andere Person
+        // desselben Besitzers zeigen kann, die in get_persons_by_owner() (alphabetisch
+        // nach Name) erst SPAETER in der Liste kommt als die referenzierende Zeile.
+        $person_generations = [];
         foreach ($persons as $person) {
             $person_id = (int)$person['id'];
             $person_key = 'person:' . $person_id;
@@ -71,6 +77,7 @@ class Relatives_TreeBuilder
                 }
             }
             $person_generation = $generation + $offset;
+            $person_generations[$person_id] = $person_generation;
 
             if (!isset($this->nodes[$person_key])) {
                 $this->nodes[$person_key] = [
@@ -89,14 +96,30 @@ class Relatives_TreeBuilder
                     'wanted_thread_link'        => $person['wanted_thread_link'],
                     'linked_uid'                => $person['linked_uid'] !== null ? (int)$person['linked_uid'] : null,
                     'link_status'               => (int)$person['link_status'],
+                    'related_to_person_id'      => !empty($person['related_to_person_id']) ? (int)$person['related_to_person_id'] : null,
                     'generation'                => $person_generation,
                 ];
-                $this->edges[] = ['from' => $self_key, 'to' => $person_key];
             }
+        }
+
+        // Zweiter Durchlauf: Kanten setzen + in verknuepfte Fremd-Baeume weitertraversieren.
+        foreach ($persons as $person) {
+            $person_id = (int)$person['id'];
+            $person_key = 'person:' . $person_id;
+
+            // Verbindung "Geschwister der Mutter" etc.: die Kante kommt von der
+            // angeklickten Person statt von self, wenn related_to_person_id auf eine
+            // bekannte Person desselben Besitzers zeigt (sonst -- z.B. Ziel geloescht --
+            // Fallback auf self als Quelle).
+            $related_id = !empty($person['related_to_person_id']) ? (int)$person['related_to_person_id'] : null;
+            $related_key = $related_id !== null ? 'person:' . $related_id : null;
+            $edge_from = ($related_key !== null && isset($this->nodes[$related_key])) ? $related_key : $self_key;
+            $this->edges[] = ['from' => $edge_from, 'to' => $person_key];
 
             // Nur bestaetigte Verknuepfungen erlauben Weiter-Traversal in den fremden Baum.
             if ((int)$person['link_status'] === 2 && !empty($person['linked_uid'])) {
                 $linked_uid = (int)$person['linked_uid'];
+                $person_generation = $person_generations[$person_id];
                 if (!isset($this->visited_uids[$linked_uid])) {
                     $this->traverse_uid($linked_uid, $person_generation, $depth + 1);
                 }

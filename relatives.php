@@ -178,6 +178,24 @@ if ($action === 'add' || $action === 'edit') {
             'wanted_thread_link'        => $wanted_thread_link_final,
         ];
 
+        // "Verwandte/n von X hinzufuegen" im Baum (Klick auf einen Personen-Knoten):
+        // nur beim Neuanlegen gesetzt/geprueft. Beim Bearbeiten bewusst NICHT in $data
+        // aufnehmen, sonst wuerde jedes Speichern ueber das klassische Formular (das
+        // dieses Feld gar nicht kennt) die bestehende Verknuepfung stillschweigend
+        // loeschen (siehe Relatives_Database::prepare_row() -- nur explizit im Array
+        // vorhandene Keys werden ueberhaupt angefasst).
+        if (!$is_edit) {
+            $related_to_person_id = $mybb->get_input('related_to_person_id', MyBB::INPUT_INT);
+            if ($related_to_person_id > 0) {
+                if (!Relatives_Database::is_owner($related_to_person_id, $my_uid)) {
+                    relatives_error_response($lang->relatives_error_generic);
+                }
+                $data['related_to_person_id'] = $related_to_person_id;
+            } else {
+                $data['related_to_person_id'] = null;
+            }
+        }
+
         if ($is_edit) {
             Relatives_Database::update_person($id, $data);
             $person_id = $id;
@@ -328,6 +346,7 @@ if ($action === 'tree') {
     ]);
     $relatives_tree_lang_json = relatives_json_for_script([
         'add_person'               => $lang->relatives_add_person,
+        'add_relative_of'          => $lang->relatives_add_relative_of,
         'edit_person'               => $lang->relatives_edit_person_title,
         'field_name'                => $lang->relatives_field_name,
         'field_gender'               => $lang->relatives_field_gender,

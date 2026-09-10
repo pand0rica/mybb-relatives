@@ -257,7 +257,12 @@ class Relatives_RelationshipTypes
             return false;
         }
         // Personen, die diesen Typ referenzieren, verlieren die Zuordnung (nicht die Person).
-        $db->update_query('relatives_persons', ['relationship_type_id' => null], "relationship_type_id = " . (int)$id);
+        // Raw NULL statt update_query() mit PHP-null: MyBBs quote_val() kennt kein NULL und
+        // wuerde stattdessen 0 schreiben (siehe Relatives_Database::update_person()).
+        $db->write_query(
+            "UPDATE " . TABLE_PREFIX . "relatives_persons SET relationship_type_id = NULL"
+            . " WHERE relationship_type_id = " . (int)$id
+        );
         $db->delete_query('relatives_relationship_types', "id = " . (int)$id, 1);
         return true;
     }

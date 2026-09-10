@@ -13,6 +13,7 @@ $l['relatives_disabled'] = "Diese Funktion ist derzeit deaktiviert.";
 // Navigation / Titel
 $l['relatives_my_persons_title'] = "Meine Verwandten";
 $l['relatives_add_person'] = "Person hinzufügen";
+$l['relatives_add_relative_of'] = "Verwandte/n von";
 $l['relatives_edit_person_title'] = "Person bearbeiten";
 $l['relatives_view_tree'] = "Stammbaum ansehen";
 $l['relatives_usercp_menu_item'] = "Verwandtschaften & Stammbaum";

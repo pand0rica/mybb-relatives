@@ -125,11 +125,16 @@
 			drawNode(node);
 		});
 
-		// Ghost-"+"-Knoten neben jedem eigenen Selbst-Knoten (Klick-Add-Interface).
+		// Ghost-"+"-Knoten neben jedem eigenen Selbst-Knoten (Klick-Add-Interface) UND
+		// neben jeder eigenen Person (z.B. "+ Verwandte/n von Mutter hinzufuegen"), damit
+		// man Verbindungen zwischen zwei angelegten Personen anlegen kann.
 		Object.keys(visible).forEach(function (key) {
 			var node = state.nodesByKey[key];
-			if (node && node.type === "self" && node.uid === config.viewerUid) {
-				drawAddGhost(node);
+			if (!node) { return; }
+			if (node.type === "self" && node.uid === config.viewerUid) {
+				drawAddGhost(node, null);
+			} else if (node.type === "person" && node.owner_uid === config.viewerUid) {
+				drawAddGhost(node, node);
 			}
 		});
 	}
@@ -213,15 +218,18 @@
 		canvas.appendChild(el);
 	}
 
-	function drawAddGhost(selfNode) {
-		var pos = nodePixel(selfNode);
+	function drawAddGhost(anchorNode, relatedToNode) {
+		var pos = nodePixel(anchorNode);
 		var el = document.createElement("div");
 		el.className = "relatives_tree_node_add";
 		el.style.left = (pos.x) + "px";
 		el.style.top = (pos.y + V_SPACING / 2) + "px";
-		el.textContent = t("add_person", "+ Person hinzufuegen");
-		el.addEventListener("click", function () {
-			openAddPanel();
+		el.textContent = relatedToNode
+			? t("add_relative_of", "+ Verwandte/n hinzufuegen")
+			: t("add_person", "+ Person hinzufuegen");
+		el.addEventListener("click", function (ev) {
+			ev.stopPropagation();
+			openPersonForm(null, relatedToNode);
 		});
 		canvas.appendChild(el);
 	}
@@ -352,15 +360,11 @@
 		if (selectedTypeId) { select.value = String(selectedTypeId); }
 	}
 
-	function openAddPanel() {
-		openPersonForm(null);
-	}
-
 	function openEditPanel(node) {
-		openPersonForm(node);
+		openPersonForm(node, null);
 	}
 
-	function openPersonForm(node) {
+	function openPersonForm(node, relatedToNode) {
 		if (!panel) { return; }
 		panel.innerHTML = "";
 		panel.appendChild(closeButton());
@@ -369,6 +373,13 @@
 		var h = document.createElement("h3");
 		h.textContent = isEdit ? t("edit_person", "Person bearbeiten") : t("add_person", "Person hinzufuegen");
 		panel.appendChild(h);
+
+		if (!isEdit && relatedToNode) {
+			var hint = document.createElement("p");
+			hint.className = "relatives_hint";
+			hint.textContent = t("add_relative_of", "Verwandte/r von") + " " + relatedToNode.name;
+			panel.appendChild(hint);
+		}
 
 		var form = document.createElement("form");
 
@@ -424,6 +435,9 @@
 			payload.append("age", ageInput.value);
 			payload.append("origin", originInput.value);
 			payload.append("description", descTextarea.value);
+			if (!isEdit && relatedToNode) {
+				payload.append("related_to_person_id", relatedToNode.id);
+			}
 
 			var checked = form.querySelectorAll("input[name='attribute_option_ids[]']:checked");
 			for (var i = 0; i < checked.length; i++) {

@@ -48,13 +48,15 @@ class Relatives_Installer
             `link_status` TINYINT(2) NOT NULL DEFAULT 0,
             `link_requested_by` INT(11) DEFAULT NULL,
             `link_confirmed_at` INT(11) DEFAULT NULL,
+            `related_to_person_id` INT(11) DEFAULT NULL,
             `legacy_id` INT(11) DEFAULT NULL,
             `legacy_source` VARCHAR(20) DEFAULT NULL,
             `created_at` INT(11) NOT NULL DEFAULT 0,
             `updated_at` INT(11) NOT NULL DEFAULT 0,
             PRIMARY KEY (`id`),
             KEY `owner_uid` (`owner_uid`),
-            KEY `linked_uid` (`linked_uid`)
+            KEY `linked_uid` (`linked_uid`),
+            KEY `related_to_person_id` (`related_to_person_id`)
         ) ENGINE=InnoDB{$collation};");
 
         $db->query("CREATE TABLE IF NOT EXISTS `" . TABLE_PREFIX . "relatives_relationship_types` (
@@ -117,11 +119,29 @@ class Relatives_Installer
     {
         global $db;
 
+        self::upgrade_schema();
         self::install_settings();
         self::install_templates();
         self::install_stylesheets();
 
         rebuild_settings();
+    }
+
+    /**
+     * Idempotente Schema-Nachruestung fuer bereits installierte Instanzen (Spalte
+     * fehlt bei einer Frischinstallation nie, da sie schon im CREATE TABLE aus
+     * install() steht -- field_exists() ist hier also nur fuer bestehende
+     * Installationen relevant, die das Plugin vor dieser Spalte schon aktiv hatten).
+     */
+    private static function upgrade_schema(): void
+    {
+        global $db;
+
+        if ($db->table_exists('relatives_persons') && !$db->field_exists('related_to_person_id', 'relatives_persons')) {
+            $db->query("ALTER TABLE `" . TABLE_PREFIX . "relatives_persons`
+                ADD COLUMN `related_to_person_id` INT(11) DEFAULT NULL AFTER `link_confirmed_at`,
+                ADD KEY `related_to_person_id` (`related_to_person_id`)");
+        }
     }
 
     public static function deactivate(): void

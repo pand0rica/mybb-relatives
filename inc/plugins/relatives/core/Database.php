@@ -148,6 +148,13 @@ class Relatives_Database
         if ($id <= 0) {
             return false;
         }
+        // Personen, die diese Person als related_to_person_id referenzieren (z.B. "Geschwister
+        // der Mutter"), verlieren nur die Verknuepfung -- nicht die Person selbst. Raw NULL
+        // (nicht update_query() mit PHP-null, siehe update_person() -- derselbe Quoting-Bug).
+        $db->write_query(
+            "UPDATE " . TABLE_PREFIX . "relatives_persons SET related_to_person_id = NULL"
+            . " WHERE related_to_person_id = " . (int)$id
+        );
         $db->delete_query('relatives_persons', "id = " . (int)$id, 1);
         Relatives_Attributes::delete_person_attributes($id);
         return true;
@@ -203,6 +210,9 @@ class Relatives_Database
         }
         if (array_key_exists('linked_uid', $data)) {
             $row['linked_uid'] = $data['linked_uid'] === null ? null : (int)$data['linked_uid'];
+        }
+        if (array_key_exists('related_to_person_id', $data)) {
+            $row['related_to_person_id'] = $data['related_to_person_id'] === null ? null : (int)$data['related_to_person_id'];
         }
         if (isset($data['link_status'])) {
             $row['link_status'] = (int)$data['link_status'];
