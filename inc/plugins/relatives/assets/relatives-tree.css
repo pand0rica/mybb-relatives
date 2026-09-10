@@ -63,6 +63,34 @@
 	font-weight: bold;
 }
 
+/* Geschlechtsfarben (angelehnt an klassische Stammbaum-Darstellungen). */
+.relatives_tree_node.relatives-gender-male {
+	background: #e3edfa;
+	border-color: #4f7cb0;
+}
+
+.relatives_tree_node.relatives-gender-male .relatives_tree_node_name {
+	color: #1f3a5f;
+}
+
+.relatives_tree_node.relatives-gender-female {
+	background: #fbe4ea;
+	border-color: #c96a8a;
+}
+
+.relatives_tree_node.relatives-gender-female .relatives_tree_node_name {
+	color: #7a2f47;
+}
+
+.relatives_tree_node.relatives-gender-diverse {
+	background: #f0eef7;
+	border-color: #8a7bab;
+}
+
+.relatives_tree_node.relatives-gender-diverse .relatives_tree_node_name {
+	color: #4a3d68;
+}
+
 .relatives_tree_node.relatives-node-wanted {
 	border-style: dashed;
 	border-color: #e0a200;

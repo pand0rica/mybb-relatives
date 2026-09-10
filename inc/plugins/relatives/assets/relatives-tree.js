@@ -190,6 +190,9 @@
 				}
 			});
 		} else {
+			if (node.gender === 0) { el.classList.add("relatives-gender-male"); }
+			else if (node.gender === 1) { el.classList.add("relatives-gender-female"); }
+			else { el.classList.add("relatives-gender-diverse"); }
 			if (node.is_wanted) { el.classList.add("relatives-node-wanted"); }
 			if (node.link_status === 2) { el.classList.add("relatives-node-linked-confirmed"); }
 			if (node.link_status === 1) { el.classList.add("relatives-node-linked-pending"); }
