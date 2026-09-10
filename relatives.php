@@ -44,6 +44,19 @@ function relatives_json_response(array $data): void
     exit;
 }
 
+/**
+ * JSON fuer Einbettung in <script type="application/json"> Blocks in Templates. NICHT
+ * mit htmlspecialchars_uni() nachbearbeiten -- <script>-Inhalte werden vom Browser nie
+ * HTML-entity-dekodiert, das wuerde z.B. jedes " zu &quot; machen und JSON.parse() im
+ * Frontend-JS lautlos scheitern lassen. Die JSON_HEX_*-Flags escapen stattdessen
+ * <, >, &, ' und " innerhalb der JSON-Werte selbst (< etc.) -- bleibt gueltiges
+ * JSON und verhindert trotzdem ein vorzeitiges </script>.
+ */
+function relatives_json_for_script(array $data): string
+{
+    return json_encode($data, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+}
+
 function relatives_error_response(string $message): void
 {
     if (isset($GLOBALS['mybb']) && $GLOBALS['mybb']->get_input('ajax')) {
@@ -245,7 +258,7 @@ if ($action === 'add' || $action === 'edit') {
         $relatives_form_link_section = relatives_render_link_section($existing);
     }
 
-    $relatives_relationship_types_json = htmlspecialchars_uni(json_encode(Relatives_RelationshipTypes::get_active_json_payload()));
+    $relatives_relationship_types_json = relatives_json_for_script(Relatives_RelationshipTypes::get_active_json_payload());
 
     eval('$page = "' . $templates->get('relatives_form') . '";');
     output_page($page);
@@ -305,15 +318,15 @@ if ($action === 'tree') {
     add_breadcrumb($lang->relatives_view_tree, 'relatives.php?action=tree');
 
     $relatives_tree_title = sprintf($lang->relatives_tree_title_for, htmlspecialchars_uni($target_user['username']));
-    $relatives_tree_json = htmlspecialchars_uni(json_encode(Relatives_TreeBuilder::build($uid)));
-    $relatives_relationship_types_json = htmlspecialchars_uni(json_encode(Relatives_RelationshipTypes::get_active_json_payload()));
-    $relatives_attribute_groups_json = htmlspecialchars_uni(json_encode(Relatives_Attributes::get_options_grouped(true)));
-    $relatives_tree_config_json = htmlspecialchars_uni(json_encode([
+    $relatives_tree_json = relatives_json_for_script(Relatives_TreeBuilder::build($uid));
+    $relatives_relationship_types_json = relatives_json_for_script(Relatives_RelationshipTypes::get_active_json_payload());
+    $relatives_attribute_groups_json = relatives_json_for_script(Relatives_Attributes::get_options_grouped(true));
+    $relatives_tree_config_json = relatives_json_for_script([
         'rootUid'   => $uid,
         'viewerUid' => $my_uid,
         'postCode'  => $mybb->post_code,
-    ]));
-    $relatives_tree_lang_json = htmlspecialchars_uni(json_encode([
+    ]);
+    $relatives_tree_lang_json = relatives_json_for_script([
         'add_person'               => $lang->relatives_add_person,
         'edit_person'               => $lang->relatives_edit_person_title,
         'field_name'                => $lang->relatives_field_name,
@@ -332,7 +345,7 @@ if ($action === 'tree') {
         'gender_diverse'             => $lang->relatives_gender_diverse,
         'save'                        => $lang->relatives_save,
         'save_failed'                => $lang->relatives_error_generic,
-    ]));
+    ]);
 
     eval('$page = "' . $templates->get('relatives_tree') . '";');
     output_page($page);
