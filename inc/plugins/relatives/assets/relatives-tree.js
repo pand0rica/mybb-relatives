@@ -124,19 +124,6 @@
 			if (!node) { return; }
 			drawNode(node);
 		});
-
-		// Ghost-"+"-Knoten neben jedem eigenen Selbst-Knoten (Klick-Add-Interface) UND
-		// neben jeder eigenen Person (z.B. "+ Verwandte/n von Mutter hinzufuegen"), damit
-		// man Verbindungen zwischen zwei angelegten Personen anlegen kann.
-		Object.keys(visible).forEach(function (key) {
-			var node = state.nodesByKey[key];
-			if (!node) { return; }
-			if (node.type === "self" && node.uid === config.viewerUid) {
-				drawAddGhost(node, null);
-			} else if (node.type === "person" && node.owner_uid === config.viewerUid) {
-				drawAddGhost(node, node);
-			}
-		});
 	}
 
 	function nodePixel(node) {
@@ -187,6 +174,8 @@
 			el.addEventListener("click", function () {
 				if (node.uid !== config.rootUid) {
 					window.location.href = "relatives.php?action=tree&uid=" + encodeURIComponent(node.uid);
+				} else if (node.uid === config.viewerUid) {
+					openActionMenu(node);
 				}
 			});
 		} else {
@@ -209,7 +198,7 @@
 
 			el.addEventListener("click", function () {
 				if (node.owner_uid === config.viewerUid) {
-					openEditPanel(node);
+					openActionMenu(node);
 				} else if (node.link_status === 2 && node.linked_uid) {
 					window.location.href = "relatives.php?action=tree&uid=" + encodeURIComponent(node.linked_uid);
 				} else {
@@ -221,20 +210,73 @@
 		canvas.appendChild(el);
 	}
 
-	function drawAddGhost(anchorNode, relatedToNode) {
-		var pos = nodePixel(anchorNode);
-		var el = document.createElement("div");
-		el.className = "relatives_tree_node_add";
-		el.style.left = (pos.x) + "px";
-		el.style.top = (pos.y + V_SPACING / 2) + "px";
-		el.textContent = relatedToNode
-			? t("add_relative_of", "+ Verwandte/n hinzufuegen")
-			: t("add_person", "+ Person hinzufuegen");
-		el.addEventListener("click", function (ev) {
-			ev.stopPropagation();
-			openPersonForm(null, relatedToNode);
-		});
-		canvas.appendChild(el);
+	// --- Aktionsmenue (Klick auf einen Knoten: Bearbeiten / Loeschen / Hinzufuegen) -----
+
+	function menuButton(label, onClick) {
+		var btn = document.createElement("button");
+		btn.type = "button";
+		btn.className = "button";
+		btn.style.display = "block";
+		btn.style.width = "100%";
+		btn.style.marginBottom = "6px";
+		btn.textContent = label;
+		btn.addEventListener("click", onClick);
+		return btn;
+	}
+
+	function openActionMenu(node) {
+		if (!panel) { return; }
+		panel.innerHTML = "";
+		panel.appendChild(closeButton());
+
+		var h = document.createElement("h3");
+		h.textContent = node.type === "self" ? (node.username || ("#" + node.uid)) : node.name;
+		panel.appendChild(h);
+
+		var menu = document.createElement("div");
+		menu.className = "relatives_tree_action_menu";
+
+		if (node.type === "person") {
+			menu.appendChild(menuButton(t("edit_person", "Person bearbeiten"), function () {
+				openEditPanel(node);
+			}));
+			menu.appendChild(menuButton(t("delete", "Loeschen"), function () {
+				if (window.confirm(t("confirm_delete", "Diese Person wirklich loeschen?"))) {
+					deletePersonAjax(node.id);
+				}
+			}));
+		}
+
+		var addLabel = node.type === "self"
+			? t("add_person", "Person hinzufuegen")
+			: t("add_relative_of", "Verwandte/n von") + " " + node.name;
+		menu.appendChild(menuButton(addLabel, function () {
+			openPersonForm(null, node.type === "person" ? node : null);
+		}));
+
+		panel.appendChild(menu);
+		panel.style.display = "block";
+	}
+
+	function deletePersonAjax(id) {
+		var payload = new FormData();
+		payload.append("my_post_key", config.postCode || "");
+		payload.append("ajax", "1");
+		payload.append("id", id);
+
+		fetch("relatives.php?action=delete", { method: "POST", body: payload, credentials: "same-origin" })
+			.then(function (resp) { return resp.json(); })
+			.then(function (data) {
+				if (data && data.success) {
+					panel.style.display = "none";
+					reloadTree();
+				} else {
+					window.alert((data && data.error) || t("save_failed", "Fehlgeschlagen."));
+				}
+			})
+			.catch(function () {
+				window.alert(t("save_failed", "Fehlgeschlagen."));
+			});
 	}
 
 	// --- Pan & Zoom --------------------------------------------------------------------

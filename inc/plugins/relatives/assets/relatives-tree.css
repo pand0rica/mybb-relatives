@@ -114,20 +114,8 @@
 	opacity: 0.8;
 }
 
-.relatives_tree_node_add {
-	position: absolute;
-	width: 110px;
-	margin-left: -55px;
-	margin-top: -18px;
-	padding: 4px 6px;
-	border-radius: 6px;
-	background: rgba(63, 111, 165, 0.08);
-	border: 1px dashed #3f6fa5;
-	text-align: center;
-	cursor: pointer;
-	font-size: 0.8em;
-	color: #3f6fa5;
-	user-select: none;
+.relatives_tree_action_menu {
+	margin-top: 10px;
 }
 
 .relatives_tree_edge {

@@ -75,6 +75,9 @@ if ($action === 'delete') {
         error_no_permission();
     }
     Relatives_Database::delete_person($id);
+    if ($mybb->get_input('ajax')) {
+        relatives_json_response(['success' => true]);
+    }
     redirect('relatives.php?action=list', $lang->relatives_deleted);
 }
 
@@ -364,6 +367,9 @@ if ($action === 'tree') {
         'gender_diverse'             => $lang->relatives_gender_diverse,
         'save'                        => $lang->relatives_save,
         'save_failed'                => $lang->relatives_error_generic,
+        'delete'                      => $lang->relatives_delete,
+        'confirm_delete'             => $lang->relatives_confirm_delete,
+        'cancel'                      => $lang->relatives_cancel,
     ]);
 
     eval('$page = "' . $templates->get('relatives_tree') . '";');
