@@ -1,0 +1,164 @@
+/* relatives.css - Verwandtschaften & Stammbaum
+ * Frontend-Styles fuer Liste, Formular und die "Gesucht"-Karten auf der Profilseite.
+ * Bewusst responsiv statt hartcodierter Theme-tid-Fallunterscheidung (Alt-Plugin-Bug).
+ */
+
+.relatives_page {
+	margin-bottom: 15px;
+}
+
+.relatives_page_header {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 10px;
+	margin-bottom: 10px;
+}
+
+.relatives_page_header h2 {
+	flex: 1 1 auto;
+	margin: 0;
+}
+
+.relatives_button {
+	display: inline-block;
+	padding: 6px 12px;
+	border-radius: 4px;
+	background: #3f6fa5;
+	color: #fff;
+	text-decoration: none;
+	font-size: 0.9em;
+}
+
+.relatives_button:hover {
+	background: #2f5680;
+	color: #fff;
+}
+
+.relatives_button_secondary {
+	background: #777;
+}
+
+.relatives_button_secondary:hover {
+	background: #555;
+}
+
+.relatives_link_button {
+	background: none;
+	border: none;
+	color: #b33;
+	cursor: pointer;
+	padding: 0;
+	font: inherit;
+	text-decoration: underline;
+}
+
+.relatives_table {
+	width: 100%;
+	border-collapse: collapse;
+}
+
+.relatives_table th,
+.relatives_table td {
+	border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+	padding: 6px 8px;
+	text-align: left;
+	vertical-align: top;
+}
+
+.relatives_field {
+	margin-bottom: 12px;
+}
+
+.relatives_field label {
+	display: block;
+	font-weight: bold;
+	margin-bottom: 4px;
+}
+
+.relatives_field input[type="text"],
+.relatives_field input[type="number"],
+.relatives_field select,
+.relatives_field textarea {
+	width: 100%;
+	max-width: 480px;
+	box-sizing: border-box;
+	padding: 5px;
+}
+
+.relatives_field_attributes fieldset {
+	border: 1px solid rgba(0, 0, 0, 0.15);
+	border-radius: 4px;
+	margin-bottom: 8px;
+	padding: 6px 10px;
+}
+
+.relatives_hint {
+	color: #b33;
+	font-size: 0.85em;
+}
+
+.relatives_badge {
+	display: inline-block;
+	padding: 1px 6px;
+	border-radius: 3px;
+	font-size: 0.75em;
+	margin-left: 4px;
+}
+
+.relatives_badge_wanted {
+	background: #e0a200;
+	color: #fff;
+}
+
+.relatives_badge_link_requested {
+	background: #999;
+	color: #fff;
+}
+
+.relatives_badge_link_confirmed {
+	background: #3f9142;
+	color: #fff;
+}
+
+.relatives_profile_wanted_box {
+	margin-top: 15px;
+}
+
+.relatives_profile_wanted_cards {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 10px;
+}
+
+.relatives_profile_wanted_card {
+	flex: 1 1 220px;
+	max-width: 100%;
+	border: 1px solid rgba(0, 0, 0, 0.15);
+	border-radius: 6px;
+	padding: 10px;
+	box-sizing: border-box;
+}
+
+.relatives_profile_wanted_card_name {
+	font-weight: bold;
+}
+
+.relatives_profile_wanted_card_relationship {
+	font-style: italic;
+	opacity: 0.85;
+	margin-bottom: 6px;
+}
+
+@media (max-width: 600px) {
+	.relatives_profile_wanted_card {
+		flex-basis: 100%;
+	}
+
+	.relatives_field input[type="text"],
+	.relatives_field input[type="number"],
+	.relatives_field select,
+	.relatives_field textarea {
+		max-width: 100%;
+	}
+}
