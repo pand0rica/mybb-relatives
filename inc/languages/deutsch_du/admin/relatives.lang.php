@@ -44,7 +44,7 @@ $l['relatives_acp_col_concept_key'] = "Konzept";
 $l['relatives_acp_no_relationship_types'] = "Noch keine Verwandtschaftsgrade angelegt.";
 $l['relatives_gender_male'] = "männlich";
 $l['relatives_gender_female'] = "weiblich";
-$l['relatives_gender_diverse_neutral'] = "neutral";
+$l['relatives_gender_diverse_neutral'] = "divers";
 $l['relatives_acp_missing'] = "fehlt";
 
 // Attribut-Gruppen

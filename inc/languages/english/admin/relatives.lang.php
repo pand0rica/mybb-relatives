@@ -44,7 +44,7 @@ $l['relatives_acp_col_concept_key'] = "Concept";
 $l['relatives_acp_no_relationship_types'] = "No relationship types defined yet.";
 $l['relatives_gender_male'] = "male";
 $l['relatives_gender_female'] = "female";
-$l['relatives_gender_diverse_neutral'] = "neutral";
+$l['relatives_gender_diverse_neutral'] = "diverse";
 $l['relatives_acp_missing'] = "missing";
 
 // Attribute groups
