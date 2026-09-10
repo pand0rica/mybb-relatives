@@ -10,6 +10,7 @@ define('IN_MYBB', 1);
 define('THIS_SCRIPT', 'relatives.php');
 
 require_once './global.php';
+require_once MYBB_ROOT . 'inc/functions_user.php';
 require_once MYBB_ROOT . 'inc/plugins/relatives/core/Database.php';
 require_once MYBB_ROOT . 'inc/plugins/relatives/core/RelationshipTypes.php';
 require_once MYBB_ROOT . 'inc/plugins/relatives/core/Attributes.php';
@@ -27,6 +28,10 @@ if ((int)$mybb->user['uid'] <= 0) {
 
 $my_uid = (int)$mybb->user['uid'];
 $action = $mybb->get_input('action');
+
+// Baut $usercpnav (die UserCP-Sidebar, inkl. unseres eigenen usercp_menu-Eintrags) fuer
+// die Seitentemplates -- dieselbe Core-Funktion, die usercp.php selbst aufruft.
+usercp_menu();
 
 add_breadcrumb($lang->relatives, 'relatives.php');
 
@@ -405,6 +410,6 @@ function relatives_render_link_section(array $person): string
         . '<input type="text" id="relatives_target_username" name="target_username" maxlength="255" />'
         . '<input type="hidden" name="id" value="' . $id . '" />'
         . '<input type="hidden" name="my_post_key" value="' . htmlspecialchars_uni($mybb->post_code) . '" />'
-        . '<input type="submit" class="relatives_button" value="' . htmlspecialchars_uni($lang->relatives_link_send_request) . '" />'
+        . '<input type="submit" class="button" value="' . htmlspecialchars_uni($lang->relatives_link_send_request) . '" />'
         . '</form></div>';
 }

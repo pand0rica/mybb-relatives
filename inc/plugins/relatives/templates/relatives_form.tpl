@@ -5,6 +5,10 @@
 </head>
 <body>
 {$header}
+<table width="100%" border="0" align="center">
+<tr>
+{$usercpnav}
+<td valign="top">
 <div class="relatives_page">
 	<h2>{$relatives_form_title}</h2>
 	<form action="relatives.php?action={$relatives_form_action}" method="post">
@@ -74,13 +78,16 @@
 		</div>
 
 		<div class="relatives_field">
-			<input type="submit" class="relatives_button" value="{$lang->relatives_save}" />
-			<a class="relatives_button relatives_button_secondary" href="relatives.php?action=list">{$lang->relatives_cancel}</a>
+			<input type="submit" class="button" value="{$lang->relatives_save}" />
+			<a class="button" href="relatives.php?action=list">{$lang->relatives_cancel}</a>
 		</div>
 	</form>
 
 	{$relatives_form_link_section}
 </div>
+</td>
+</tr>
+</table>
 
 <script type="application/json" id="relatives-relationship-types-data">{$relatives_relationship_types_json}</script>
 <script>
