@@ -68,24 +68,27 @@ if ($do === 'add' || $do === 'edit') {
     $page->output_header($lang->relatives_acp_title);
     relatives_acp_nav_tabs('relationship-types');
 
+    $title = $do === 'add' ? $lang->relatives_acp_add_relationship_type : $lang->relatives_acp_edit_relationship_type;
     $form = new Form('index.php?module=tools-relatives&action=relationship-types&do=' . $do . ($existing ? '&id=' . $id : ''), 'post');
-    echo $form->generate_form_header($do === 'add' ? $lang->relatives_acp_add_relationship_type : $lang->relatives_acp_edit_relationship_type);
+    $form_container = new FormContainer($title);
 
-    echo $form->generate_text_box('concept_key', $existing['concept_key'] ?? '', ['id' => 'concept_key', 'label' => $lang->relatives_acp_field_concept_key, 'description' => $lang->relatives_acp_field_concept_key_desc]);
-    echo $form->generate_select_box('gender', $gender_labels, $existing['gender'] ?? Relatives_RelationshipTypes::LABEL_NEUTRAL, ['id' => 'gender', 'label' => $lang->relatives_field_gender]);
-    echo $form->generate_text_box('label', $existing['label'] ?? '', ['id' => 'label', 'label' => $lang->relatives_acp_field_label]);
-    echo $form->generate_select_box('generation_offset', [
+    $form_container->output_row($lang->relatives_acp_field_concept_key, $lang->relatives_acp_field_concept_key_desc, $form->generate_text_box('concept_key', $existing['concept_key'] ?? '', ['id' => 'concept_key']), 'concept_key');
+    $form_container->output_row($lang->relatives_field_gender, '', $form->generate_select_box('gender', $gender_labels, $existing['gender'] ?? Relatives_RelationshipTypes::LABEL_NEUTRAL, ['id' => 'gender']), 'gender');
+    $form_container->output_row($lang->relatives_acp_field_label, '', $form->generate_text_box('label', $existing['label'] ?? '', ['id' => 'label']), 'label');
+    $form_container->output_row($lang->relatives_acp_field_generation_offset, '', $form->generate_select_box('generation_offset', [
         -2 => $lang->relatives_acp_generation_grandparent,
         -1 => $lang->relatives_acp_generation_parent,
         0  => $lang->relatives_acp_generation_same,
         1  => $lang->relatives_acp_generation_child,
         2  => $lang->relatives_acp_generation_grandchild,
-    ], $existing['generation_offset'] ?? 0, ['id' => 'generation_offset', 'label' => $lang->relatives_acp_field_generation_offset]);
-    echo $form->generate_numeric_field('sort_order', $existing['sort_order'] ?? 0, ['id' => 'sort_order', 'label' => $lang->relatives_acp_field_sort_order]);
-    echo $form->generate_yes_no_radio('is_active', $existing['is_active'] ?? 1, true, ['id' => 'is_active', 'label' => $lang->relatives_acp_field_is_active]);
+    ], $existing['generation_offset'] ?? 0, ['id' => 'generation_offset']), 'generation_offset');
+    $form_container->output_row($lang->relatives_acp_field_sort_order, '', $form->generate_numeric_field('sort_order', $existing['sort_order'] ?? 0, ['id' => 'sort_order']), 'sort_order');
+    $form_container->output_row($lang->relatives_acp_field_is_active, '', $form->generate_yes_no_radio('is_active', $existing['is_active'] ?? 1, true, ['id' => 'is_active']), 'is_active');
+    $form_container->end();
 
-    echo $form->generate_submit_buttons($do === 'add' ? $lang->relatives_acp_add_relationship_type : $lang->relatives_acp_edit_relationship_type);
-    $form->output_form_footer();
+    $buttons[] = $form->generate_submit_button($title);
+    $form->output_submit_wrapper($buttons);
+    $form->end();
 
     $page->output_footer();
     exit;

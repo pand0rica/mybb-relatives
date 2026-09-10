@@ -69,11 +69,14 @@ if ($already_migrated) {
 }
 
 $form = new Form('index.php?module=tools-relatives&action=migration', 'post');
-echo $form->generate_form_header($lang->relatives_acp_migration_run);
 if ($already_migrated) {
-    echo $form->generate_check_box('confirm_rerun', 1, $lang->relatives_acp_migration_confirm_rerun);
+    $form_container = new FormContainer($lang->relatives_acp_migration_run);
+    $form_container->output_row('', '', $form->generate_check_box('confirm_rerun', 1, $lang->relatives_acp_migration_confirm_rerun), 'confirm_rerun');
+    $form_container->end();
 }
-echo $form->generate_submit_buttons($lang->relatives_acp_migration_run);
-$form->output_form_footer();
+
+$buttons[] = $form->generate_submit_button($lang->relatives_acp_migration_run);
+$form->output_submit_wrapper($buttons);
+$form->end();
 
 $page->output_footer();

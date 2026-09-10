@@ -54,13 +54,17 @@ if ($do === 'add_group' || $do === 'edit_group') {
     $page->output_header($lang->relatives_acp_title);
     relatives_acp_nav_tabs('attributes');
 
+    $title = $do === 'add_group' ? $lang->relatives_acp_add_group : $lang->relatives_acp_edit_group;
     $form = new Form('index.php?module=tools-relatives&action=attributes&do=' . $do . ($existing ? '&id=' . $id : ''), 'post');
-    echo $form->generate_form_header($do === 'add_group' ? $lang->relatives_acp_add_group : $lang->relatives_acp_edit_group);
-    echo $form->generate_text_box('label', $existing['label'] ?? '', ['id' => 'label', 'label' => $lang->relatives_acp_field_label]);
-    echo $form->generate_numeric_field('sort_order', $existing['sort_order'] ?? 0, ['id' => 'sort_order', 'label' => $lang->relatives_acp_field_sort_order]);
-    echo $form->generate_yes_no_radio('is_active', $existing['is_active'] ?? 1, true, ['id' => 'is_active', 'label' => $lang->relatives_acp_field_is_active]);
-    echo $form->generate_submit_buttons($do === 'add_group' ? $lang->relatives_acp_add_group : $lang->relatives_acp_edit_group);
-    $form->output_form_footer();
+    $form_container = new FormContainer($title);
+    $form_container->output_row($lang->relatives_acp_field_label, '', $form->generate_text_box('label', $existing['label'] ?? '', ['id' => 'label']), 'label');
+    $form_container->output_row($lang->relatives_acp_field_sort_order, '', $form->generate_numeric_field('sort_order', $existing['sort_order'] ?? 0, ['id' => 'sort_order']), 'sort_order');
+    $form_container->output_row($lang->relatives_acp_field_is_active, '', $form->generate_yes_no_radio('is_active', $existing['is_active'] ?? 1, true, ['id' => 'is_active']), 'is_active');
+    $form_container->end();
+
+    $buttons[] = $form->generate_submit_button($title);
+    $form->output_submit_wrapper($buttons);
+    $form->end();
 
     $page->output_footer();
     exit;
@@ -119,12 +123,15 @@ if ($do === 'add_option' || $do === 'edit_option') {
 
     $form = new Form('index.php?module=tools-relatives&action=attributes&do=' . $do . ($existing ? '&id=' . $id : '') . '&group_id=' . $group_id, 'post');
     $title = ($do === 'add_option' ? $lang->relatives_acp_add_option : $lang->relatives_acp_edit_option) . ' (' . htmlspecialchars_uni($group['label']) . ')';
-    echo $form->generate_form_header($title);
-    echo $form->generate_text_box('label', $existing['label'] ?? '', ['id' => 'label', 'label' => $lang->relatives_acp_field_label]);
-    echo $form->generate_numeric_field('sort_order', $existing['sort_order'] ?? 0, ['id' => 'sort_order', 'label' => $lang->relatives_acp_field_sort_order]);
-    echo $form->generate_yes_no_radio('is_active', $existing['is_active'] ?? 1, true, ['id' => 'is_active', 'label' => $lang->relatives_acp_field_is_active]);
-    echo $form->generate_submit_buttons($title);
-    $form->output_form_footer();
+    $form_container = new FormContainer($title);
+    $form_container->output_row($lang->relatives_acp_field_label, '', $form->generate_text_box('label', $existing['label'] ?? '', ['id' => 'label']), 'label');
+    $form_container->output_row($lang->relatives_acp_field_sort_order, '', $form->generate_numeric_field('sort_order', $existing['sort_order'] ?? 0, ['id' => 'sort_order']), 'sort_order');
+    $form_container->output_row($lang->relatives_acp_field_is_active, '', $form->generate_yes_no_radio('is_active', $existing['is_active'] ?? 1, true, ['id' => 'is_active']), 'is_active');
+    $form_container->end();
+
+    $buttons[] = $form->generate_submit_button($title);
+    $form->output_submit_wrapper($buttons);
+    $form->end();
 
     $page->output_footer();
     exit;

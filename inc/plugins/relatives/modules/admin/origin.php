@@ -40,13 +40,26 @@ relatives_acp_nav_tabs('origin');
 echo '<p>' . $lang->relatives_acp_origin_intro . '</p>';
 
 $form = new Form('index.php?module=tools-relatives&action=origin', 'post');
-echo $form->generate_form_header($lang->relatives_tab_origin);
-echo $form->generate_select_box('relatives_origin_mode', [
-    'freetext'     => $lang->relatives_acp_origin_mode_freetext,
-    'profilefield' => $lang->relatives_acp_origin_mode_profilefield,
-], $mybb->settings['relatives_origin_mode'] ?? 'freetext', ['id' => 'relatives_origin_mode', 'label' => $lang->relatives_field_origin]);
-echo $form->generate_numeric_field('relatives_origin_profilefield_id', $mybb->settings['relatives_origin_profilefield_id'] ?? 0, ['id' => 'relatives_origin_profilefield_id', 'label' => $lang->relatives_acp_field_origin_fid, 'description' => $lang->relatives_acp_field_origin_fid_desc]);
-echo $form->generate_submit_buttons($lang->relatives_acp_saved);
-$form->output_form_footer();
+$form_container = new FormContainer($lang->relatives_tab_origin);
+$form_container->output_row(
+    $lang->relatives_field_origin,
+    '',
+    $form->generate_select_box('relatives_origin_mode', [
+        'freetext'     => $lang->relatives_acp_origin_mode_freetext,
+        'profilefield' => $lang->relatives_acp_origin_mode_profilefield,
+    ], $mybb->settings['relatives_origin_mode'] ?? 'freetext', ['id' => 'relatives_origin_mode']),
+    'relatives_origin_mode'
+);
+$form_container->output_row(
+    $lang->relatives_acp_field_origin_fid,
+    $lang->relatives_acp_field_origin_fid_desc,
+    $form->generate_numeric_field('relatives_origin_profilefield_id', $mybb->settings['relatives_origin_profilefield_id'] ?? 0, ['id' => 'relatives_origin_profilefield_id']),
+    'relatives_origin_profilefield_id'
+);
+$form_container->end();
+
+$buttons[] = $form->generate_submit_button($lang->relatives_acp_saved);
+$form->output_submit_wrapper($buttons);
+$form->end();
 
 $page->output_footer();
