@@ -1,3 +1,10 @@
+<html>
+<head>
+<title>{$mybb->settings['bbname']} - {$relatives_form_title}</title>
+{$headerinclude}
+</head>
+<body>
+{$header}
 <div class="relatives_page">
 	<h2>{$relatives_form_title}</h2>
 	<form action="relatives.php?action={$relatives_form_action}" method="post">
@@ -139,3 +146,6 @@
 	toggleWantedThread();
 })();
 </script>
+{$footer}
+</body>
+</html>

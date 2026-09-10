@@ -1,3 +1,10 @@
+<html>
+<head>
+<title>{$mybb->settings['bbname']} - {$lang->relatives_my_persons_title}</title>
+{$headerinclude}
+</head>
+<body>
+{$header}
 <div class="relatives_page">
 	<div class="relatives_page_header">
 		<h2>{$lang->relatives_my_persons_title}</h2>
@@ -23,3 +30,6 @@
 	</table>
 	{$relatives_empty_notice}
 </div>
+{$footer}
+</body>
+</html>

@@ -1,3 +1,10 @@
+<html>
+<head>
+<title>{$mybb->settings['bbname']} - {$relatives_tree_title}</title>
+{$headerinclude}
+</head>
+<body>
+{$header}
 <div class="relatives_tree_page">
 	<div class="relatives_page_header">
 		<h2>{$relatives_tree_title}</h2>
@@ -23,3 +30,6 @@
 <script type="application/json" id="relatives-tree-config">{$relatives_tree_config_json}</script>
 <script type="application/json" id="relatives-tree-lang">{$relatives_tree_lang_json}</script>
 <script src="inc/plugins/relatives/assets/relatives-tree.js"></script>
+{$footer}
+</body>
+</html>
