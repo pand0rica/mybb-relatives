@@ -46,6 +46,84 @@ class Relatives_RelationshipTypes
         ['adoptive_child',   1, ['Adoptivsohn', 'Adoptivtochter', 'Adoptivkind']],
     ];
 
+    /**
+     * Verwandtschafts-Komposition: "R" (Verhaeltnis der neuen Person ZUR
+     * Bezugsperson, z.B. 'spouse' = Ehemann von Mama) + "A" (Verhaeltnis der
+     * Bezugsperson ZU DIR, z.B. 'parent' = Mama ist deine Mutter) ergibt "C"
+     * (Verhaeltnis der neuen Person ZU DIR, z.B. 'parent' = er ist dein Vater).
+     * Format: COMPOSE[A][R] = C. Nur eindeutige, gebraeuchliche Kombinationen --
+     * unbekannte Kombinationen (z.B. Schwager/Schwaegerin, Groß-Tante/-Onkel,
+     * Schwiegereltern -- dafuer gibt es keine eigenen Konzepte) werden NICHT
+     * geraten, sondern zeigen stattdessen "<gewaehlter Typ> von <Bezugsperson>"
+     * (siehe TreeBuilder::build()).
+     */
+    private const COMPOSE = [
+        'parent' => [
+            'spouse' => 'parent', 'ex_spouse' => 'parent', 'partner' => 'parent',
+            'sibling' => 'aunt_uncle', 'step_sibling' => 'aunt_uncle',
+            'parent' => 'grandparent', 'step_parent' => 'grandparent', 'adoptive_parent' => 'grandparent',
+        ],
+        'sibling' => [
+            'child' => 'niece_nephew',
+        ],
+        'aunt_uncle' => [
+            'child' => 'cousin',
+            'spouse' => 'aunt_uncle', 'partner' => 'aunt_uncle',
+        ],
+        'child' => [
+            'child' => 'grandchild',
+        ],
+        'grandparent' => [
+            'spouse' => 'grandparent', 'partner' => 'grandparent',
+        ],
+        'spouse' => [
+            'child' => 'step_child',
+        ],
+        'partner' => [
+            'child' => 'step_child',
+        ],
+    ];
+
+    /**
+     * Findet die aktive Zeile fuer ein Konzept+Geschlecht (z.B. fuer die
+     * Komposition oben: "welche relatives_relationship_types-Zeile ist
+     * concept_key='parent', gender=maennlich?").
+     */
+    public static function get_by_concept_and_gender(string $concept_key, int $gender): ?array
+    {
+        global $db;
+        $row = $db->fetch_array($db->simple_select(
+            'relatives_relationship_types',
+            '*',
+            "concept_key = '" . $db->escape_string($concept_key) . "' AND gender = " . (int)$gender . " AND is_active = 1",
+            ['limit' => 1]
+        ));
+        return $row ?: null;
+    }
+
+    /**
+     * Komponiert "Verhaeltnis der neuen Person zur Bezugsperson" + "Verhaeltnis
+     * der Bezugsperson zu dir" zu "Verhaeltnis der neuen Person zu dir" (siehe
+     * COMPOSE-Tabelle). Gibt null zurueck, wenn die Bezugsperson selbst keinen
+     * strukturierten Typ hat (Freitext), die Kombination unbekannt ist, oder das
+     * Zielkonzept+Geschlecht in der ACP nicht (mehr) existiert -- der Aufrufer
+     * faellt dann auf einen Klartext-Fallback zurueck statt zu raten.
+     */
+    public static function compose_relationship(?array $anchor_type, ?array $relation_type, int $new_person_gender): ?array
+    {
+        if ($anchor_type === null || $relation_type === null) {
+            return null;
+        }
+        $anchor_concept = (string)$anchor_type['concept_key'];
+        $relation_concept = (string)$relation_type['concept_key'];
+        if (!isset(self::COMPOSE[$anchor_concept][$relation_concept])) {
+            return null;
+        }
+        $result_concept = self::COMPOSE[$anchor_concept][$relation_concept];
+        $result_gender = self::map_person_gender_to_label_gender($new_person_gender);
+        return self::get_by_concept_and_gender($result_concept, $result_gender);
+    }
+
     public static function get_all(bool $active_only = true): array
     {
         global $db;

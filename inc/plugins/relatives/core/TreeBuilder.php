@@ -59,25 +59,81 @@ class Relatives_TreeBuilder
         }
 
         $persons = Relatives_Database::get_persons_by_owner($uid);
-
-        // Erster Durchlauf: alle Knoten dieses Besitzers anlegen, bevor irgendeine Kante
-        // gezogen wird. Noetig, weil "Geschwister der Mutter" auf eine andere Person
-        // desselben Besitzers zeigen kann, die in get_persons_by_owner() (alphabetisch
-        // nach Name) erst SPAETER in der Liste kommt als die referenzierende Zeile.
-        $person_generations = [];
+        $persons_by_id = [];
         foreach ($persons as $person) {
-            $person_id = (int)$person['id'];
-            $person_key = 'person:' . $person_id;
+            $persons_by_id[(int)$person['id']] = $person;
+        }
 
-            $offset = 0;
-            if (!empty($person['relationship_type_id'])) {
-                $type = Relatives_RelationshipTypes::get_by_id((int)$person['relationship_type_id']);
+        $type_cache = [];
+        $get_type = function (?int $type_id) use (&$type_cache): ?array {
+            if (empty($type_id)) {
+                return null;
+            }
+            if (!array_key_exists($type_id, $type_cache)) {
+                $type_cache[$type_id] = Relatives_RelationshipTypes::get_by_id($type_id);
+            }
+            return $type_cache[$type_id];
+        };
+
+        // Generationen aufloesen: eine Person ohne related_to_person_id (oder deren
+        // Bezugsperson nicht (mehr) existiert) haengt direkt an self, sonst an der
+        // Generation der Bezugsperson. Iterativ (statt rekursiv), weil
+        // get_persons_by_owner() alphabetisch sortiert -- die Bezugsperson kann in der
+        // Liste erst SPAETER als die referenzierende Zeile kommen. Mit Sicherheitsnetz
+        // gegen Zyklen/verwaiste Referenzen (faellt dann auf self-relativ zurueck).
+        $person_generations = [];
+        $unresolved = array_keys($persons_by_id);
+        for ($pass = 0; $pass < count($unresolved) + 1 && !empty($unresolved); $pass++) {
+            $still_unresolved = [];
+            foreach ($unresolved as $person_id) {
+                $related_id = !empty($persons_by_id[$person_id]['related_to_person_id'])
+                    ? (int)$persons_by_id[$person_id]['related_to_person_id'] : null;
+                $offset = 0;
+                $type = $get_type(!empty($persons_by_id[$person_id]['relationship_type_id']) ? (int)$persons_by_id[$person_id]['relationship_type_id'] : null);
                 if ($type !== null) {
                     $offset = (int)$type['generation_offset'];
                 }
+
+                if ($related_id === null || !isset($persons_by_id[$related_id])) {
+                    $person_generations[$person_id] = $generation + $offset;
+                } elseif (isset($person_generations[$related_id])) {
+                    $person_generations[$person_id] = $person_generations[$related_id] + $offset;
+                } else {
+                    $still_unresolved[] = $person_id; // Bezugsperson noch nicht aufgeloest, naechster Durchlauf
+                }
             }
-            $person_generation = $generation + $offset;
-            $person_generations[$person_id] = $person_generation;
+            $unresolved = $still_unresolved;
+        }
+        foreach ($unresolved as $person_id) { // Zyklus-Sicherheitsnetz
+            $offset = 0;
+            $type = $get_type(!empty($persons_by_id[$person_id]['relationship_type_id']) ? (int)$persons_by_id[$person_id]['relationship_type_id'] : null);
+            if ($type !== null) {
+                $offset = (int)$type['generation_offset'];
+            }
+            $person_generations[$person_id] = $generation + $offset;
+        }
+
+        // Knoten anlegen (inkl. komponiertem Anzeige-Label aus deiner Sicht, siehe
+        // Relatives_RelationshipTypes::compose_relationship()).
+        foreach ($persons as $person) {
+            $person_id = (int)$person['id'];
+            $person_key = 'person:' . $person_id;
+            $person_generation = $person_generations[$person_id];
+
+            $related_id = !empty($person['related_to_person_id']) ? (int)$person['related_to_person_id'] : null;
+            $own_type = $get_type(!empty($person['relationship_type_id']) ? (int)$person['relationship_type_id'] : null);
+
+            $display_label = null;
+            if ($related_id !== null && isset($persons_by_id[$related_id])) {
+                $anchor_type = $get_type(!empty($persons_by_id[$related_id]['relationship_type_id']) ? (int)$persons_by_id[$related_id]['relationship_type_id'] : null);
+                $composed = Relatives_RelationshipTypes::compose_relationship($anchor_type, $own_type, (int)$person['gender']);
+                if ($composed !== null) {
+                    $display_label = (string)$composed['label'];
+                } else {
+                    $raw_label = $own_type !== null ? (string)$own_type['label'] : (string)$person['relationship_custom_label'];
+                    $display_label = $raw_label . ' von ' . (string)$persons_by_id[$related_id]['name'];
+                }
+            }
 
             if (!isset($this->nodes[$person_key])) {
                 $this->nodes[$person_key] = [
@@ -89,6 +145,7 @@ class Relatives_TreeBuilder
                     'gender'                    => (int)$person['gender'],
                     'relationship_type_id'      => $person['relationship_type_id'] !== null ? (int)$person['relationship_type_id'] : null,
                     'relationship_custom_label' => $person['relationship_custom_label'],
+                    'display_relationship_label' => $display_label,
                     'age'                       => $person['age'] !== null ? (int)$person['age'] : null,
                     'origin'                    => $person['origin'],
                     'description'               => $person['description'],
@@ -96,7 +153,7 @@ class Relatives_TreeBuilder
                     'wanted_thread_link'        => $person['wanted_thread_link'],
                     'linked_uid'                => $person['linked_uid'] !== null ? (int)$person['linked_uid'] : null,
                     'link_status'               => (int)$person['link_status'],
-                    'related_to_person_id'      => !empty($person['related_to_person_id']) ? (int)$person['related_to_person_id'] : null,
+                    'related_to_person_id'      => $related_id,
                     'generation'                => $person_generation,
                 ];
             }

@@ -92,24 +92,37 @@ auf die zum gewählten Geschlecht passenden `gender`-Zeilen gefiltert:
   Wurzel-Charakter); Rendering als HTML/CSS (+ optional SVG-Konnektoren) **ohne externe
   JS-Libraries** (Projektregel „keine externen Libraries"), vanilla JS für Pan/Zoom und
   Ein-/Ausklappen von Ästen.
-- Klick auf einen **eigenen** Knoten (owner_uid = eingeloggter User) → Inline-Bearbeiten-Panel
-  direkt im Baum (kein Seitenwechsel).
-- Klick auf einen **leeren Beziehungs-Slot** neben einem Knoten (z.B. „+ Mutter hinzufügen") →
-  geführtes Klick-Add-Interface (Schritt 1 Geschlecht, Schritt 2 gefilterter
-  Verwandtschaftsgrad, Schritt 3 restliche Felder), das denselben Save-Endpunkt wie das
-  klassische Formular nutzt.
+- Klick auf einen **eigenen** Knoten (self oder Person, owner_uid = eingeloggter User) →
+  Aktionsmenü im Seitenpanel (kein Seitenwechsel): **Bearbeiten** / **Löschen** (beides nur
+  bei Personen-Knoten, per AJAX ohne Reload) / **Person hinzufügen** (bzw. „Verwandte/n von
+  X" bei einem Personen-Knoten). Es gibt bewusst **keine** dauerhaft sichtbaren „+"-Ghosts
+  mehr – die haben den Baum zugemüllt (frühere Version, siehe Git-Historie).
 - Klick auf einen **verlinkten, bestätigten** fremden Knoten → Navigation in dessen Stammbaum.
-- **„+ Verwandte/n hinzufügen"-Ghost neben jeder eigenen Person** (nicht nur neben sich
-  selbst): legt eine neue Person mit `related_to_person_id` = der angeklickten Person an
-  (z.B. Geschwister der Mutter eintragen, während man auf den Mutter-Knoten klickt).
-  **Wichtig:** Der gewählte Verwandtschaftsgrad wird weiterhin relativ zum eigenen Account
-  interpretiert, nicht relativ zur angeklickten Person – z.B. „Geschwister der Mutter"
-  eintragen heißt konkret: Typ „Tante"/„Onkel" wählen (das eigene Verhältnis dazu), der
-  Klick auf die Mutter bestimmt nur, von welcher Person aus im Baum eine Verbindungslinie
-  gezogen wird. `related_to_person_id` ist nur im Baum-Klick-Add-Interface verfügbar,
-  bewusst **nicht** im klassischen Formular – ein Edit über das klassische Formular lässt
-  eine bestehende Verknüpfung unangetastet (das Feld wird beim Bearbeiten nie ins
-  Update-Array aufgenommen, siehe `Relatives_Database::prepare_row()`).
+- Klick auf einen fremden, nicht-eigenen Knoten ohne bestätigte Verknüpfung → Nur-Lese-Panel.
+- **„Person hinzufügen" bei einer Person X (`related_to_person_id` = X)**: Der im Formular
+  gewählte Verwandtschaftsgrad wird **relativ zu X** interpretiert, nicht relativ zu dir
+  selbst – man macht die Eingabe „aus Sicht des Verwandten": Klick auf Mama, Typ „Ehemann"
+  wählen heißt „das ist Mamas Ehemann". `related_to_person_id` ist nur im
+  Baum-Klick-Add-Interface verfügbar, bewusst **nicht** im klassischen Formular – ein Edit
+  über das klassische Formular lässt eine bestehende Verknüpfung unangetastet (das Feld wird
+  beim Bearbeiten nie ins Update-Array aufgenommen, siehe `Relatives_Database::prepare_row()`).
+  Generation wird entsprechend relativ zur Bezugsperson berechnet (nicht relativ zu dir),
+  iterativ aufgelöst in `Relatives_TreeBuilder::traverse_uid()` (Ketten/Reihenfolge in
+  `get_persons_by_owner()` sind nicht garantiert dependency-sortiert).
+- **Anzeige-Label wird aus deiner Sicht zurückkomponiert**
+  (`Relatives_RelationshipTypes::compose_relationship()` + `COMPOSE`-Tabelle in
+  `RelationshipTypes.php`): „Mamas Ehemann" (Typ Ehemann, relativ zu Mama = Mutter) wird im
+  Baum als **„Vater"** angezeigt, nicht als „Ehemann". Nur die gängigsten, eindeutigen
+  Kombinationen sind hinterlegt (Elternteil+Ehepartner→Elternteil, Elternteil+Geschwister→
+  Tante/Onkel, Elternteil+Elternteil→Großelternteil, Geschwister+Kind→Nichte/Neffe,
+  Tante/Onkel+Kind→Cousin, Kind+Kind→Enkelkind, Großelternteil+Ehepartner→Großelternteil,
+  Ehepartner+Kind→Stiefkind). Unbekannte Kombinationen (z.B. Schwager/Schwägerin,
+  Schwiegereltern, Groß-Tante/-Onkel – dafür gibt es keine eigenen Konzepte in
+  `RelationshipTypes::COMMON_DEFAULTS`) werden **nicht geraten**, sondern zeigen
+  „<gewählter Typ> von <Bezugsperson>" (z.B. „Schwager von Papa") als ehrlichen Klartext-
+  Fallback. `relationship_type_id` selbst bleibt dabei unverändert der roh gewählte Typ
+  (relativ zur Bezugsperson) – das komponierte Label ist ein reines Anzeige-Feld
+  (`display_relationship_label` im Tree-JSON), nicht persistiert.
 - Zusätzlich existiert eine einfache Listenansicht (`action=list`) als barrierearme Fallback-
   Übersicht der eigenen Personen (kein Ersatz, sondern Ergänzung zum Baum).
 - **Sichtbarkeit:** Stammbäume sind für alle eingeloggten Nutzer:innen öffentlich einsehbar

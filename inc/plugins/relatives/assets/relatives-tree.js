@@ -94,6 +94,7 @@
 	// --- Rendering -------------------------------------------------------------------
 
 	function relationshipLabel(node) {
+		if (node.display_relationship_label) { return node.display_relationship_label; }
 		if (node.relationship_type_id) {
 			for (var i = 0; i < relationshipTypes.length; i++) {
 				if (relationshipTypes[i].id === node.relationship_type_id) {
