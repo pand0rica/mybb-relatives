@@ -338,6 +338,12 @@ if ($action === 'tree') {
 
     add_breadcrumb($lang->relatives_view_tree, 'relatives.php?action=tree');
 
+    // Cache-Busting fuer relatives-tree.js: die Datei wird als reine statische
+    // <script src>-Referenz eingebunden (kein MyBB-Stylesheet-Mechanismus wie bei den
+    // CSS-Dateien), Browser koennen sie sonst beliebig lange nach einem Deploy
+    // zwischenspeichern.
+    $relatives_tree_js_version = (int)(@filemtime(MYBB_ROOT . 'inc/plugins/relatives/assets/relatives-tree.js') ?: TIME_NOW);
+
     $relatives_tree_title = sprintf($lang->relatives_tree_title_for, htmlspecialchars_uni($target_user['username']));
     $relatives_tree_json = relatives_json_for_script(Relatives_TreeBuilder::build($uid));
     $relatives_relationship_types_json = relatives_json_for_script(Relatives_RelationshipTypes::get_active_json_payload());
