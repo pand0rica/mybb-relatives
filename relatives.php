@@ -350,6 +350,7 @@ if ($action === 'tree') {
     $relatives_tree_lang_json = relatives_json_for_script([
         'add_person'               => $lang->relatives_add_person,
         'add_relative_of'          => $lang->relatives_add_relative_of,
+        'add_relative_of_note'     => $lang->relatives_add_relative_of_note,
         'edit_person'               => $lang->relatives_edit_person_title,
         'field_name'                => $lang->relatives_field_name,
         'field_gender'               => $lang->relatives_field_gender,

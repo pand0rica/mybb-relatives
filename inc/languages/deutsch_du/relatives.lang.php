@@ -14,6 +14,7 @@ $l['relatives_disabled'] = "Diese Funktion ist derzeit deaktiviert.";
 $l['relatives_my_persons_title'] = "Meine Verwandten";
 $l['relatives_add_person'] = "Person hinzufügen";
 $l['relatives_add_relative_of'] = "Verwandte/n von";
+$l['relatives_add_relative_of_note'] = "Der Verwandtschaftsgrad wird aus deiner eigenen Sicht gewählt, nicht aus Sicht von %s.";
 $l['relatives_edit_person_title'] = "Person bearbeiten";
 $l['relatives_view_tree'] = "Stammbaum ansehen";
 $l['relatives_usercp_menu_item'] = "Verwandtschaften & Stammbaum";

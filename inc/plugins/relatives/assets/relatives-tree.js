@@ -424,6 +424,13 @@
 			hint.className = "relatives_hint";
 			hint.textContent = t("add_relative_of", "Verwandte/r von") + " " + relatedToNode.name;
 			panel.appendChild(hint);
+
+			var hintDetail = document.createElement("p");
+			hintDetail.className = "relatives_hint";
+			hintDetail.style.fontSize = "0.85em";
+			hintDetail.style.opacity = "0.8";
+			hintDetail.textContent = t("add_relative_of_note", "Der Verwandtschaftsgrad wird aus deiner eigenen Sicht gewaehlt, nicht aus Sicht von %s.").replace("%s", relatedToNode.name);
+			panel.appendChild(hintDetail);
 		}
 
 		var form = document.createElement("form");

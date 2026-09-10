@@ -14,6 +14,7 @@ $l['relatives_disabled'] = "This feature is currently disabled.";
 $l['relatives_my_persons_title'] = "My relatives";
 $l['relatives_add_person'] = "Add person";
 $l['relatives_add_relative_of'] = "Relative of";
+$l['relatives_add_relative_of_note'] = "The relationship type is chosen from your own perspective, not from %s's.";
 $l['relatives_edit_person_title'] = "Edit person";
 $l['relatives_view_tree'] = "View family tree";
 $l['relatives_usercp_menu_item'] = "Relatives & Family Tree";
