@@ -430,7 +430,10 @@
 			hintDetail.className = "relatives_hint";
 			hintDetail.style.fontSize = "0.85em";
 			hintDetail.style.opacity = "0.8";
-			hintDetail.textContent = t("add_relative_of_note", "Der Verwandtschaftsgrad wird aus deiner eigenen Sicht gewaehlt, nicht aus Sicht von %s.").replace("%s", relatedToNode.name);
+			hintDetail.textContent = t(
+				"add_relative_of_note",
+				"Der Verwandtschaftsgrad wird aus Sicht von %s gewaehlt. Der Baum zeigt dir automatisch, was das aus deiner eigenen Sicht bedeutet."
+			).split("%s").join(relatedToNode.name);
 			panel.appendChild(hintDetail);
 		}
 
