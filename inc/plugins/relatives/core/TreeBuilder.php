@@ -147,12 +147,68 @@ class Relatives_TreeBuilder
         ksort($by_generation);
 
         foreach ($by_generation as $generation => $keys) {
-            sort($keys); // stabile, deterministische Reihenfolge
+            $keys = $this->order_generation_keys($keys);
             $count = count($keys);
             foreach ($keys as $index => $key) {
                 $this->nodes[$key]['x'] = $index - (($count - 1) / 2);
                 $this->nodes[$key]['y'] = $generation;
             }
         }
+    }
+
+    /**
+     * Ordnet die Knoten einer Generation so an, dass ueber "Verwandte/n von X
+     * hinzufuegen" angelegte Personen direkt neben X einsortiert werden (statt rein
+     * alphabetisch/nach id verstreut zu sein) -- macht z.B. aus "Mama, Onkel, Papa"
+     * die zusammenhaengende Gruppe "Mama, Papa" (Mamas Mann direkt daneben), "Onkel"
+     * bleibt separat. Rekursiv, damit auch Ketten (Verwandte einer Verwandten einer
+     * Verwandten, alle in derselben Generation) zusammenbleiben. Faellt bei Zyklen/
+     * verwaisten Referenzen sicher auf "hinten anhaengen" zurueck statt Knoten zu
+     * verlieren.
+     */
+    private function order_generation_keys(array $keys): array
+    {
+        $key_set = array_flip($keys);
+        $children_of = [];
+        $anchor_keys = [];
+
+        foreach ($keys as $key) {
+            $node = $this->nodes[$key];
+            $related_key = !empty($node['related_to_person_id']) ? 'person:' . $node['related_to_person_id'] : null;
+            if ($related_key !== null && isset($key_set[$related_key])) {
+                $children_of[$related_key][] = $key;
+            } else {
+                $anchor_keys[] = $key;
+            }
+        }
+        sort($anchor_keys);
+        foreach ($children_of as &$list) {
+            sort($list);
+        }
+        unset($list);
+
+        $ordered = [];
+        $placed = [];
+        $place = function (string $key) use (&$place, &$ordered, &$placed, &$children_of): void {
+            if (isset($placed[$key])) {
+                return;
+            }
+            $placed[$key] = true;
+            $ordered[] = $key;
+            foreach ($children_of[$key] ?? [] as $child) {
+                $place($child);
+            }
+        };
+
+        foreach ($anchor_keys as $anchor) {
+            $place($anchor);
+        }
+        // Sicherheitsnetz: alles, was durch einen Zyklus oder eine verwaiste
+        // related_to_person_id-Referenz noch nicht platziert wurde, hinten anhaengen.
+        foreach ($keys as $key) {
+            $place($key);
+        }
+
+        return $ordered;
     }
 }
