@@ -145,8 +145,8 @@ nach. Bei Unklarheit gezielt nachfragen, aber nicht umplanen. Schritt nach Erled
   `relatives-tree.css`/`relatives-tree.js` (vanilla JS, keine externen Libraries). Deployt und
   gelinted auf test.h4w-rpg.de (PHP 8.1.33). curl-Verifikation der einzelnen Actions **nicht**
   durchgeführt (nur die darunterliegende Business-Logik über `tests/cli-selftest.php`) –
-  manueller Klicktest bleibt zwingend offen (siehe Bericht, insbesondere Baum-Interaktion,
-  Pan/Zoom/Ein-Ausklappen und die Klick-Add-Slots direkt im Baum).
+  manueller Klicktest (Baum-Interaktion, Pan/Zoom/Ein-Ausklappen, Klick-Add im Baum) wurde
+  vom Nutzer auf test.h4w-rpg.de durchgeführt – erledigt.
 
 ## Schritt 8 – Öffentliche API & Provider-Hooks für Schwester-Plugins
 - [x] **Ziel:** `relatives_search_persons(array $filters): array` implementieren (Vertrag siehe
@@ -189,7 +189,7 @@ nach. Bei Unklarheit gezielt nachfragen, aber nicht umplanen. Schritt nach Erled
   `mybb_relatives_options.sql` erstellt (siehe Bericht). **Kein** Referenzmodul zum
   Methoden-Abgleich verfügbar (Blacklist/RPG-Maps-Repos nicht im Zugriff dieser Session) –
   Form/Table-API-Aufrufe sind Standardmuster, aber nicht gegen ein Referenzmodul verifiziert.
-  Manueller ACP-Klicktest zwingend offen.
+  Manueller ACP-Klicktest vom Nutzer auf test.h4w-rpg.de durchgeführt – erledigt.
 
 ## Schritt 10 – Sprachdateien (englisch + deutsch_du, Frontend + Admin getrennt)
 - [x] **Ziel:** Alle genutzten Keys definieren. UI-Texte konsequent genderneutral formulieren
@@ -228,6 +228,41 @@ nach. Bei Unklarheit gezielt nachfragen, aber nicht umplanen. Schritt nach Erled
   (`mybb_relatives`: 1003, `mybb_wanted`: 69, `mybb_relatives_options`: 85 Zeilen) vorab per
   `mysqldump` gesichert (liegt lokal außerhalb des Repos, nicht auf dem Server) – als
   Migrationsquelle für einen künftigen ACP-Migrationslauf unangetastet erhalten.
+
+
+## Nachtrag v2.1 / v2.2 (nach Phase-2-Abschluss mit dem Nutzer vereinbart)
+Diese Schritte wurden nach Schritt 11 in Abstimmung mit dem Nutzer ergänzt. Maßgebliche
+Spezifikation: `PROJECT_CONTEXT.md`, Abschnitte „Interaktiver Stammbaum“, „Gemeinsames Geflecht
+(v2.2)“ und „Verwandtschaftsgraph (v2.1)“.
+
+## Schritt 12 – Verwandtschaftsgraph (v2.1)
+- [x] **Ziel:** Kantentabelle `relatives_relations` (mehrere Verbindungen je Person, geheim,
+      Hauptverbindung), Familien-Kästen `relatives_families` + Familien-Attribute, Verstorben-
+      Flag, Linienarten je Grad, Verwandtschafts-Cache (`Relatives_Kinship`), idempotente
+      Schema-Migration `Relatives_Installer::upgrade_schema()`.
+- **Dateien:** `core/Kinship.php`, `core/Families.php`, `core/Installer.php`,
+  `core/Database.php`, `core/Attributes.php`, `relatives.php`, Familien-Templates.
+- **Nachweis:** `php tests/cli-kinship.php` → 47 passed, 0 failed. Klicktest durch Nutzer.
+
+## Schritt 13 – Gemeinsames Geflecht (v2.2)
+- [x] **Ziel:** Eine Aussage gilt in allen Stammbäumen (`Relatives_Graph`): Charakter-Knoten,
+      Bearbeitungsrechte, Doppel-/Widerspruchsprüfung, Personen zusammenführen, geschlossene
+      Familien, ACP-Tab „Geflecht“ (Vorschau, Zusammenführung, Konflikte, Rücknahme geratener
+      Migrations-Zuordnungen via `StructureInference`).
+- **Dateien:** `core/Graph.php`, `core/StructureInference.php`, `modules/admin/graph.php`,
+  `core/Migration.php`, `tests/cli-migration.php`.
+- **Nachweis:** Migration + Zusammenführung auf dem Testforum mehrfach durchgespielt
+  (`tests/cli-migration.php run/verify`). Klicktest durch Nutzer.
+
+## Schritt 14 – Stammbaum-Darstellung & Navigation
+- [x] **Ziel:** Familienstruktur statt roher Kanten, Platzhalter-Knoten
+      (`Relatives_TreePlaceholders`), rechtwinklige Konnektoren, Popup-Ansicht (`&popup=1`,
+      auch für Gäst*innen), gemeinsame Navigationsleiste `relatives_nav`, öffentliche
+      Familienliste (`action=family_list`).
+- **Dateien:** `core/TreeBuilder.php`, `core/TreePlaceholders.php`, `assets/relatives-tree.*`,
+  `assets/relatives.js`, `relatives_tree_*`/`relatives_nav*`/`relatives_icon_*`-Templates.
+- **Nachweis:** `php tests/cli-tree-placeholders.php` → 47 passed, 0 failed. `php -l` sauber
+  für alle PHP-Dateien. Klicktest durch Nutzer.
 
 ---
 
