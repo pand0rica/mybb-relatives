@@ -1,0 +1,18 @@
+# Sensitive / local files - never commit
+.vscode/sftp.json
+*.sql
+*.sql.gz
+*.dump
+*.bak
+*.backup
+
+# Internal development docs
+DELIVERY_SUMMARY.md
+TESTING.md
+
+# Forum post (maintained separately, not code)
+PLUGIN_POST.html
+
+# OS / editor
+.DS_Store
+Thumbs.db

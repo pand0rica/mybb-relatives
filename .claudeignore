@@ -1,0 +1,5 @@
+.vscode/sftp.json
+*.sql
+*.dump
+*.bak
+docs/screenshots/*.png
