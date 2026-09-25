@@ -57,6 +57,13 @@ new code base; 2.0 and 2.1 were internal development stages and are summarised h
 - Tooltip of the *Family tree* link showed a literal "%s" instead of the character name.
 - A fresh installation without legacy data was locked ("network not merged yet") until an admin
   ran a merge on empty tables.
+- The ACP page is registered as an admin permission (*Tools & Maintenance → Can manage
+  Relatives & Family Tree?*); before, every administrator had access and it could not be
+  restricted.
+- Setting titles and descriptions are translatable (English and German) instead of fixed German
+  text.
+- ACP pages and plugin templates no longer use inline `style`/`onclick` attributes; the ACP delete
+  confirmation no longer breaks on language strings containing an apostrophe.
 
 ### Security
 - All data-changing frontend actions (delete, adopt, link request/accept/decline, family delete)

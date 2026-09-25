@@ -133,29 +133,29 @@ relatives_acp_nav_tabs('relationship-types');
 
 $actions_table = new Table();
 $actions_table->construct_cell(
-    '<form action="index.php" method="get" style="margin:0">'
+    '<form action="index.php" method="get" class="relatives_acp_action_form">'
     . '<input type="hidden" name="module" value="tools-relatives" />'
     . '<input type="hidden" name="action" value="relationship-types" />'
     . '<input type="hidden" name="do" value="add" />'
     . '<input type="submit" class="submit_button" value="' . htmlspecialchars_uni($lang->relatives_acp_add_relationship_type) . '" />'
     . '</form>'
-    . '<p class="smalltext" style="margin:6px 0 0">' . $lang->relatives_acp_add_relationship_type_desc . '</p>',
+    . '<p class="smalltext relatives_acp_action_desc">' . $lang->relatives_acp_add_relationship_type_desc . '</p>',
     ['width' => '34%']
 );
 $actions_table->construct_cell(
-    '<form action="index.php?module=tools-relatives&action=relationship-types&do=seed_defaults" method="post" style="margin:0">'
+    '<form action="index.php?module=tools-relatives&action=relationship-types&do=seed_defaults" method="post" class="relatives_acp_action_form">'
     . '<input type="hidden" name="my_post_key" value="' . $mybb->post_code . '" />'
     . '<input type="submit" class="submit_button" value="' . htmlspecialchars_uni($lang->relatives_acp_seed_defaults_button) . '" />'
     . '</form>'
-    . '<p class="smalltext" style="margin:6px 0 0">' . $lang->relatives_acp_seed_defaults_desc . '</p>',
+    . '<p class="smalltext relatives_acp_action_desc">' . $lang->relatives_acp_seed_defaults_desc . '</p>',
     ['width' => '33%']
 );
 $actions_table->construct_cell(
-    '<form action="index.php?module=tools-relatives&action=relationship-types&do=recompute" method="post" style="margin:0">'
+    '<form action="index.php?module=tools-relatives&action=relationship-types&do=recompute" method="post" class="relatives_acp_action_form">'
     . '<input type="hidden" name="my_post_key" value="' . $mybb->post_code . '" />'
     . '<input type="submit" class="submit_button" value="' . htmlspecialchars_uni($lang->relatives_acp_recompute_button) . '" />'
     . '</form>'
-    . '<p class="smalltext" style="margin:6px 0 0">' . $lang->relatives_acp_recompute_desc . '</p>',
+    . '<p class="smalltext relatives_acp_action_desc">' . $lang->relatives_acp_recompute_desc . '</p>',
     ['width' => '33%']
 );
 $actions_table->construct_row();
@@ -177,7 +177,7 @@ if (empty($grouped)) {
         foreach ([Relatives_RelationshipTypes::LABEL_MALE, Relatives_RelationshipTypes::LABEL_FEMALE, Relatives_RelationshipTypes::LABEL_NEUTRAL] as $gender_key) {
             $variant = $variants[$gender_key];
             if ($variant === null) {
-                $missing_class = ($gender_key === Relatives_RelationshipTypes::LABEL_NEUTRAL) ? ' style="font-weight:bold;"' : '';
+                $missing_class = ($gender_key === Relatives_RelationshipTypes::LABEL_NEUTRAL) ? ' class="relatives_acp_missing_neutral"' : '';
                 $table->construct_cell('<span' . $missing_class . '>' . $lang->relatives_acp_missing . '</span>');
             } else {
                 $edit_link = 'index.php?module=tools-relatives&action=relationship-types&do=edit&id=' . (int)$variant['id'];

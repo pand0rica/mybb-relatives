@@ -90,6 +90,8 @@ $plugins->add_hook("datahandler_user_delete_start", "relatives_handle_user_delet
 
 $plugins->add_hook("admin_tools_menu", "relatives_admin_menu");
 $plugins->add_hook("admin_tools_action_handler", "relatives_admin_action");
+$plugins->add_hook("admin_tools_permissions", "relatives_admin_permissions");
+$plugins->add_hook("admin_config_settings_begin", "relatives_admin_settings_lang");
 
 // Provider-Hooks fuer das optionale Schwester-Plugin "jobliste" (siehe
 // PROJECT_CONTEXT.md "Eigene Hooks / API"). Laufen ins Leere, wenn Jobliste nicht
@@ -438,6 +440,30 @@ function relatives_admin_menu(&$sub_menu): void
 function relatives_admin_action(&$actions): void
 {
     $actions['relatives'] = ['active' => 'relatives', 'file' => 'relatives.php'];
+}
+
+/**
+ * Registers "tools -> relatives" as an admin permission. Without it MyBB lets every
+ * admin in and the page cannot be restricted per admin/group (check_admin_permissions()
+ * only enforces registered actions).
+ */
+function relatives_admin_permissions(&$admin_permissions): void
+{
+    global $lang;
+    $lang->load('relatives');
+
+    $admin_permissions['relatives'] = $lang->relatives_acp_permission;
+}
+
+/**
+ * The setting titles in the settings table are the German fallback; MyBB replaces them
+ * with $lang->setting_<name> / setting_<name>_desc / setting_group_<group> when those
+ * keys are loaded. config-settings only loads its own language file, so load ours.
+ */
+function relatives_admin_settings_lang(): void
+{
+    global $lang;
+    $lang->load('relatives');
 }
 
 // --- Provider-Hooks fuer Jobliste (nur wirksam, wenn Jobliste installiert ist) --------------

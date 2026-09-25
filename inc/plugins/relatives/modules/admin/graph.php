@@ -44,7 +44,7 @@ relatives_acp_nav_tabs('graph');
 function relatives_acp_graph_button(string $do, int $id, string $label): string
 {
     global $mybb;
-    return '<form action="index.php?module=tools-relatives&amp;action=graph&amp;do=' . $do . '" method="post" style="display:inline">'
+    return '<form action="index.php?module=tools-relatives&amp;action=graph&amp;do=' . $do . '" method="post" class="relatives_acp_inline_form">'
         . '<input type="hidden" name="my_post_key" value="' . $mybb->post_code . '" />'
         . '<input type="hidden" name="id" value="' . $id . '" />'
         . '<input type="submit" class="submit_button" value="' . htmlspecialchars_uni($label) . '" />'

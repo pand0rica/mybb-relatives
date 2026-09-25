@@ -459,6 +459,8 @@ fehlende nach (`debugging.md` #21).
 | `postbit`, `postbit_prev` | `relatives_handle_postbit` | Setzt `$post['relatives_tree_link']` (Setting `relatives_tree_link_postbit`) |
 | `memberlist_user` | `relatives_handle_memberlist_user` | Setzt `$user['relatives_tree_link']` (Setting `relatives_tree_link_memberlist`) |
 | `usercp_menu` | `relatives_handle_usercp_menu` | Eigener, sauberer UserCP-Menüpunkt „Verwandtschaften" (ersetzt die alte zusammengewürfelte 3-Link-Nav) |
+| `admin_tools_permissions` | `relatives_admin_permissions` | Registriert `tools → relatives` als Admin-Recht (sonst hätten alle Admins Zugriff, ohne Einschränkungsmöglichkeit) |
+| `admin_config_settings_begin` | `relatives_admin_settings_lang` | Lädt die Admin-Sprachdatei, damit MyBB die Setting-Titel über `setting_<name>`/`_desc`/`setting_group_relatives` übersetzt; die deutschen Texte in der DB sind nur Fallback |
 | `datahandler_user_delete_start` | `relatives_handle_user_delete` | Entfernt den gelöschten User als Besitzer*in aller seiner Personen (Personen ohne weitere Besitzer*innen werden gelöscht); setzt bei allen Zeilen, die diesen User als `linked_uid` referenzieren, `linked_uid`/`link_status` zurück |
 
 ## Eigene Hooks / API (andere Plugins docken hier an)

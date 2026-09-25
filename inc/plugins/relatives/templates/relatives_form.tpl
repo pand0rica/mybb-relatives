@@ -38,7 +38,7 @@
 		<div class="relatives_field relatives_field_relations">
 			<label>{$lang->relatives_field_relations}</label>
 			<p class="relatives_hint">{$lang->relatives_field_relations_hint}</p>
-			<p class="relatives_hint" id="relatives_relationship_hint" style="display:none;">{$lang->relatives_relationship_missing_neutral}</p>
+			<p class="relatives_hint" id="relatives_relationship_hint" hidden>{$lang->relatives_relationship_missing_neutral}</p>
 			<div id="relatives-relations"
 				data-self-label="{$relatives_form_self_label}"
 				data-self-name="{$relatives_form_self_name}"

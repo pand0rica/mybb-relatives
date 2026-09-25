@@ -894,13 +894,13 @@
 	// --- Panel -------------------------------------------------------------------------
 
 	function openPanel() {
-		panel.style.display = "block";
-		if (backdrop) { backdrop.style.display = "block"; }
+		panel.hidden = false;
+		if (backdrop) { backdrop.hidden = false; }
 	}
 
 	function closePanel() {
-		panel.style.display = "none";
-		if (backdrop) { backdrop.style.display = "none"; }
+		panel.hidden = true;
+		if (backdrop) { backdrop.hidden = true; }
 	}
 
 	function panelHeader(titleText) {
@@ -924,7 +924,7 @@
 
 	if (backdrop) { backdrop.addEventListener("click", closePanel); }
 	document.addEventListener("keydown", function (ev) {
-		if (ev.key === "Escape" && panel && panel.style.display === "block") { closePanel(); }
+		if (ev.key === "Escape" && panel && !panel.hidden) { closePanel(); }
 	});
 
 	// --- Aktionsmenue (Klick auf einen Knoten: Bearbeiten / Loeschen / Hinzufuegen) -----

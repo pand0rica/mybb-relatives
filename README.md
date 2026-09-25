@@ -24,7 +24,7 @@ sheet alone can't show who belongs to whom.
 1. Upload the contents of this repository into your MyBB root directory (the folders `admin/`
    and `inc/` merge with the existing ones, `relatives.php` goes next to `index.php`).
 2. **ACP → Configuration → Plugins** → *Verwandtschaften & Stammbaum* → **Install & Activate**.
-3. **ACP → Configuration → Settings → Verwandtschaften & Stammbaum** → review the settings (see
+3. **ACP → Configuration → Settings → Relatives & Family Tree** → review the settings (see
    [Configuration](#configuration)).
 4. **ACP → Tools & Maintenance → Relatives & Family Tree → Relationship types** → click
    **Create default relationship types**. The plugin ships without any relationship types, so
@@ -146,7 +146,9 @@ played characters as formatted profile links. It can be embedded into an existin
 
 ### For administrators: ACP pages
 
-All pages are under **ACP → Tools & Maintenance → Relatives & Family Tree**.
+All pages are under **ACP → Tools & Maintenance → Relatives & Family Tree**. Super administrators
+have access right away; other administrators need **ACP → Users & Groups → Admin Permissions →
+*user or group* → Tools & Maintenance → Can manage Relatives & Family Tree?**.
 
 - **Relationship types** – gender-specific labels grouped by a *Concept key* (e.g. `parent` with
   *Father* / *Mother* / *Parent*). Fields: **Concept key**, **Gender** (male/female/diverse
@@ -202,8 +204,7 @@ A fresh installation **without** legacy tables is unlocked immediately.
 
 ## Configuration
 
-**ACP → Configuration → Settings → Verwandtschaften & Stammbaum** (the setting titles are in
-German; the English names below are translations).
+**ACP → Configuration → Settings → Relatives & Family Tree**
 
 - **Plugin active** – master switch. When off, `relatives.php` shows a notice; the User CP menu
   item stays visible.

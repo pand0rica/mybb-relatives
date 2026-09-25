@@ -179,13 +179,13 @@ relatives_acp_nav_tabs('attributes');
 
 $actions_table = new Table();
 $actions_table->construct_cell(
-    '<form action="index.php" method="get" style="margin:0">'
+    '<form action="index.php" method="get" class="relatives_acp_action_form">'
     . '<input type="hidden" name="module" value="tools-relatives" />'
     . '<input type="hidden" name="action" value="attributes" />'
     . '<input type="hidden" name="do" value="add_group" />'
     . '<input type="submit" class="submit_button" value="' . htmlspecialchars_uni($lang->relatives_acp_add_group) . '" />'
     . '</form>'
-    . '<p class="smalltext" style="margin:6px 0 0">' . $lang->relatives_acp_add_group_desc . '</p>'
+    . '<p class="smalltext relatives_acp_action_desc">' . $lang->relatives_acp_add_group_desc . '</p>'
 );
 $actions_table->construct_row();
 $actions_table->output($lang->relatives_acp_actions_title);

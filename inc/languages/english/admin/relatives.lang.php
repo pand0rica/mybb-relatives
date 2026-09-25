@@ -193,3 +193,36 @@ $l['relatives_acp_graph_col_original'] = 'Becomes again';
 $l['relatives_acp_graph_no_guesses'] = 'No guessed assignments left.';
 $l['relatives_acp_graph_guesses_button'] = 'Revert guessed assignments';
 $l['relatives_acp_graph_guesses_reverted'] = '{1} guessed assignments have been reverted.';
+
+// Admin permission (ACP -> Administrator permissions -> Tools & Maintenance)
+$l['relatives_acp_permission'] = 'Can manage Relatives & Family Tree?';
+
+// Settings: MyBB replaces the stored (German) titles with setting_<name> / setting_<name>_desc
+$l['setting_group_relatives'] = 'Relatives & Family Tree';
+$l['setting_group_relatives_desc'] = 'Settings for the Relatives & Family Tree plugin.';
+$l['setting_relatives_origin_mode_freetext'] = 'Free text';
+$l['setting_relatives_origin_mode_profilefield'] = 'Profile field';
+$l['setting_relatives_enabled'] = 'Plugin active';
+$l['setting_relatives_enabled_desc'] = 'Master switch for the whole plugin.';
+$l['setting_relatives_max_persons_per_user'] = 'Maximum persons per user';
+$l['setting_relatives_max_persons_per_user_desc'] = 'Abuse protection. 0 = unlimited.';
+$l['setting_relatives_origin_mode'] = 'Origin source';
+$l['setting_relatives_origin_mode_desc'] = 'Where the "origin" of a person comes from: a free text field or an existing profile field.';
+$l['setting_relatives_origin_profilefield_id'] = 'Origin profile field (fid)';
+$l['setting_relatives_origin_profilefield_id_desc'] = 'fid of the MyBB profile field used as the origin option list. Only relevant if "Origin source" = Profile field.';
+$l['setting_relatives_legacy_migrated'] = 'Last legacy migration (Unix timestamp)';
+$l['setting_relatives_legacy_migrated_desc'] = 'Set automatically by the migration tool. 0 = never migrated. Do not change manually.';
+$l['setting_relatives_graph_merged'] = 'Shared network merged (Unix timestamp)';
+$l['setting_relatives_graph_merged_desc'] = 'Set automatically once the former per-character lists have been merged into the shared family network in the ACP. 0 = not yet. Do not change manually.';
+$l['setting_relatives_family_list_guests'] = 'Family list for guests';
+$l['setting_relatives_family_list_guests_desc'] = 'May guests view the public family list (relatives.php?action=family_list)? The usergroup permission "Can view board" applies as well.';
+$l['setting_relatives_family_list_layout_template'] = 'Family list: frame template (optional)';
+$l['setting_relatives_family_list_layout_template_desc'] = 'Name of an existing template the family list is embedded into, e.g. the frame of your other lists ("listen"). It receives the content as {$listen_content} or {$relatives_family_list_content}, the navigation as {$listen_nav} or {$relatives_list_nav} and the title as {$headline}. Empty = the plugin\'s own page.';
+$l['setting_relatives_family_list_nav_template'] = 'Family list: navigation template (optional)';
+$l['setting_relatives_family_list_nav_template_desc'] = 'Name of an existing template with the list navigation, e.g. "listen_nav". Only used together with the frame template.';
+$l['setting_relatives_tree_link_profile'] = 'Family tree link in profile';
+$l['setting_relatives_tree_link_profile_desc'] = 'Shows a link to the character\'s family tree in the profile. Template variable {$relatives_tree_link} in the template member_profile.';
+$l['setting_relatives_tree_link_postbit'] = 'Family tree link in postbit';
+$l['setting_relatives_tree_link_postbit_desc'] = 'Shows a link to the author\'s family tree in the postbit. Template variable {$post[\'relatives_tree_link\']} in the templates postbit and postbit_classic.';
+$l['setting_relatives_tree_link_memberlist'] = 'Family tree link in member list';
+$l['setting_relatives_tree_link_memberlist_desc'] = 'Shows a link to each member\'s family tree in the member list. Template variable {$user[\'relatives_tree_link\']} in the template memberlist_user.';

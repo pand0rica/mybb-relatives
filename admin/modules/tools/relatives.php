@@ -70,13 +70,38 @@ function relatives_acp_delete_link(string $form_id, string $post_url, int $id): 
 {
     global $mybb, $lang;
 
-    return '<form id="' . $form_id . '" action="' . $post_url . '" method="post" style="display:none">'
+    return '<form id="' . $form_id . '" action="' . $post_url . '" method="post" hidden>'
         . '<input type="hidden" name="id" value="' . $id . '" />'
         . '<input type="hidden" name="my_post_key" value="' . $mybb->post_code . '" />'
         . '</form>'
-        . '<a href="javascript:void(0)" onclick="if(confirm(\'' . $lang->relatives_acp_confirm_delete . '\')){document.getElementById(\'' . $form_id . '\').submit();}return false;">'
+        . '<a href="#" data-relatives-delete-form="' . htmlspecialchars_uni($form_id) . '"'
+        . ' data-relatives-confirm="' . htmlspecialchars_uni($lang->relatives_acp_confirm_delete) . '">'
         . $lang->relatives_acp_delete . '</a>';
 }
+
+/**
+ * Shared ACP styles and the delete confirmation, emitted once in the page head. The ACP
+ * has no plugin stylesheet mechanism, so this replaces scattered inline style/onclick
+ * attributes. Must run before a tab handler calls $page->output_header().
+ */
+function relatives_acp_head(): string
+{
+    return '<style>'
+        . '.relatives_acp_action_form{margin:0}'
+        . '.relatives_acp_action_desc{margin:6px 0 0}'
+        . '.relatives_acp_inline_form{display:inline;margin:0}'
+        . '.relatives_acp_missing_neutral{font-weight:bold}'
+        . '</style>'
+        . '<script>'
+        . 'document.addEventListener("click",function(e){'
+        . 'var a=e.target.closest?e.target.closest("[data-relatives-delete-form]"):null;'
+        . 'if(!a){return;}e.preventDefault();'
+        . 'var f=document.getElementById(a.getAttribute("data-relatives-delete-form"));'
+        . 'if(f&&window.confirm(a.getAttribute("data-relatives-confirm"))){f.submit();}'
+        . '});'
+        . '</script>';
+}
+$page->extra_header .= relatives_acp_head();
 
 $action = $mybb->get_input('action');
 if ($action === '') {

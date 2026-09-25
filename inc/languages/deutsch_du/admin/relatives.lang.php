@@ -193,3 +193,36 @@ $l['relatives_acp_graph_col_original'] = 'Wird wieder zu';
 $l['relatives_acp_graph_no_guesses'] = 'Keine geratenen Zuordnungen mehr vorhanden.';
 $l['relatives_acp_graph_guesses_button'] = 'Geratene Zuordnungen zurücknehmen';
 $l['relatives_acp_graph_guesses_reverted'] = '{1} geratene Zuordnungen wurden zurückgenommen.';
+
+// Admin-Berechtigung (ACP -> Administrator-Berechtigungen -> Werkzeuge & Wartung)
+$l['relatives_acp_permission'] = 'Darf Verwandtschaften & Stammbaum verwalten?';
+
+// Einstellungen: MyBB ersetzt die gespeicherten Titel durch setting_<name> / setting_<name>_desc
+$l['setting_group_relatives'] = 'Verwandtschaften & Stammbaum';
+$l['setting_group_relatives_desc'] = 'Einstellungen für das Plugin Verwandtschaften & Stammbaum.';
+$l['setting_relatives_origin_mode_freetext'] = 'Freitext';
+$l['setting_relatives_origin_mode_profilefield'] = 'Profilfeld';
+$l['setting_relatives_enabled'] = 'Plugin aktiv';
+$l['setting_relatives_enabled_desc'] = 'Schaltet das Plugin komplett ein/aus (Hauptschalter).';
+$l['setting_relatives_max_persons_per_user'] = 'Maximale Personen pro Nutzer*in';
+$l['setting_relatives_max_persons_per_user_desc'] = 'Missbrauchsschutz. 0 = unbegrenzt.';
+$l['setting_relatives_origin_mode'] = 'Herkunfts-Quelle';
+$l['setting_relatives_origin_mode_desc'] = 'Woher stammt die „Herkunft“ einer Person: freies Textfeld oder ein bestehendes Profilfeld.';
+$l['setting_relatives_origin_profilefield_id'] = 'Herkunfts-Profilfeld (fid)';
+$l['setting_relatives_origin_profilefield_id_desc'] = 'fid des MyBB-Profilfelds, das als Herkunfts-Optionsliste dient. Nur relevant, wenn „Herkunfts-Quelle“ = Profilfeld.';
+$l['setting_relatives_legacy_migrated'] = 'Letzte Legacy-Migration (Unix-Zeitstempel)';
+$l['setting_relatives_legacy_migrated_desc'] = 'Wird automatisch vom Migrations-Tool gesetzt. 0 = noch nie migriert. Nicht manuell ändern.';
+$l['setting_relatives_graph_merged'] = 'Gemeinsames Geflecht zusammengeführt (Unix-Zeitstempel)';
+$l['setting_relatives_graph_merged_desc'] = 'Wird automatisch gesetzt, sobald die früheren Einzel-Listen im ACP zu einem gemeinsamen Stammbaum-Geflecht zusammengeführt wurden. 0 = noch nicht. Nicht manuell ändern.';
+$l['setting_relatives_family_list_guests'] = 'Familienliste für Gäst*innen';
+$l['setting_relatives_family_list_guests_desc'] = 'Dürfen Gäst*innen die öffentliche Familienliste (relatives.php?action=family_list) sehen? Die Gruppenberechtigung „Forum ansehen“ gilt zusätzlich.';
+$l['setting_relatives_family_list_layout_template'] = 'Familienliste: Rahmen-Template (optional)';
+$l['setting_relatives_family_list_layout_template_desc'] = 'Name eines vorhandenen Templates, in das die Familienliste eingebettet wird, z. B. der Rahmen eurer übrigen Listen („listen“). Es erhält den Inhalt als {$listen_content} bzw. {$relatives_family_list_content}, die Navigation als {$listen_nav} bzw. {$relatives_list_nav} und den Titel als {$headline}. Leer = eigene Seite des Plugins.';
+$l['setting_relatives_family_list_nav_template'] = 'Familienliste: Navigations-Template (optional)';
+$l['setting_relatives_family_list_nav_template_desc'] = 'Name eines vorhandenen Templates mit der Listen-Navigation, z. B. „listen_nav“. Nur zusammen mit dem Rahmen-Template wirksam.';
+$l['setting_relatives_tree_link_profile'] = 'Stammbaum-Link im Profil';
+$l['setting_relatives_tree_link_profile_desc'] = 'Zeigt im Profil einen Link zum Stammbaum des Charakters. Template-Variable {$relatives_tree_link} im Template member_profile.';
+$l['setting_relatives_tree_link_postbit'] = 'Stammbaum-Link im Postbit';
+$l['setting_relatives_tree_link_postbit_desc'] = 'Zeigt im Postbit einen Link zum Stammbaum der Autor*in. Template-Variable {$post[\'relatives_tree_link\']} in den Templates postbit und postbit_classic.';
+$l['setting_relatives_tree_link_memberlist'] = 'Stammbaum-Link in der Mitgliederliste';
+$l['setting_relatives_tree_link_memberlist_desc'] = 'Zeigt in der Mitgliederliste je Mitglied einen Link zum Stammbaum. Template-Variable {$user[\'relatives_tree_link\']} im Template memberlist_user.';

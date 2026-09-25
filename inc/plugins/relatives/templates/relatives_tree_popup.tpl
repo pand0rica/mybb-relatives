@@ -20,8 +20,8 @@
 
 	<p class="relatives_tree_hint">{$relatives_tree_hint}</p>
 
-	<div id="relatives-tree-backdrop" class="relatives_tree_backdrop" style="display:none;"></div>
-	<div id="relatives-tree-panel" class="relatives_tree_panel" role="dialog" aria-modal="true" style="display:none;"></div>
+	<div id="relatives-tree-backdrop" class="relatives_tree_backdrop" hidden></div>
+	<div id="relatives-tree-panel" class="relatives_tree_panel" role="dialog" aria-modal="true" hidden></div>
 </div>
 
 {$relatives_tree_scripts}

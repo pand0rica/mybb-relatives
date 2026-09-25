@@ -484,6 +484,12 @@
 
 /* --- Panel ------------------------------------------------------------------------ */
 
+/* Toggled via the hidden attribute; the class rules below would otherwise override it. */
+.relatives_tree_backdrop[hidden],
+.relatives_tree_panel[hidden] {
+	display: none;
+}
+
 .relatives_tree_backdrop {
 	position: fixed;
 	inset: 0;
