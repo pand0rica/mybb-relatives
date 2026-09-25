@@ -119,6 +119,14 @@ class Relatives_Installer
         // sie sind Nutzerdaten (z.B. relatives_max_persons_per_user) und duerfen bei
         // einem simplen Deaktivieren/Reaktivieren nicht auf die Defaults zurueckfallen.
         self::install_settings();
+
+        // relatives.php stays locked until the shared network is merged. A fresh forum
+        // without legacy tables has nothing to merge -- open it right away instead of
+        // forcing an ACP merge on empty tables. With legacy data the admin still runs
+        // Migration and then "Merge network now". Upgrades never pass through install().
+        if (!in_array(true, Relatives_Migration::legacy_tables_available(), true)) {
+            $db->update_query('settings', ['value' => TIME_NOW], "name = 'relatives_graph_merged'");
+        }
         rebuild_settings();
     }
 

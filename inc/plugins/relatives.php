@@ -198,7 +198,8 @@ function relatives_tree_link_html(int $uid, string $username): string
     $lang->load('relatives');
     return relatives_tree_popup_link(
         $uid,
-        $lang->sprintf($lang->relatives_tree_title_for, $username),
+        // relatives_tree_title_for uses %s (shared with the tree page title), not {1}.
+        sprintf($lang->relatives_tree_title_for, $username),
         htmlspecialchars_uni($lang->relatives_tree_link)
     );
 }

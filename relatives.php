@@ -81,11 +81,27 @@ function relatives_json_for_script(array $data): string
 
 function relatives_error_response(string $message): void
 {
-    if (isset($GLOBALS['mybb']) && $GLOBALS['mybb']->get_input('ajax')) {
+    global $mybb;
+
+    if ($mybb->get_input('ajax')) {
         relatives_json_response(['success' => false, 'error' => $message]);
     }
-    global $lang;
     error($message);
+}
+
+/**
+ * Guard for every data-changing action: POST only, plus a valid my_post_key. A GET link
+ * carrying the key would still pass verify_post_check() and leak the key into logs and
+ * referrers (debugging.md #3).
+ */
+function relatives_verify_post(): void
+{
+    global $mybb;
+
+    if ($mybb->request_method !== 'post') {
+        error_no_permission();
+    }
+    verify_post_check($mybb->get_input('my_post_key'));
 }
 
 /**
@@ -383,7 +399,7 @@ function relatives_collect_relations(
 // --- action: delete (POST) -------------------------------------------------------------
 
 if ($action === 'delete') {
-    verify_post_check($mybb->get_input('my_post_key'));
+    relatives_verify_post();
     $id = $mybb->get_input('id', MyBB::INPUT_INT);
     if (!Relatives_Database::is_owner($id, $my_uid)) {
         error_no_permission();
@@ -405,7 +421,7 @@ if ($action === 'delete') {
 // dieselbe Wirkung wie das Anlegen einer gleichnamigen Person, nur ohne Umweg ueber das
 // Formular. Danach darf der Account sie bearbeiten (Relatives_Graph::can_edit_person()).
 if ($action === 'adopt') {
-    verify_post_check($mybb->get_input('my_post_key'));
+    relatives_verify_post();
     $id = $mybb->get_input('id', MyBB::INPUT_INT);
     $person = Relatives_Database::get_person($id);
     // Gespielte Charaktere gehoeren ihrem Account, nicht einer Liste.
@@ -825,7 +841,7 @@ if ($action === 'add' || $action === 'edit') {
 // --- action: link_request / link_accept / link_decline (POST) --------------------------
 
 if ($action === 'link_request') {
-    verify_post_check($mybb->get_input('my_post_key'));
+    relatives_verify_post();
     $id = $mybb->get_input('id', MyBB::INPUT_INT);
     $target_username = trim($mybb->get_input('target_username'));
 
@@ -846,7 +862,7 @@ if ($action === 'link_request') {
 }
 
 if ($action === 'link_accept' || $action === 'link_decline') {
-    verify_post_check($mybb->get_input('my_post_key'));
+    relatives_verify_post();
     $id = $mybb->get_input('id', MyBB::INPUT_INT);
 
     // Hatte der Account schon einen (automatisch angelegten) Knoten, wird er in die
@@ -889,7 +905,7 @@ function relatives_can_manage_family(array $family): bool
 }
 
 if ($action === 'family_delete') {
-    verify_post_check($mybb->get_input('my_post_key'));
+    relatives_verify_post();
     $family_id = $mybb->get_input('id', MyBB::INPUT_INT);
     $family = Relatives_Families::get_by_id($family_id);
     if ($family === null) {

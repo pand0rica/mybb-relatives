@@ -315,6 +315,8 @@ sagen, gilt für Verbindungen jetzt dieser Abschnitt.
   identische werden zusammengelegt, Widersprüche landen in `relatives_relation_conflicts`
   (ACP: übernehmen/verwerfen), (5) eine Hauptverbindung je Person, (6) Setting
   `relatives_graph_merged` + Cache neu. Bis dahin sperrt `relatives.php` das Frontend.
+  Ausnahme Neuinstallation ohne Alt-Tabellen: `Relatives_Installer::install()` setzt das Flag
+  sofort (nichts zusammenzuführen); Upgrades laufen nie durch `install()`.
   Testforum-Stand vor der Umstellung: 265 Personen, 382 Verbindungen, 32 Account-Verknüpfungen,
   16 neue Knoten, 4 doppelte Namen, 26 identische Aussagen, 0 Widersprüche.
 
@@ -440,6 +442,14 @@ sagen, gilt für Verbindungen jetzt dieser Abschnitt.
 | `relatives_tree_link_profile` | yesno (default 1) | Stammbaum-Link im Profil – Variable `{$relatives_tree_link}` in `member_profile` |
 | `relatives_tree_link_postbit` | yesno (default 0) | Stammbaum-Link im Postbit – Variable `{$post['relatives_tree_link']}` in `postbit`/`postbit_classic` |
 | `relatives_tree_link_memberlist` | yesno (default 0) | Stammbaum-Link in der Mitgliederliste – Variable `{$user['relatives_tree_link']}` in `memberlist_user` |
+| `relatives_family_list_guests` | yesno (default 1) | Öffentliche Familienliste (`action=family_list`) auch für Gäst*innen; „Forum ansehen" gilt zusätzlich |
+| `relatives_family_list_layout_template` | text (default leer) | Optionales Rahmen-Template für die Familienliste (z. B. `listen`) |
+| `relatives_family_list_nav_template` | text (default leer) | Optionales Navigations-Template (z. B. `listen_nav`), nur zusammen mit dem Rahmen-Template |
+| `relatives_legacy_migrated` | text (intern) | Zeitstempel der letzten Legacy-Migration, vom Migrations-Tool gesetzt |
+| `relatives_graph_merged` | text (intern) | Zeitstempel der Geflecht-Zusammenführung; bis dahin sperrt `relatives.php` das Frontend |
+
+Settings werden in `install()` angelegt und in `uninstall()` entfernt; `activate()` rüstet nur
+fehlende nach (`debugging.md` #21).
 
 ## Hooks
 
@@ -500,11 +510,16 @@ Such-API in `owners[]` zusätzlich `computed_label`, `computed_concept_key`, `co
   auf, Anschluss-Suchmaschine braucht produktive `relatives_persons`-Daten zum Testen).
 
 ## Berechtigungen
-- Alle Aktionen erfordern Login (`$mybb->user['uid'] > 0`).
-- Personen bearbeiten/aus der eigenen Liste entfernen: nur Besitzer*innen der Person
-  (`Relatives_Database::is_owner()`, fixt den Alt-IDOR-Bug, bei dem jede eingeloggte Person
-  fremde Einträge per ID bearbeiten/löschen konnte).
-- Stammbaum ansehen: alle eingeloggten Nutzer:innen, für jeden `uid` (öffentlich, siehe oben).
+- Alle Aktionen erfordern Login (`$mybb->user['uid'] > 0`). Ausnahmen (nur lesend, Gruppenrecht
+  „Forum ansehen" gilt weiter): Stammbaum-Popup `action=tree&popup=1` und – per Setting
+  `relatives_family_list_guests` – die öffentliche Familienliste `action=family_list`.
+- Schreibende Aktionen nur per POST + `verify_post_check()` (`relatives_verify_post()` bzw.
+  `request_method`-Prüfung im Formular-Handler).
+- Personen bearbeiten: `Relatives_Graph::can_edit_person()` (siehe „Gemeinsames Geflecht");
+  aus der eigenen Liste entfernen: nur Besitzer*innen (`Relatives_Database::is_owner()`, fixt den
+  Alt-IDOR-Bug, bei dem jede eingeloggte Person fremde Einträge per ID bearbeiten/löschen konnte).
+- Familien-Kästen ändern/löschen: anlegende Person oder Team (`relatives_can_manage_family()`).
+- Stammbaum ansehen: alle eingeloggten Nutzer*innen, für jeden `uid` (öffentlich, siehe oben).
 - Verwandtschaftsgrade/Attribut-Gruppen/Migrations-Tool: nur über ACP (Admin-Rechte).
 - Link-Bestätigung: nur der per `linked_uid` referenzierte Account selbst darf annehmen/ablehnen.
 
