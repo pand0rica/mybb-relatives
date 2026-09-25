@@ -1,32 +1,133 @@
 /* relatives-tree.css - Verwandtschaften & Stammbaum
- * Styles fuer den interaktiven Stammbaum (Pan/Zoom-Viewport, Knoten, Verbindungslinien,
- * Klick-Add/Edit-Panel).
+ * Styles fuer den interaktiven Stammbaum (Toolbar, Legende, Pan/Zoom-Viewport, Knoten,
+ * SVG-Verbindungslinien, Klick-Add/Edit-Panel).
+ *
+ * Bewusst nah am MyBB-Standardtheme (gleiche Blau-/Grautoene, gleiche Kantenradien),
+ * aber mit klarer Kartenoptik statt flacher Kaesten. Alle Farben haengen an
+ * Custom-Properties auf .relatives_tree_page -- ein Theme kann sie an einer Stelle
+ * ueberschreiben, ohne die einzelnen Regeln anzufassen.
+ * Die Kastenmasse (--relatives-node-*) muessen zu NODE_WIDTH/NODE_HEIGHT in
+ * relatives-tree.js passen: das Skript rechnet die Ansatzpunkte der Linien daraus.
  */
 
-.relatives_tree_toolbar {
-	margin-bottom: 8px;
+.relatives_tree_page {
+	--relatives-node-width: 170px;
+	--relatives-node-height: 58px;
+	--relatives-surface: #ffffff;
+	--relatives-surface-muted: #f5f7fa;
+	--relatives-border: #c9d2dc;
+	--relatives-border-strong: #9aa7b5;
+	--relatives-text: #2c3540;
+	--relatives-text-muted: #6b7785;
+	--relatives-accent: #0f5c8e;
+	--relatives-shadow: 0 1px 2px rgba(20, 34, 51, 0.08), 0 2px 8px rgba(20, 34, 51, 0.06);
 }
 
-.relatives_tree_toolbar button {
-	padding: 4px 10px;
-	margin-right: 4px;
+/* --- Toolbar & Legende ---------------------------------------------------------- */
+
+.relatives_tree_toolbar {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 12px;
+	margin-bottom: 10px;
+}
+
+.relatives_tree_toolbar_group {
+	display: inline-flex;
+	border: 1px solid var(--relatives-border);
+	border-radius: 5px;
+	overflow: hidden;
+	background: var(--relatives-surface);
+	box-shadow: var(--relatives-shadow);
+}
+
+.relatives_tree_toolbar_group button {
+	appearance: none;
+	border: 0;
+	border-left: 1px solid var(--relatives-border);
+	background: transparent;
+	color: var(--relatives-text);
+	font: inherit;
+	line-height: 1;
+	padding: 7px 12px;
 	cursor: pointer;
 }
+
+.relatives_tree_toolbar_group button:first-child {
+	border-left: 0;
+}
+
+.relatives_tree_toolbar_group button:hover,
+.relatives_tree_toolbar_group button:focus-visible {
+	background: var(--relatives-surface-muted);
+	color: var(--relatives-accent);
+}
+
+.relatives_tree_legend {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 4px 14px;
+	margin-left: auto;
+	font-size: 0.82em;
+	color: var(--relatives-text-muted);
+}
+
+.relatives_tree_legend_item {
+	display: inline-flex;
+	align-items: center;
+	gap: 5px;
+	white-space: nowrap;
+}
+
+.relatives_tree_legend_swatch {
+	width: 12px;
+	height: 12px;
+	border-radius: 3px;
+	border: 1px solid var(--relatives-border-strong);
+	flex: 0 0 auto;
+}
+
+.relatives_tree_legend_swatch_male { background: #dfe9f6; border-color: #7ea3cc; }
+.relatives_tree_legend_swatch_female { background: #f8dfe6; border-color: #d295a9; }
+.relatives_tree_legend_swatch_diverse { background: #ece8f6; border-color: #a396c9; }
+.relatives_tree_legend_swatch_self { background: var(--relatives-surface-muted); border: 2px solid #3f4a57; }
+.relatives_tree_legend_swatch_wanted { background: var(--relatives-surface); border: 1px dashed #d79a1f; }
+.relatives_tree_legend_swatch_family { background: var(--relatives-surface-muted); border-left: 5px solid #7d8894; }
+.relatives_tree_legend_swatch_deceased { background: var(--relatives-surface); border-color: #9aa1a9; filter: grayscale(.45); }
+
+/* Linienarten-Legende: kurze Striche statt Farbflaechen. */
+.relatives_tree_legend_lines { margin-top: 4px; }
+
+.relatives_tree_legend_line {
+	display: inline-block;
+	width: 22px;
+	height: 0;
+	margin-right: 6px;
+	vertical-align: middle;
+	border-top: 2px solid #7d8894;
+}
+
+.relatives_tree_legend_line_solid { border-top-style: solid; }
+.relatives_tree_legend_line_dashed { border-top-style: dashed; }
+.relatives_tree_legend_line_dotted { border-top-style: dotted; }
+.relatives_tree_legend_line_secret { border-top-style: solid; opacity: .5; }
+
+/* --- Viewport & Zeichenflaeche --------------------------------------------------- */
 
 .relatives_tree_viewport {
 	position: relative;
 	overflow: hidden;
 	width: 100%;
-	height: 620px;
-	border: 1px solid rgba(0, 0, 0, 0.15);
+	height: clamp(420px, 68vh, 760px);
+	border: 1px solid var(--relatives-border);
 	border-radius: 6px;
-	background: repeating-linear-gradient(
-		0deg,
-		rgba(0, 0, 0, 0.02),
-		rgba(0, 0, 0, 0.02) 1px,
-		transparent 1px,
-		transparent 40px
-	);
+	/* Feines Punktraster: gibt beim Ziehen eine Orientierung, ohne aufzufallen. */
+	background-color: var(--relatives-surface-muted);
+	background-image: radial-gradient(circle, rgba(44, 53, 64, 0.09) 1px, transparent 1px);
+	background-size: 22px 22px;
+	box-shadow: inset 0 1px 3px rgba(20, 34, 51, 0.07);
 	cursor: grab;
 	touch-action: none;
 }
@@ -40,113 +141,617 @@
 	top: 50%;
 	left: 50%;
 	transform-origin: 0 0;
+	will-change: transform;
 }
+
+.relatives_tree_nodes {
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 0;
+	height: 0;
+}
+
+/* --- Verbindungslinien ----------------------------------------------------------- */
+
+.relatives_tree_connectors {
+	position: absolute;
+	overflow: visible;
+	pointer-events: none;
+}
+
+.relatives_tree_connector {
+	fill: none;
+	stroke: #8b949f;
+	stroke-width: 1.5;
+}
+
+/* Partner- und Abstammungslinien sind die tragende Struktur: durchgezogen. */
+.relatives_tree_connector_partner,
+.relatives_tree_connector_family {
+	stroke: #7d8894;
+}
+
+/* Beziehungen ohne Zwischenperson (Tante, Cousin, freie Bezeichnung) sind keine
+ * Abstammung -- gestrichelt, damit sie nicht als Eltern-Kind-Linie missverstanden wird. */
+.relatives_tree_connector_loose {
+	stroke: #a8b1bb;
+	stroke-dasharray: 5 4;
+}
+
+/* Bestaetigte Konto-Verknuepfung: dieselbe Person in zwei Stammbaeumen. */
+.relatives_tree_connector_account {
+	stroke: #3f8f52;
+	stroke-dasharray: 3 3;
+}
+
+/* Zweit-/Adoptivfamilie: andere Farbe, damit die leibliche Linie fuehrend bleibt. */
+.relatives_tree_connector_family_secondary {
+	stroke: #9a7bb0;
+}
+
+/* Linienart je Verwandtschaftsgrad (ACP-Feld line_style): "Ehefrau" -> durchgezogen,
+ * "Ex-Frau" -> gestrichelt, Stiefverhaeltnisse gepunktet, Halbgeschwister Strichpunkt.
+ * Steht NACH den Kind-Regeln oben, damit die Art die Farbe nicht ueberschreibt. */
+.relatives_tree_connector.is-style-dashed { stroke-dasharray: 6 4; }
+.relatives_tree_connector.is-style-dotted { stroke-dasharray: 2 4; stroke-linecap: round; }
+.relatives_tree_connector.is-style-dashdot { stroke-dasharray: 8 3 2 3; }
+
+/* Heimliche Verbindung (z.B. eine nie anerkannte Vaterschaft): blass und duenn --
+ * sie ist da, draengt sich aber nicht auf. */
+.relatives_tree_connector.is-secret {
+	opacity: .5;
+	stroke-width: 1;
+}
+
+/* Hervorhebung beim Ueberfahren eines Kastens: alles andere tritt zurueck, die
+ * Verbindungen genau dieser Person bleiben kraeftig. */
+.relatives_tree_connectors.is-dimmed .relatives_tree_connector { opacity: .15; }
+.relatives_tree_connectors.is-dimmed .relatives_tree_connector.is-highlighted {
+	opacity: 1;
+	stroke-width: 2.5;
+	stroke: var(--relatives-accent);
+}
+.relatives_tree_nodes.is-dimmed .relatives_tree_node { opacity: .45; }
+.relatives_tree_nodes.is-dimmed .relatives_tree_node.is-highlighted {
+	opacity: 1;
+	box-shadow: 0 0 0 2px var(--relatives-accent), var(--relatives-shadow);
+}
+
+/* --- Knoten ----------------------------------------------------------------------- */
 
 .relatives_tree_node {
 	position: absolute;
-	width: 150px;
-	margin-left: -75px;
-	margin-top: -30px;
-	padding: 6px 8px;
-	border-radius: 6px;
-	background: #fff;
-	border: 2px solid #3f6fa5;
-	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+	box-sizing: border-box;
+	width: var(--relatives-node-width);
+	height: var(--relatives-node-height);
+	transform: translate(-50%, -50%);
+	padding: 6px 10px;
+	border: 1px solid var(--relatives-border-strong);
+	border-radius: 5px;
+	background: var(--relatives-surface);
+	box-shadow: var(--relatives-shadow);
+	color: var(--relatives-text);
 	text-align: center;
 	cursor: pointer;
 	user-select: none;
+	transition: box-shadow 0.12s ease, transform 0.12s ease;
 }
 
-.relatives_tree_node.relatives-node-self {
-	border-color: #333;
-	background: #eee;
-	font-weight: bold;
+.relatives_tree_node:hover,
+.relatives_tree_node:focus-visible {
+	transform: translate(-50%, -50%) translateY(-2px);
+	box-shadow: 0 2px 4px rgba(20, 34, 51, 0.12), 0 6px 16px rgba(20, 34, 51, 0.14);
+	outline: none;
+	z-index: 3;
 }
 
-/* Geschlechtsfarben (angelehnt an klassische Stammbaum-Darstellungen). */
-.relatives_tree_node.relatives-gender-male {
-	background: #e3edfa;
-	border-color: #4f7cb0;
-}
-
-.relatives_tree_node.relatives-gender-male .relatives_tree_node_name {
-	color: #1f3a5f;
-}
-
-.relatives_tree_node.relatives-gender-female {
-	background: #fbe4ea;
-	border-color: #c96a8a;
-}
-
-.relatives_tree_node.relatives-gender-female .relatives_tree_node_name {
-	color: #7a2f47;
-}
-
-.relatives_tree_node.relatives-gender-diverse {
-	background: #f0eef7;
-	border-color: #8a7bab;
-}
-
-.relatives_tree_node.relatives-gender-diverse .relatives_tree_node_name {
-	color: #4a3d68;
-}
-
-.relatives_tree_node.relatives-node-wanted {
-	border-style: dashed;
-	border-color: #e0a200;
-}
-
-.relatives_tree_node.relatives-node-linked-confirmed {
-	border-color: #3f9142;
-}
-
-.relatives_tree_node.relatives-node-linked-pending {
-	opacity: 0.7;
+.relatives_tree_node_body {
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	height: 100%;
+	overflow: hidden;
 }
 
 .relatives_tree_node_name {
 	font-weight: bold;
 	font-size: 0.9em;
+	line-height: 1.2;
+	/* Zweizeilig abschneiden statt den Kasten sprengen -- die Linien docken an einer
+	 * fest gerechneten Kastenhoehe an. */
+	display: -webkit-box;
+	-webkit-line-clamp: 2;
+	-webkit-box-orient: vertical;
+	overflow: hidden;
 }
 
 .relatives_tree_node_relationship {
-	font-size: 0.8em;
-	opacity: 0.8;
+	font-size: 0.78em;
+	line-height: 1.3;
+	color: var(--relatives-text-muted);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
 }
 
-.relatives_tree_action_menu {
-	margin-top: 10px;
+/* Geschlechtsfarben, angelehnt an klassische Stammbaum-Darstellungen. */
+.relatives_tree_node.relatives-gender-male {
+	background: #dfe9f6;
+	border-color: #7ea3cc;
 }
 
-.relatives_tree_edge {
+.relatives_tree_node.relatives-gender-male .relatives_tree_node_name { color: #24425f; }
+.relatives_tree_node.relatives-gender-male .relatives_tree_node_relationship { color: #4c6b8c; }
+
+.relatives_tree_node.relatives-gender-female {
+	background: #f8dfe6;
+	border-color: #d295a9;
+}
+
+.relatives_tree_node.relatives-gender-female .relatives_tree_node_name { color: #6d2a41; }
+.relatives_tree_node.relatives-gender-female .relatives_tree_node_relationship { color: #93566b; }
+
+.relatives_tree_node.relatives-gender-diverse {
+	background: #ece8f6;
+	border-color: #a396c9;
+}
+
+.relatives_tree_node.relatives-gender-diverse .relatives_tree_node_name { color: #413465; }
+.relatives_tree_node.relatives-gender-diverse .relatives_tree_node_relationship { color: #665694; }
+
+/* Account-Knoten (eigener Wurzel-Account bzw. verknuepfte Fremd-Accounts). */
+.relatives_tree_node.relatives-node-account {
+	background: var(--relatives-surface);
+	border-color: var(--relatives-border-strong);
+}
+
+.relatives_tree_node.relatives-node-self {
+	border: 2px solid #3f4a57;
+	background: #eef1f5;
+	box-shadow: 0 0 0 3px rgba(63, 74, 87, 0.12), var(--relatives-shadow);
+}
+
+.relatives_tree_node.relatives-node-wanted {
+	border-style: dashed;
+	border-color: #d79a1f;
+}
+
+.relatives_tree_node.relatives-node-linked-confirmed {
+	border-color: #3f8f52;
+}
+
+.relatives_tree_node.relatives-node-linked-pending {
+	opacity: 0.72;
+}
+
+.relatives_tree_node.relatives-node-collapsed {
+	box-shadow: 3px 3px 0 -1px var(--relatives-surface), 3px 3px 0 0 var(--relatives-border-strong), var(--relatives-shadow);
+}
+
+/* Badges und Klapp-Button sitzen bewusst in den Ecken: die Mitte der Ober- und
+ * Unterkante ist der Ansatzpunkt der Eltern-/Kind-Linien. */
+.relatives_tree_node_badges {
 	position: absolute;
-	background: rgba(0, 0, 0, 0.25);
-	height: 2px;
-	transform-origin: 0 0;
+	top: -8px;
+	right: -4px;
+	display: flex;
+	gap: 3px;
+	white-space: nowrap;
+}
+
+.relatives_tree_node_badge {
+	font-size: 0.62em;
+	line-height: 1;
+	padding: 3px 5px;
+	border-radius: 8px;
+	color: #fff;
+	letter-spacing: 0.02em;
+}
+
+.relatives_tree_node_badge_wanted { background: #d79a1f; }
+.relatives_tree_node_badge_linked { background: #3f8f52; }
+.relatives_tree_node_badge_pending { background: #8b949f; }
+.relatives_tree_node_badge_deceased { background: #4a5058; }
+
+/* --- Familien-Kasten, Verstorbene, eigene Knoten ------------------------------------ */
+
+/* Familien-Kasten ("Familie Flemming"): steht an der Stelle der Eltern. Die Farbe
+ * kommt aus der Datenbank und wird als Custom Property am Element gesetzt. */
+.relatives_tree_node.relatives_tree_node_family {
+	background: var(--relatives-surface-muted);
+	border-color: var(--relatives-family-color, var(--relatives-border-strong));
+	border-left: 6px solid var(--relatives-family-color, var(--relatives-border-strong));
+	font-style: italic;
+}
+
+/* Platzhalter: nicht eingetragene Zwischenperson (nur Anzeige), ueber die z. B. die
+ * Verbindung zu Tante oder Cousin*e laeuft. Bewusst blass und gestrichelt. */
+.relatives_tree_node.relatives_tree_node_placeholder {
+	background: var(--relatives-surface-muted);
+	border-style: dashed;
+	border-color: var(--relatives-border-strong);
+	color: var(--relatives-text-muted);
+	box-shadow: none;
+	font-style: italic;
+}
+
+/* Verstorbene: gedaempft, aber lesbar -- das Kreuz-Badge traegt die Information,
+ * die Ausgrauung ist nur die Unterstuetzung. */
+.relatives_tree_node.relatives-node-deceased {
+	filter: grayscale(.45);
+	border-style: solid;
+	border-color: #9aa1a9;
+}
+
+/* Eigene Personen: dezent kraeftigerer Rahmen, damit erkennbar ist, was man
+ * bearbeiten darf (die Klasse wurde bisher gesetzt, war aber ohne Wirkung). */
+.relatives_tree_node.relatives-node-own {
+	border-color: var(--relatives-border-strong);
+}
+
+/* --- Verbindungsliste im Panel ------------------------------------------------------ */
+
+.relatives_tree_relations {
+	margin-top: 14px;
+	border-top: 1px solid var(--relatives-border);
+	padding-top: 10px;
+}
+
+.relatives_tree_relations h4 {
+	margin: 0 0 6px;
+	font-size: 13px;
+}
+
+.relatives_tree_relations ul {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.relatives_tree_relations li {
+	margin-bottom: 4px;
+	line-height: 1.5;
+}
+
+.relatives_tree_relation_link {
+	background: none;
+	border: 0;
+	padding: 0;
+	font: inherit;
+	color: var(--relatives-accent);
+	cursor: pointer;
+	text-decoration: underline;
+}
+
+.relatives_tree_relation_link.is-secret {
+	opacity: .7;
+	font-style: italic;
+}
+
+/* Abgeleitete Verbindung (ueber gemeinsame Eltern erkannt, nicht eingetragen):
+ * gepunktet unterstrichen statt durchgezogen. */
+.relatives_tree_relation_link.is-derived {
+	text-decoration-style: dotted;
+}
+
+/* --- Randknoten (v2.2): hinter ihm geht das gemeinsame Geflecht weiter -------------- */
+
+.relatives_tree_node_more {
+	position: absolute;
+	left: -10px;
+	bottom: -10px;
+	width: 22px;
+	height: 20px;
+	padding: 0;
+	border: 1px solid var(--relatives-border-strong);
+	border-radius: 10px;
+	background: var(--relatives-surface);
+	color: var(--relatives-text);
+	font-size: 12px;
+	line-height: 16px;
+	cursor: pointer;
+}
+
+.relatives_tree_node_more:hover,
+.relatives_tree_node_more:focus {
+	background: var(--relatives-accent);
+	color: #fff;
+}
+
+.relatives_tree_node_toggle {
+	position: absolute;
+	right: -8px;
+	bottom: -8px;
+	width: 20px;
+	height: 20px;
+	padding: 0;
+	border: 1px solid var(--relatives-border-strong);
+	border-radius: 50%;
+	background: var(--relatives-surface);
+	color: var(--relatives-text-muted);
+	font-size: 13px;
+	line-height: 1;
+	cursor: pointer;
+	z-index: 2;
+}
+
+.relatives_tree_node_toggle:hover {
+	background: var(--relatives-accent);
+	border-color: var(--relatives-accent);
+	color: #fff;
+}
+
+/* --- Panel ------------------------------------------------------------------------ */
+
+.relatives_tree_backdrop {
+	position: fixed;
+	inset: 0;
+	background: rgba(20, 34, 51, 0.42);
+	z-index: 999;
 }
 
 .relatives_tree_panel {
 	position: fixed;
-	top: 10%;
+	top: 50%;
 	left: 50%;
-	transform: translateX(-50%);
-	width: 90%;
-	max-width: 480px;
-	max-height: 80vh;
+	transform: translate(-50%, -50%);
+	width: calc(100% - 32px);
+	max-width: 460px;
+	max-height: 82vh;
 	overflow-y: auto;
-	background: #fff;
-	border: 1px solid rgba(0, 0, 0, 0.2);
+	background: var(--relatives-surface);
+	border: 1px solid var(--relatives-border);
 	border-radius: 8px;
-	padding: 15px;
-	box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+	padding: 0 18px 18px;
+	box-shadow: 0 12px 40px rgba(20, 34, 51, 0.32);
+	color: var(--relatives-text);
 	z-index: 1000;
 }
 
+.relatives_tree_panel_header {
+	position: sticky;
+	top: 0;
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	margin: 0 -18px 14px;
+	padding: 14px 18px;
+	border-bottom: 1px solid var(--relatives-border);
+	background: var(--relatives-surface);
+}
+
+.relatives_tree_panel_header h3 {
+	flex: 1 1 auto;
+	margin: 0;
+	font-size: 1.05em;
+}
+
 .relatives_tree_panel_close {
-	float: right;
-	cursor: pointer;
-	font-size: 1.2em;
-	line-height: 1;
+	flex: 0 0 auto;
+	width: 28px;
+	height: 28px;
+	padding: 0;
+	border: 0;
+	border-radius: 4px;
 	background: none;
-	border: none;
+	color: var(--relatives-text-muted);
+	font-size: 1.4em;
+	line-height: 1;
+	cursor: pointer;
+}
+
+.relatives_tree_panel_close:hover {
+	background: var(--relatives-surface-muted);
+	color: var(--relatives-text);
+}
+
+.relatives_tree_panel_lead {
+	margin: 0 0 8px;
+	font-weight: bold;
+}
+
+.relatives_tree_panel_note {
+	margin: 0 0 14px;
+	font-size: 0.85em;
+	color: var(--relatives-text-muted);
+}
+
+.relatives_tree_action_menu {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.relatives_tree_menu_button {
+	display: block;
+	width: 100%;
+	box-sizing: border-box;
+	padding: 9px 12px;
+	border: 1px solid var(--relatives-border);
+	border-radius: 5px;
+	background: var(--relatives-surface-muted);
+	color: var(--relatives-text);
+	font: inherit;
+	text-align: left;
+	cursor: pointer;
+}
+
+.relatives_tree_menu_button:hover {
+	border-color: var(--relatives-accent);
+	color: var(--relatives-accent);
+}
+
+.relatives_tree_menu_button_primary {
+	margin-top: 6px;
+	background: var(--relatives-accent);
+	border-color: var(--relatives-accent);
+	color: #fff;
+	text-align: center;
+	font-weight: bold;
+}
+
+.relatives_tree_menu_button_primary:hover {
+	background: #0c4c77;
+	color: #fff;
+}
+
+.relatives_tree_menu_button_primary[disabled] {
+	opacity: 0.6;
+	cursor: default;
+}
+
+.relatives_tree_form_label {
+	display: block;
+	font-weight: bold;
+	margin-bottom: 4px;
+}
+
+.relatives_tree_attribute_group {
+	margin: 0 0 12px;
+	padding: 8px 10px;
+	border: 1px solid var(--relatives-border);
+	border-radius: 5px;
+}
+
+.relatives_tree_attribute_group legend {
+	padding: 0 4px;
+	font-size: 0.85em;
+	color: var(--relatives-text-muted);
+}
+
+.relatives_tree_attribute_group label {
+	display: inline-block;
+	margin: 0 10px 4px 0;
+	font-weight: normal;
+}
+
+@media (max-width: 640px) {
+	.relatives_tree_legend {
+		margin-left: 0;
+		width: 100%;
+	}
+}
+
+.relatives_tree_hint {
+	margin: 8px 0 0;
+	font-size: 0.82em;
+	color: var(--relatives-text-muted);
+}
+
+/* --- Popup-Ansicht (relatives.php?action=tree&popup=1) --------------------------- */
+/* Nur der Baum: Hintergrund und Schriften kommen aus dem Theme, der Viewport fuellt
+ * das restliche Fenster statt der festen Hoehe der eingebetteten Ansicht. */
+
+.relatives_tree_popup_body {
+	margin: 0;
+}
+
+.relatives_tree_popup {
+	display: flex;
+	flex-direction: column;
+	box-sizing: border-box;
+	height: 100vh;
+	padding: 12px 16px;
+}
+
+.relatives_tree_popup_header {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 10px;
+	margin-bottom: 10px;
+}
+
+.relatives_tree_popup_title {
+	font-size: 1.2em;
+}
+
+.relatives_tree_popup .relatives_tree_viewport {
+	flex: 1 1 auto;
+	height: auto;
+	min-height: 320px;
+}
+
+/* --- Hinweise im Viewport (Strg + Mausrad, leerer Baum) --------------------------- */
+
+.relatives_tree_wheel_hint,
+.relatives_tree_empty {
+	position: absolute;
+	left: 50%;
+	transform: translateX(-50%);
+	max-width: calc(100% - 32px);
+	box-sizing: border-box;
+	padding: 8px 14px;
+	border-radius: 6px;
+	text-align: center;
+	pointer-events: none;
+	z-index: 2;
+}
+
+.relatives_tree_wheel_hint {
+	top: 12px;
+	background: rgba(20, 34, 51, 0.78);
+	color: #ffffff;
+	font-size: 0.9em;
+	opacity: 0;
+	transition: opacity 0.2s ease;
+}
+
+.relatives_tree_wheel_hint.is-visible {
+	opacity: 1;
+}
+
+.relatives_tree_empty {
+	bottom: 16px;
+	background: var(--relatives-surface);
+	border: 1px solid var(--relatives-border);
+	box-shadow: var(--relatives-shadow);
+	color: var(--relatives-text);
+}
+
+/* Eigener Kasten im leeren Baum: sanft pulsieren, damit der Klickweg auffaellt. */
+.relatives_tree_node.relatives-node-pulse {
+	animation: relatives-node-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes relatives-node-pulse {
+	0%, 100% { box-shadow: var(--relatives-shadow), 0 0 0 0 rgba(15, 92, 142, 0.45); }
+	50% { box-shadow: var(--relatives-shadow), 0 0 0 8px rgba(15, 92, 142, 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.relatives_tree_node.relatives-node-pulse {
+		animation: none;
+		outline: 2px solid var(--relatives-accent);
+		outline-offset: 3px;
+	}
+}
+
+/* --- Bestaetigungsdialog (relatives.js, auch auf Liste/Familien) ------------------ */
+
+.relatives_confirm_actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	margin-top: 14px;
+}
+
+.relatives_confirm_actions .relatives_tree_menu_button {
+	flex: 1 1 140px;
+	width: auto;
+	text-align: center;
+}
+
+.relatives_tree_menu_button_danger {
+	border-color: #b3261e;
+	color: #b3261e;
+}
+
+.relatives_tree_menu_button_danger:hover,
+.relatives_tree_menu_button_danger:focus-visible {
+	background: #b3261e;
+	border-color: #b3261e;
+	color: #ffffff;
 }

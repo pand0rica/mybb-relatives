@@ -33,8 +33,8 @@ class Relatives_LinkManager
         if ($person === null) {
             return false;
         }
-        if ((int)$person['owner_uid'] !== $requester_uid) {
-            return false; // nur der Owner der Person darf verknuepfen
+        if (!Relatives_Database::is_owner($person_id, $requester_uid)) {
+            return false; // nur Besitzer*innen der Person duerfen verknuepfen
         }
         if ($target_uid <= 0 || $target_uid === $requester_uid) {
             return false;

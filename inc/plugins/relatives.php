@@ -19,10 +19,15 @@ require_once MYBB_ROOT . "inc/plugins/relatives/core/Installer.php";
 require_once MYBB_ROOT . "inc/plugins/relatives/core/Database.php";
 require_once MYBB_ROOT . "inc/plugins/relatives/core/RelationshipTypes.php";
 require_once MYBB_ROOT . "inc/plugins/relatives/core/Attributes.php";
+require_once MYBB_ROOT . "inc/plugins/relatives/core/Families.php";
+require_once MYBB_ROOT . "inc/plugins/relatives/core/Kinship.php";
+require_once MYBB_ROOT . "inc/plugins/relatives/core/Graph.php";
 require_once MYBB_ROOT . "inc/plugins/relatives/core/TreeBuilder.php";
+require_once MYBB_ROOT . "inc/plugins/relatives/core/TreePlaceholders.php";
 require_once MYBB_ROOT . "inc/plugins/relatives/core/LinkManager.php";
 require_once MYBB_ROOT . "inc/plugins/relatives/core/SearchApi.php";
 require_once MYBB_ROOT . "inc/plugins/relatives/core/Migration.php";
+require_once MYBB_ROOT . "inc/plugins/relatives/core/StructureInference.php";
 
 // --- info() -------------------------------------------------------------------------
 
@@ -34,7 +39,7 @@ function relatives_info(): array
         "website"       => "https://github.com/pand0rica/relatives",
         "author"        => "pand0rica",
         "authorsite"    => "https://github.com/pand0rica",
-        "version"       => "2.0.0",
+        "version"       => "2.2.0",
         "guid"          => "",
         "codename"      => "relatives",
         "compatibility" => "18*",
@@ -68,9 +73,18 @@ function relatives_deactivate(): void
     Relatives_Installer::deactivate();
 }
 
+// Stammbaum-Link mit dem Seiten-Templatecache laden statt je eine Query beim ersten get().
+if (defined('THIS_SCRIPT') && in_array(THIS_SCRIPT, ['member.php', 'memberlist.php', 'showthread.php', 'newreply.php', 'editpost.php'], true)) {
+    global $templatelist;
+    $templatelist = (isset($templatelist) && $templatelist !== '' ? $templatelist . ',' : '') . 'relatives_tree_link';
+}
+
 // --- Hook-Registrierung ---------------------------------------------------------------
 
 $plugins->add_hook("member_profile_end", "relatives_handle_member_profile");
+$plugins->add_hook("postbit", "relatives_handle_postbit");
+$plugins->add_hook("postbit_prev", "relatives_handle_postbit");
+$plugins->add_hook("memberlist_user", "relatives_handle_memberlist_user");
 $plugins->add_hook("usercp_menu", "relatives_handle_usercp_menu");
 $plugins->add_hook("datahandler_user_delete_start", "relatives_handle_user_delete");
 
@@ -92,13 +106,18 @@ $plugins->add_hook("jobliste_resolve_entity_label", "relatives_resolve_jobliste_
  */
 function relatives_handle_member_profile(): void
 {
-    global $mybb, $db, $templates, $lang, $memprofile, $relatives_wanted_box;
+    global $mybb, $db, $templates, $lang, $memprofile, $relatives_wanted_box, $relatives_tree_link;
 
+    $relatives_tree_link = '';
     if (empty($mybb->settings['relatives_enabled'])) {
         return;
     }
     if (!isset($memprofile['uid'])) {
         return;
+    }
+
+    if (!empty($mybb->settings['relatives_tree_link_profile'])) {
+        $relatives_tree_link = relatives_tree_link_html((int)$memprofile['uid'], (string)$memprofile['username']);
     }
 
     $owner_uid = (int)$memprofile['uid'];
@@ -112,12 +131,12 @@ function relatives_handle_member_profile(): void
     }
 
     $lang->load('relatives');
+    $labels = relatives_get_relationship_labels($persons);
 
     $cards = '';
     foreach ($wanted as $person) {
         $name = htmlspecialchars_uni($person['name']);
-        $label = relatives_get_relationship_label($person);
-        $label = htmlspecialchars_uni($label);
+        $label = htmlspecialchars_uni($labels[(int)$person['id']]);
         $link = '';
         if (!empty($person['wanted_thread_link'])) {
             $safe_url = relatives_sanitize_url((string)$person['wanted_thread_link']);
@@ -127,12 +146,106 @@ function relatives_handle_member_profile(): void
             }
         }
         $description = nl2br(htmlspecialchars_uni((string)$person['description']));
+        $relationship_description = nl2br(htmlspecialchars_uni((string)$person['relationship_description']));
 
         eval('$relatives_wanted_card = "' . $templates->get('relatives_profile_wanted_card') . '";');
         $cards .= $relatives_wanted_card;
     }
 
     eval('$relatives_wanted_box = "' . $templates->get('relatives_profile_wanted_box') . '";');
+}
+
+// --- Hook-Handler: postbit / memberlist_user ------------------------------------------
+
+/** Stammbaum-Link der Autor*in als {$post['relatives_tree_link']}. */
+function relatives_handle_postbit(array $post): array
+{
+    global $mybb;
+
+    $post['relatives_tree_link'] = '';
+    if (!empty($mybb->settings['relatives_enabled']) && !empty($mybb->settings['relatives_tree_link_postbit'])
+        && isset($post['uid'], $post['username'])) {
+        $post['relatives_tree_link'] = relatives_tree_link_html((int)$post['uid'], (string)$post['username']);
+    }
+    return $post;
+}
+
+/** Stammbaum-Link des Mitglieds als {$user['relatives_tree_link']}. */
+function relatives_handle_memberlist_user(array $user): array
+{
+    global $mybb;
+
+    $user['relatives_tree_link'] = '';
+    if (!empty($mybb->settings['relatives_enabled']) && !empty($mybb->settings['relatives_tree_link_memberlist'])
+        && isset($user['uid'], $user['username'])) {
+        $user['relatives_tree_link'] = relatives_tree_link_html((int)$user['uid'], (string)$user['username']);
+    }
+    return $user;
+}
+
+/**
+ * Link zur (auch fuer Gaeste freigegebenen) Popup-Ansicht des Stammbaums von $uid.
+ * Leer, wenn der Account keinen Baum hat -- ein Link ins Leere waere schlimmer als keiner.
+ */
+function relatives_tree_link_html(int $uid, string $username): string
+{
+    global $mybb, $lang, $templates;
+
+    if ($uid <= 0 || !Relatives_Graph::is_merged() || !isset(relatives_uids_with_tree()[$uid])) {
+        return '';
+    }
+
+    $lang->load('relatives');
+    return relatives_tree_popup_link(
+        $uid,
+        $lang->sprintf($lang->relatives_tree_title_for, $username),
+        htmlspecialchars_uni($lang->relatives_tree_link)
+    );
+}
+
+/**
+ * The one popup-opening link (template relatives_tree_link) -- used by profile/postbit/
+ * memberlist and by the popup icon in the UserCP nav, so the window.open() call lives
+ * in a single template.
+ *
+ * @param string $title   plain text, escaped here
+ * @param string $content ready HTML (escaped text or an icon)
+ */
+function relatives_tree_popup_link(int $uid, string $title, string $content, string $class = 'relatives_tree_link'): string
+{
+    global $mybb, $lang, $templates;
+
+    $relatives_tree_link_uid = $uid;
+    $relatives_tree_link_title = htmlspecialchars_uni($title);
+    $relatives_tree_link_content = $content;
+    $relatives_tree_link_class = htmlspecialchars_uni($class);
+    eval('$link = "' . $templates->get('relatives_tree_link') . '";');
+    return $link;
+}
+
+/**
+ * Alle Accounts mit Stammbaum (eigene Personen oder als Person bestaetigt verknuepft),
+ * einmal pro Request geladen -- Postbit und Mitgliederliste fragen je Zeile, das soll
+ * nicht pro Zeile eine Query kosten.
+ *
+ * @return array<int, true>
+ */
+function relatives_uids_with_tree(): array
+{
+    global $db;
+    static $uids = null;
+
+    if ($uids === null) {
+        $uids = [];
+        $query = $db->query("SELECT DISTINCT owner_uid AS uid FROM " . TABLE_PREFIX . "relatives_person_owners
+            UNION SELECT DISTINCT linked_uid AS uid FROM " . TABLE_PREFIX . "relatives_persons WHERE link_status = 2");
+        while ($row = $db->fetch_array($query)) {
+            if ((int)$row['uid'] > 0) {
+                $uids[(int)$row['uid']] = true;
+            }
+        }
+    }
+    return $uids;
 }
 
 /**
@@ -158,6 +271,82 @@ function relatives_get_relationship_label(array $person): string
 }
 
 /**
+ * Anzeige-Labels aller Personen einer Liste (aus get_persons_by_owner()) aus Sicht des
+ * Besitzers: mit Bezugsperson komponiert ("Bruder" von "Mutter" = "Onkel"), sonst Grad
+ * bzw. freie Bezeichnung.
+ *
+ * @return array person_id => string
+ */
+function relatives_get_relationship_labels(array $persons): array
+{
+    $labels = [];
+    foreach ($persons as $person) {
+        $person_id = (int)$person['id'];
+        // Der Cache aus Relatives_Kinship ist bereits aus Sicht des Besitzers
+        // gerechnet und auf "entfernte*r Verwandte*r" begrenzt -- er ist die
+        // Standardquelle. Nur wenn er (noch) leer ist, faellt die Anzeige auf den
+        // roh eingetragenen Grad zurueck.
+        if (!empty($person['computed_label'])) {
+            $labels[$person_id] = (string)Relatives_Kinship::display_label(
+                (string)$person['computed_label'],
+                $person['computed_via_person_id'] ?? null
+            );
+            continue;
+        }
+        $labels[$person_id] = relatives_get_relationship_label($person);
+    }
+    return $labels;
+}
+
+/**
+ * Oeffentliche API: Wie steht Person $person_id zum Charakter $uid?
+ * Einziger vorgesehener Zugriffsweg fuer Fremdplugins (Jobliste) auf die berechnete
+ * Verwandtschaft -- kein direkter Tabellenzugriff.
+ *
+ * @return array ['concept_key' => ?string, 'label' => ?string, 'category' => string,
+ *                'up' => ?int, 'down' => ?int, 'owner_name' => string,
+ *                'text' => string]  text = "Onkel von Megan Fawley" (leer, wenn unbekannt)
+ */
+function relatives_get_relation(int $person_id, int $uid): array
+{
+    global $lang;
+
+    $empty = [
+        'concept_key' => null,
+        'label'       => null,
+        'category'    => Relatives_Kinship::CATEGORY_UNKNOWN,
+        'up'          => null,
+        'down'        => null,
+        'owner_name'  => '',
+        'text'        => '',
+    ];
+
+    if ($person_id <= 0 || $uid <= 0) {
+        return $empty;
+    }
+
+    $relation = Relatives_Kinship::get_cached($person_id, $uid);
+    if ($relation === null) {
+        return $empty;
+    }
+
+    $user = get_user($uid);
+    $relation['owner_name'] = $user ? (string)$user['username'] : '';
+    $relation['text'] = '';
+
+    if (!empty($relation['label']) && $relation['owner_name'] !== '') {
+        $lang->load('relatives');
+        // "via" nennt bereits eine andere Person ("Adoptivvater von Louisa Griffin") --
+        // ein angehaengtes "von Megan Fawley" wuerde den Satz falsch machen.
+        $relation['text'] = $relation['category'] === Relatives_Kinship::CATEGORY_VIA
+            ? (string)Relatives_Kinship::display_label($relation['label'], $relation['via_person_id'] ?? null)
+            : $lang->sprintf($lang->relatives_relation_of, $relation['label'], $relation['owner_name']);
+    }
+
+    return $relation;
+}
+
+/**
  * Beschraenkt eine nutzereingegebene URL auf http(s)/relative Pfade (blockt
  * javascript:/data:/vbscript:-Schemas). Gibt einen leeren String zurueck, wenn die URL
  * nicht sicher ist.
@@ -179,26 +368,29 @@ function relatives_sanitize_url(string $url): string
 
 // --- Hook-Handler: usercp_menu ---------------------------------------------------------
 
+/**
+ * Die Zeile selbst ist statisch in usercp_nav_misc eingebacken (siehe
+ * Relatives_Installer::install_usercp_nav_misc_link()) -- kein Platzhalter-Global, weil
+ * die Core-Funktion usercp_menu() (aufgerufen aus relatives.php:34) usercp_nav_misc
+ * innerhalb ihres eigenen Funktions-Scopes eval()t und ein per Hook gesetztes
+ * Custom-Global dort nicht sichtbar waere. Dieser Hook laedt nur die Sprachdatei, damit
+ * {$lang->relatives_usercp_menu_item} im Template etwas findet -- $lang ist ein Objekt,
+ * seine Aenderungen sind ueberall sichtbar, wo dieselbe Instanz referenziert wird.
+ */
 function relatives_handle_usercp_menu(): void
 {
-    global $mybb, $templates, $lang, $usercpmenu;
-
-    if (empty($mybb->settings['relatives_enabled'])) {
-        return;
-    }
+    global $lang;
 
     $lang->load('relatives');
-
-    eval('$relatives_usercp_menu = "' . $templates->get('relatives_usercp_menu') . '";');
-    $usercpmenu .= $relatives_usercp_menu;
 }
 
 // --- Hook-Handler: datahandler_user_delete_start -----------------------------------------
 
 /**
- * Deckt ALLE Loeschwege ab (ACP einzeln/bulk, Merge, Frontend). Loescht alle
- * relatives_persons-Zeilen des geloeschten Users und setzt bei allen Zeilen, die diesen
- * User als linked_uid referenzieren, linked_uid/link_status zurueck.
+ * Deckt ALLE Loeschwege ab (ACP einzeln/bulk, Merge, Frontend). Entfernt den geloeschten
+ * User als Besitzer*in aller seiner Personen (Personen, die sonst niemand mehr hat, werden
+ * dabei geloescht) und setzt bei allen Zeilen, die diesen User als linked_uid
+ * referenzieren, linked_uid/link_status zurueck.
  */
 function relatives_handle_user_delete(&$userhandler): void
 {
@@ -214,7 +406,7 @@ function relatives_handle_user_delete(&$userhandler): void
 
     $own_persons = Relatives_Database::get_persons_by_owner($uid);
     foreach ($own_persons as $person) {
-        Relatives_Database::delete_person((int)$person['id']);
+        Relatives_Database::remove_owner((int)$person['id'], $uid);
     }
 
     $linked_persons = Relatives_Database::get_persons_by_linked_uid($uid);
@@ -277,6 +469,12 @@ function relatives_provide_jobliste_entities(&$args): void
             'entity_type' => 'relative',
             'entity_id'   => (int)$person['id'],
             'label'       => (string)$person['name'],
+            // Verwandtschaft zum Charakter, bereits begrenzt ("entfernte*r
+            // Verwandte*r" statt einer erfundenen Bezeichnung). Optionales Extra --
+            // Konsumenten, die das Feld nicht kennen, ignorieren es einfach.
+            'relation_label' => isset($person['computed_label'])
+                ? (string)Relatives_Kinship::display_label((string)$person['computed_label'], $person['computed_via_person_id'] ?? null)
+                : '',
         ];
     }
 }

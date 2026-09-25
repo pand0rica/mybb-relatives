@@ -16,8 +16,10 @@ class Relatives_SearchApi
     /**
      * Filter-Keys (alle optional): gender, relationship_type_id, attribute_option_ids
      * (array), is_wanted (bool, Default true), age_min, age_max, query (Text Name/
-     * Description). Rueckgabe: sanitisierte, aber NICHT html-escapte Zeilen -- Escaping
-     * macht der Konsument beim Rendern.
+     * Description). Rueckgabe: eine Zeile je Person, sanitisiert, aber NICHT html-escaped
+     * -- Escaping macht der Konsument beim Rendern. Eine Person kann mehreren
+     * Charakteren gehoeren; deren Zuordnungen stehen in 'owners'. relationship_type_id
+     * trifft, sobald mindestens eine Zuordnung diesen Grad hat.
      */
     public static function search(array $filters): array
     {
@@ -30,7 +32,9 @@ class Relatives_SearchApi
         }
 
         if (isset($filters['relationship_type_id']) && (int)$filters['relationship_type_id'] > 0) {
-            $where[] = "relationship_type_id = " . (int)$filters['relationship_type_id'];
+            // Grade stehen seit v2.1 an den Verbindungen, nicht an der Zuordnung.
+            $where[] = "id IN (SELECT person_id FROM " . TABLE_PREFIX . "relatives_relations"
+                . " WHERE relationship_type_id = " . (int)$filters['relationship_type_id'] . ")";
         }
 
         $is_wanted = array_key_exists('is_wanted', $filters) ? (bool)$filters['is_wanted'] : true;
@@ -53,7 +57,6 @@ class Relatives_SearchApi
             $where[] = "(name LIKE '%{$needle}%' OR description LIKE '%{$needle}%')";
         }
 
-        $person_ids_filter = null;
         if (!empty($filters['attribute_option_ids']) && is_array($filters['attribute_option_ids'])) {
             $option_ids = array_filter(array_map('intval', $filters['attribute_option_ids']), static function ($v) {
                 return $v > 0;
@@ -70,26 +73,32 @@ class Relatives_SearchApi
         $rows = [];
         $query = $db->simple_select(
             'relatives_persons',
-            'id, owner_uid, name, gender, relationship_type_id, relationship_custom_label, age, origin, description, is_wanted, wanted_thread_link',
+            'id, name, gender, age, origin, avatar, description, is_wanted, wanted_thread_link',
             implode(' AND ', $where),
             ['order_by' => 'name', 'order_dir' => 'ASC']
         );
         while ($row = $db->fetch_array($query)) {
-            $rows[] = [
-                'id'                        => (int)$row['id'],
-                'owner_uid'                 => (int)$row['owner_uid'],
-                'name'                      => (string)$row['name'],
-                'gender'                    => (int)$row['gender'],
-                'relationship_type_id'      => $row['relationship_type_id'] !== null ? (int)$row['relationship_type_id'] : null,
-                'relationship_custom_label' => $row['relationship_custom_label'],
-                'age'                       => $row['age'] !== null ? (int)$row['age'] : null,
-                'origin'                    => $row['origin'],
-                'description'               => $row['description'],
-                'is_wanted'                 => (bool)$row['is_wanted'],
-                'wanted_thread_link'        => $row['wanted_thread_link'],
+            $rows[(int)$row['id']] = [
+                'id'                 => (int)$row['id'],
+                'name'               => (string)$row['name'],
+                'gender'             => (int)$row['gender'],
+                'age'                => $row['age'] !== null ? (int)$row['age'] : null,
+                'origin'             => $row['origin'],
+                'avatar'             => $row['avatar'],
+                'description'        => $row['description'],
+                'is_wanted'          => (bool)$row['is_wanted'],
+                'wanted_thread_link' => $row['wanted_thread_link'],
+                'owners'             => [],
             ];
         }
-        return $rows;
+
+        foreach (Relatives_Database::get_owners_bulk(array_keys($rows)) as $person_id => $owners) {
+            if (isset($rows[$person_id])) {
+                $rows[$person_id]['owners'] = $owners;
+            }
+        }
+
+        return array_values($rows);
     }
 
     private static function person_ids_with_options(array $option_ids): array

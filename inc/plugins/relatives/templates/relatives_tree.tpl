@@ -9,34 +9,32 @@
 <tr>
 {$usercpnav}
 <td valign="top">
-<div class="relatives_tree_page">
-	<div class="relatives_page_header">
-		<h2>{$relatives_tree_title}</h2>
-		<a class="button" href="relatives.php?action=list">{$lang->relatives_my_persons_title}</a>
-	</div>
+<table border="0" cellspacing="{$theme['borderwidth']}" cellpadding="{$theme['tablespace']}" class="tborder relatives_tree_page">
+<tr>
+	<td class="thead"><strong>{$relatives_tree_title}</strong></td>
+</tr>
+<tr>
+	<td class="trow1">
+	{$relatives_nav}
 
-	<div id="relatives-tree-toolbar" class="relatives_tree_toolbar">
-		<button type="button" id="relatives-tree-zoom-in">+</button>
-		<button type="button" id="relatives-tree-zoom-out">-</button>
-		<button type="button" id="relatives-tree-zoom-reset">{$lang->relatives_tree_reset_view}</button>
-	</div>
+	{$relatives_tree_toolbar}
 
 	<div id="relatives-tree-viewport" class="relatives_tree_viewport">
 		<div id="relatives-tree-canvas" class="relatives_tree_canvas"></div>
 	</div>
 
-	<div id="relatives-tree-panel" class="relatives_tree_panel" style="display:none;"></div>
-</div>
+	<p class="relatives_tree_hint">{$relatives_tree_hint}</p>
+
+	<div id="relatives-tree-backdrop" class="relatives_tree_backdrop" style="display:none;"></div>
+	<div id="relatives-tree-panel" class="relatives_tree_panel" role="dialog" aria-modal="true" style="display:none;"></div>
+	</td>
+</tr>
+</table>
 </td>
 </tr>
 </table>
 
-<script type="application/json" id="relatives-tree-data">{$relatives_tree_json}</script>
-<script type="application/json" id="relatives-relationship-types-data">{$relatives_relationship_types_json}</script>
-<script type="application/json" id="relatives-attribute-groups-data">{$relatives_attribute_groups_json}</script>
-<script type="application/json" id="relatives-tree-config">{$relatives_tree_config_json}</script>
-<script type="application/json" id="relatives-tree-lang">{$relatives_tree_lang_json}</script>
-<script src="inc/plugins/relatives/assets/relatives-tree.js?v={$relatives_tree_js_version}"></script>
+{$relatives_tree_scripts}
 {$footer}
 </body>
 </html>

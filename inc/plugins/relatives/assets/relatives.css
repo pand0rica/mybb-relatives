@@ -15,15 +15,10 @@
 	margin-bottom: 10px;
 }
 
-.relatives_page_header h2 {
-	flex: 1 1 auto;
-	margin: 0;
-}
-
 .relatives_link_button {
 	background: none;
 	border: none;
-	color: #b33;
+	color: inherit;
 	cursor: pointer;
 	padding: 0;
 	font: inherit;
@@ -54,6 +49,7 @@
 }
 
 .relatives_field input[type="text"],
+.relatives_field input[type="url"],
 .relatives_field input[type="number"],
 .relatives_field select,
 .relatives_field textarea {
@@ -61,6 +57,20 @@
 	max-width: 480px;
 	box-sizing: border-box;
 	padding: 5px;
+}
+
+.relatives_field input::placeholder,
+.relatives_field textarea::placeholder {
+	color: #aaa;
+	opacity: 1;
+	font-style: italic;
+}
+
+.relatives_form_section {
+	margin: 20px 0 12px;
+	padding-bottom: 4px;
+	border-bottom: 1px solid rgba(0, 0, 0, 0.15);
+	font-size: 1.1em;
 }
 
 .relatives_field_attributes fieldset {
@@ -71,8 +81,20 @@
 }
 
 .relatives_hint {
-	color: #b33;
 	font-size: 0.85em;
+}
+
+/* Neutraler Erklaerungstext einer Seite. Wie .relatives_hint ohne eigene Schriftfarbe --
+ * die kommt aus dem Theme. */
+.relatives_intro {
+	font-size: 0.85em;
+	opacity: 0.85;
+}
+
+.relatives_shared_note {
+	margin: 0 0 10px;
+	font-size: 0.9em;
+	opacity: 0.8;
 }
 
 .relatives_badge {
@@ -133,9 +155,342 @@
 	}
 
 	.relatives_field input[type="text"],
+	.relatives_field input[type="url"],
 	.relatives_field input[type="number"],
 	.relatives_field select,
 	.relatives_field textarea {
 		max-width: 100%;
 	}
+}
+
+/* --- v2.1: Verbindungen im Formular ------------------------------------------------- */
+
+.relatives_relation_row {
+	margin: 0 0 10px;
+	padding: 8px 10px;
+	border: 1px solid #d5dbe1;
+	border-radius: 4px;
+}
+
+.relatives_relation_row .relatives_field {
+	display: inline-block;
+	margin-right: 12px;
+	vertical-align: top;
+}
+
+/* "Bedeutet: Finian Hari ist Sohn von Rian MacCrea." -- direction of the connection */
+.relatives_relation_sentence {
+	margin: 2px 0 6px;
+	font-style: italic;
+}
+
+.relatives_relation_flags label {
+	margin-right: 12px;
+}
+
+.relatives_deceased_mark {
+	margin-left: 4px;
+	color: #6b7178;
+}
+
+.relatives_inline_form {
+	display: inline;
+	margin: 0;
+}
+
+/* --- v2.1: Familien-Uebersicht ------------------------------------------------------ */
+
+.relatives_families_filter {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-end;
+	gap: 8px 16px;
+	margin-bottom: 12px;
+}
+
+.relatives_families_filter_field label {
+	display: block;
+	font-weight: bold;
+	margin-bottom: 2px;
+}
+
+.relatives_families_filter_actions a {
+	margin-left: 6px;
+}
+
+.relatives_family_cards {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+	gap: 12px;
+}
+
+.relatives_family_card {
+	padding: 10px 12px;
+	border: 1px solid #d5dbe1;
+	border-left: 6px solid var(--relatives-family-color, #7d8894);
+	border-radius: 4px;
+}
+
+.relatives_family_card_name {
+	font-weight: bold;
+}
+
+.relatives_family_card_members {
+	font-size: 11px;
+	color: #6b7178;
+	margin-bottom: 6px;
+}
+
+.relatives_family_card_closed {
+	display: inline-block;
+	margin-bottom: 6px;
+	padding: 1px 6px;
+	font-size: 11px;
+	color: #7a4b00;
+	background: #fdf1dc;
+	border: 1px solid #ecd3a6;
+	border-radius: 3px;
+}
+
+.relatives_family_card_attributes {
+	display: grid;
+	grid-template-columns: auto 1fr;
+	gap: 2px 8px;
+	margin: 0 0 6px;
+	font-size: 0.9em;
+}
+
+.relatives_family_card_attributes dt {
+	font-weight: bold;
+}
+
+.relatives_family_card_attributes dd {
+	margin: 0;
+}
+
+.relatives_family_card_actions {
+	margin-top: 8px;
+}
+
+.relatives_family_card_member_list {
+	margin-top: 8px;
+}
+
+.relatives_family_card_member_list summary {
+	cursor: pointer;
+	font-weight: bold;
+}
+
+.relatives_family_card_member_list ul {
+	margin: 6px 0 0;
+	padding-left: 18px;
+}
+
+/* Gemeinsame Navigationsleiste aller UserCP-Seiten als Tab-Leiste; Icons rechts.
+ * Farben aus currentColor, damit die Leiste sich jedem Theme anpasst; der Akzent
+ * laesst sich per --relatives-accent im Theme ueberschreiben. */
+.relatives_nav {
+	align-items: flex-end;
+	gap: 2px;
+	border-bottom: 1px solid rgba(128, 128, 128, 0.35);
+}
+
+.relatives_nav .relatives_nav_tab {
+	padding: 8px 14px 7px;
+	border-bottom: 3px solid transparent;
+	margin-bottom: -1px;
+	border-radius: 4px 4px 0 0;
+	color: inherit;
+	text-decoration: none;
+	opacity: 0.7;
+	transition: opacity 0.15s, background-color 0.15s, border-color 0.15s;
+}
+
+.relatives_nav .relatives_nav_tab:hover,
+.relatives_nav .relatives_nav_tab:focus {
+	opacity: 1;
+	background-color: rgba(128, 128, 128, 0.12);
+	border-bottom-color: rgba(128, 128, 128, 0.45);
+	text-decoration: none;
+}
+
+.relatives_nav_side {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	margin-left: auto;
+	align-self: center;
+}
+
+.relatives_nav_icon {
+	display: inline-flex;
+	padding: 6px;
+	border-radius: 50%;
+	line-height: 0;
+	color: inherit;
+	opacity: 0.75;
+	transition: opacity 0.15s, background-color 0.15s;
+}
+
+.relatives_nav_icon:hover,
+.relatives_nav_icon:focus {
+	opacity: 1;
+	background-color: rgba(128, 128, 128, 0.15);
+}
+
+/* Stammbaum-Link in Profil, Postbit und Mitgliederliste */
+.relatives_tree_link {
+	white-space: nowrap;
+}
+
+/* Aktueller Tab: voll deckend, fett, Akzent-Unterstrich. */
+.relatives_nav .relatives_nav_active,
+.relatives_nav .relatives_nav_active:hover,
+.relatives_nav .relatives_nav_active:focus {
+	font-weight: bold;
+	opacity: 1;
+	background-color: transparent;
+	border-bottom-color: var(--relatives-accent, currentColor);
+}
+
+/* Hauptaktion im Leerzustand der Liste ("Person hinzufuegen"). */
+.relatives_nav_primary {
+	font-weight: bold;
+}
+
+.relatives_nav_primary::before {
+	content: "+ ";
+}
+
+/* Leerzustand der Liste: Hinweis plus Wege nach vorn statt Sackgasse. */
+.relatives_empty_state {
+	margin: 12px 0;
+	padding: 16px;
+	border: 1px dashed rgba(0, 0, 0, 0.2);
+	border-radius: 6px;
+	text-align: center;
+}
+
+.relatives_empty_state_actions {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: center;
+	gap: 8px;
+	margin-bottom: 0;
+}
+
+/* Offene Verknuepfungsanfragen */
+.relatives_link_request_meta {
+	margin-top: 4px;
+	font-size: 0.9em;
+}
+
+.relatives_link_request_actions {
+	white-space: nowrap;
+	text-align: right;
+}
+
+.relatives_link_request_actions .relatives_link_button {
+	margin-left: 8px;
+}
+
+/* Ohne Eintraege keine leere Tabellenkopfzeile ueber dem Leerzustand. */
+.relatives_table_empty {
+	display: none;
+}
+
+/* --- Attribute im Personenformular ---------------------------------------------- */
+
+.relatives_field_label {
+	display: block;
+	font-weight: bold;
+	margin-bottom: 6px;
+}
+
+/* Einzelwert-Gruppen (Dropdown) nebeneinander, Mehrfach-Gruppen volle Breite. */
+.relatives_attribute_groups {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 10px 16px;
+}
+
+.relatives_attribute_group_single {
+	flex: 0 1 220px;
+}
+
+.relatives_attribute_group_single label {
+	font-weight: normal;
+	margin-bottom: 3px;
+}
+
+fieldset.relatives_attribute_group {
+	flex: 1 1 100%;
+	margin: 0;
+	padding: 6px 10px 8px;
+	border: 1px solid rgba(0, 0, 0, 0.15);
+	border-radius: 4px;
+}
+
+.relatives_attribute_options {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px 14px;
+}
+
+.relatives_field .relatives_attribute_options label {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	margin: 0;
+	font-weight: normal;
+}
+
+.relatives_form_actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	margin-top: 16px;
+}
+
+/* --- Verknuepfung mit Account (eigener Kasten unter dem Formular) ---------------- */
+
+.relatives_link_section {
+	margin-top: 24px;
+	padding: 12px 16px;
+	border: 1px solid rgba(0, 0, 0, 0.15);
+	border-left: 4px solid currentColor;
+	border-radius: 6px;
+}
+
+.relatives_link_section_title {
+	margin: 0 0 6px;
+}
+
+.relatives_link_section label {
+	display: block;
+	font-weight: bold;
+	margin-bottom: 4px;
+}
+
+.relatives_link_request_inputs {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px;
+}
+
+.relatives_link_request_inputs #relatives_target_username,
+.relatives_link_request_inputs .select2-container {
+	flex: 1 1 240px;
+	max-width: 360px;
+}
+
+.relatives_link_state {
+	margin: 6px 0 0;
+	font-weight: bold;
+}
+
+/* Status-Spalte: alle Badges (Gesucht, Verknuepfung) untereinander statt am Namen. */
+.relatives_status_badges .relatives_badge {
+	margin: 0 4px 2px 0;
 }

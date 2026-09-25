@@ -42,7 +42,7 @@ function relatives_cli_status(): void
 {
     global $db;
 
-    $tables = ['relatives_persons', 'relatives_relationship_types', 'relatives_attribute_groups', 'relatives_attribute_options', 'relatives_person_attributes'];
+    $tables = ['relatives_persons', 'relatives_person_owners', 'relatives_relations', 'relatives_families', 'relatives_relationship_types', 'relatives_attribute_groups', 'relatives_attribute_options', 'relatives_person_attributes'];
     echo "Tables:\n";
     foreach ($tables as $table) {
         echo "  {$table}: " . ($db->table_exists($table) ? 'EXISTS' : 'MISSING') . "\n";
