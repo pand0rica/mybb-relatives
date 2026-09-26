@@ -399,19 +399,31 @@ function relatives_handle_usercp_menu(): void
  * User als Besitzer*in aller seiner Personen (Personen, die sonst niemand mehr hat, werden
  * dabei geloescht) und setzt bei allen Zeilen, die diesen User als linked_uid
  * referenzieren, linked_uid/link_status zurueck.
+ *
+ * UserDataHandler::delete_user() setzt KEIN $user-Property, sondern legt die zu
+ * loeschenden uids vor dem Hook in $delete_uids ab (Array, bei Bulk-Loeschung mehrere).
  */
 function relatives_handle_user_delete(&$userhandler): void
 {
-    global $db;
-
-    if (!isset($userhandler->user['uid'])) {
+    if (!is_object($userhandler) || !isset($userhandler->delete_uids)) {
         return;
     }
-    $uid = (int)$userhandler->user['uid'];
-    if ($uid <= 0) {
-        return;
-    }
+    $uids = is_array($userhandler->delete_uids)
+        ? $userhandler->delete_uids
+        : explode(',', (string)$userhandler->delete_uids);
 
+    foreach ($uids as $uid) {
+        $uid = (int)$uid;
+        if ($uid <= 0) {
+            continue;
+        }
+        relatives_cleanup_deleted_user($uid);
+    }
+}
+
+/** Raeumt alle Daten eines einzelnen geloeschten Accounts auf. */
+function relatives_cleanup_deleted_user(int $uid): void
+{
     // Vor dem Austragen: eigene offene Loeschantraege platzen, eigene offene Antworten
     // entfallen (und koennen fremde Antraege damit abschliessen).
     Relatives_DeleteRequests::handle_user_delete($uid);

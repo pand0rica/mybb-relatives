@@ -744,6 +744,69 @@ if ($uid_a > 0 && $uid_b > 0 && $db->table_exists('relatives_relation_conflicts'
     echo "  skip v2.2 section (needs two users and the v2.2 tables -- deactivate/activate the plugin once)\n";
 }
 
+echo "\n=== datahandler_user_delete_start (relatives_handle_user_delete) ===\n";
+
+// Geister-uids oberhalb der hoechsten echten uid: der Handler loescht so nie Daten
+// echter Testforum-Accounts. Kein Insert in users -- der Handler liest nur delete_uids.
+require_once MYBB_ROOT . 'inc/plugins/relatives.php';
+$max_uid = (int)$db->fetch_field($db->simple_select('users', 'MAX(uid) AS max_uid'), 'max_uid');
+$ghost_a = $max_uid + 1000000;
+$ghost_b = $ghost_a + 1;
+$ghost_keep = $ghost_a + 2;
+
+$del_solo_a = Relatives_Database::create_person(['name' => $marker . ' del solo A', 'gender' => 0]);
+Relatives_Database::add_owner($del_solo_a, $ghost_a);
+$del_solo_b = Relatives_Database::create_person(['name' => $marker . ' del solo B', 'gender' => 1]);
+Relatives_Database::add_owner($del_solo_b, $ghost_b);
+$del_shared = Relatives_Database::create_person(['name' => $marker . ' del shared', 'gender' => 1]);
+Relatives_Database::add_owner($del_shared, $ghost_a);
+Relatives_Database::add_owner($del_shared, $ghost_keep);
+$del_linked = Relatives_Database::create_person([
+    'name' => $marker . ' del linked', 'gender' => 0,
+    'linked_uid' => $ghost_b, 'link_status' => Relatives_LinkManager::STATUS_CONFIRMED,
+    'link_requested_by' => $ghost_keep, 'link_confirmed_at' => TIME_NOW,
+]);
+Relatives_Database::add_owner($del_linked, $ghost_keep);
+
+// Altes (fehlerhaftes) Objektformat: MyBB setzt kein $user -> darf nichts anfassen.
+$legacy_handler = (object)['user' => ['uid' => $ghost_a]];
+relatives_handle_user_delete($legacy_handler);
+check('handler ignores an object without delete_uids', true, Relatives_Database::is_owner($del_solo_a, $ghost_a));
+
+// Bulk-Loeschung wie im ACP: mehrere uids, ungueltige Eintraege werden uebersprungen.
+$bulk_handler = (object)['delete_uids' => [$ghost_a, 0, -5, (string)$ghost_b]];
+relatives_handle_user_delete($bulk_handler);
+check('sole-owner person of deleted user A is removed', null, Relatives_Database::get_person($del_solo_a));
+check('sole-owner person of deleted user B is removed (bulk)', null, Relatives_Database::get_person($del_solo_b));
+check('shared person survives with the remaining owner', [true, false, 1], [
+    Relatives_Database::get_person($del_shared) !== null,
+    Relatives_Database::is_owner($del_shared, $ghost_a),
+    Relatives_Database::count_owners($del_shared),
+]);
+check('deleted user A owns no persons anymore', [], Relatives_Database::get_persons_by_owner($ghost_a));
+// array_key_exists statt ??: die erwarteten Werte sind gerade NULL.
+$linked_after = Relatives_Database::get_person($del_linked) ?? [];
+$link_field = static function (string $key) use ($linked_after) {
+    return array_key_exists($key, $linked_after) ? $linked_after[$key] : 'missing';
+};
+check('linked_uid reference to deleted user B is reset', [null, Relatives_LinkManager::STATUS_NONE, null, null], [
+    $link_field('linked_uid'),
+    (int)$link_field('link_status'),
+    $link_field('link_requested_by'),
+    $link_field('link_confirmed_at'),
+]);
+check('no person references deleted user B anymore', [], Relatives_Database::get_persons_by_linked_uid($ghost_b));
+
+// Komma-String-Form (defensiv) -- raeumt zugleich die restlichen Fixtures ab.
+$string_handler = (object)['delete_uids' => (string)$ghost_keep];
+relatives_handle_user_delete($string_handler);
+check('comma-string delete_uids is accepted', [], Relatives_Database::get_persons_by_owner($ghost_keep));
+foreach ([$del_shared, $del_linked] as $del_person_id) {
+    if (Relatives_Database::get_person($del_person_id) !== null) {
+        Relatives_Database::delete_person($del_person_id);
+    }
+}
+
 // Cleanup Fixtures
 if ($person_id > 0) {
     // Die Fixture-Person ist inzwischen verbunden und ein bestaetigter Charakter-Knoten --

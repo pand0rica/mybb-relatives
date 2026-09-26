@@ -70,6 +70,12 @@ new code base; 2.0 and 2.1 were internal development stages and are summarised h
   text.
 - ACP pages and plugin templates no longer use inline `style`/`onclick` attributes; the ACP delete
   confirmation no longer breaks on language strings containing an apostrophe.
+- Deleting a user account left all of its relatives data behind: the
+  `datahandler_user_delete_start` handler read `$userhandler->user['uid']`, which
+  `UserDataHandler::delete_user()` never sets, and always returned early. It now iterates over
+  `$userhandler->delete_uids` (also covers bulk deletions in the ACP), removes each deleted user as
+  owner of their persons, cancels their open deletion requests/votes and resets every
+  `linked_uid` reference to them.
 
 ### Security
 - All data-changing frontend actions (delete, adopt, link request/accept/decline, family delete)
