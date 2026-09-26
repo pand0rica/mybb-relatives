@@ -2,8 +2,8 @@
 /**
  * Verwandtschaften & Stammbaum - ACP-Tools-Modul
  *
- * Dispatcher fuer die vier Tabs: Verwandtschaftsgrade, Attribut-Gruppen, Herkunft,
- * Migration. Tab-Handler liegen unter inc/plugins/relatives/modules/admin/.
+ * Dispatcher fuer die Tabs: Verwandtschaftsgrade, Attribut-Gruppen, Herkunft,
+ * Migration, Geflecht, Loeschantraege. Tab-Handler liegen unter inc/plugins/relatives/modules/admin/.
  */
 
 if (!defined("IN_MYBB")) {
@@ -19,6 +19,8 @@ require_once MYBB_ROOT . 'inc/plugins/relatives/core/Migration.php';
 require_once MYBB_ROOT . 'inc/plugins/relatives/core/Families.php';
 require_once MYBB_ROOT . 'inc/plugins/relatives/core/Kinship.php';
 require_once MYBB_ROOT . 'inc/plugins/relatives/core/Graph.php';
+require_once MYBB_ROOT . 'inc/plugins/relatives/core/Alerts.php';
+require_once MYBB_ROOT . 'inc/plugins/relatives/core/DeleteRequests.php';
 
 $page->add_breadcrumb_item($lang->relatives, "index.php?module=tools-relatives");
 
@@ -55,6 +57,11 @@ function relatives_acp_nav_tabs(string $active): void
             'title'       => $lang->relatives_tab_graph,
             'link'        => 'index.php?module=tools-relatives&action=graph',
             'description' => $lang->relatives_tab_desc_graph,
+        ],
+        'delete-requests' => [
+            'title'       => $lang->relatives_tab_delete_requests,
+            'link'        => 'index.php?module=tools-relatives&action=delete-requests',
+            'description' => $lang->relatives_tab_desc_delete_requests,
         ],
     ];
 
@@ -108,7 +115,7 @@ if ($action === '') {
     $action = 'relationship-types';
 }
 
-$allowed_actions = ['relationship-types', 'attributes', 'origin', 'migration', 'graph'];
+$allowed_actions = ['relationship-types', 'attributes', 'origin', 'migration', 'graph', 'delete-requests'];
 if (!in_array($action, $allowed_actions, true)) {
     $action = 'relationship-types';
 }

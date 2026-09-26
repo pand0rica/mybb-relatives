@@ -213,3 +213,24 @@ $l['relatives_tree_placeholder_add'] = 'Add this person';
 $l['relatives_tree_adopt'] = 'Add to my list';
 $l['relatives_tree_adopt_note'] = 'This person was added by another player. Add them to your list to be able to edit them – the details stay shared with everyone.';
 $l['relatives_adopted'] = 'The person is now in your list too.';
+
+// Deletion requests for NPCs
+$l['relatives_confirm_delete_npc'] = 'Delete this person from the family tree completely? Everyone else who has them in their list must agree first. Only then are they deleted together with all connections. If nobody else has them in their list, they are deleted right away.';
+$l['relatives_deleted_completely'] = 'The person was deleted from the family tree completely.';
+$l['relatives_delete_requested_one'] = 'Deletion requested. One more person has to agree, then the NPC is deleted completely and you will be notified.';
+$l['relatives_delete_requested'] = 'Deletion requested. {1} more people have to agree, then the NPC is deleted completely and you will be notified.';
+$l['relatives_error_delete_pending'] = 'There is already a deletion request for this person. You can find open requests under "My relatives".';
+$l['relatives_error_delete_vote'] = 'This deletion request is no longer open or does not concern you.';
+$l['relatives_pending_delete_requests'] = 'Open deletion requests';
+$l['relatives_pending_delete_requests_hint'] = 'These people are in your list as well. They are only deleted completely once everyone has agreed. If you decline, the person is kept.';
+$l['relatives_delete_request_text'] = '{1} wants to delete <strong>{2}</strong> from the family tree completely.';
+$l['relatives_delete_request_date'] = 'Requested on {1}';
+$l['relatives_delete_vote_confirm'] = 'Agree to delete';
+$l['relatives_delete_vote_decline'] = 'Keep';
+$l['relatives_delete_vote_confirm_message'] = 'Agree that this person is deleted from the family tree together with all connections? This cannot be undone.';
+$l['relatives_delete_vote_confirmed'] = 'Thanks, your approval was saved. The person is deleted once everyone has agreed.';
+$l['relatives_delete_vote_completed'] = 'Everyone agreed, the person was deleted from the family tree completely.';
+$l['relatives_delete_vote_declined'] = 'The person is kept. The deletion request was declined.';
+$l['relatives_badge_delete_requested'] = 'Deletion requested ({1}/{2} approvals)';
+$l['relatives_badge_delete_vote_open'] = 'Deletion request open';
+$l['relatives_nav_open_delete_requests'] = 'Open deletion requests: {1}';

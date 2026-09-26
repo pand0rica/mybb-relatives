@@ -39,6 +39,12 @@ new code base; 2.0 and 2.1 were internal development stages and are summarised h
   *jobliste* plugin.
 - User CP menu item in the *Miscellaneous* box with its own icon; shared tab navigation on all
   plugin pages.
+- Deletion requests for NPCs: deleting an NPC asks everyone else who has it in their list
+  (optional MyAlerts notifications, open requests under *My relatives* with a counter in the
+  navigation). Once all agree, the NPC is deleted completely and the requester is notified; one
+  *Keep* cancels the request and removes the requester from the NPC's list. NPCs nobody else
+  lists are deleted right away. ACP tab *Deletion requests* to decide stuck requests.
+- Feedback after deleting in the family tree (status message instead of a silent reload).
 
 ### Changed
 - Wanted cards on the profile use responsive CSS instead of hard-coded widths per theme.

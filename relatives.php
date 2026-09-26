@@ -3,7 +3,7 @@
  * Verwandtschaften & Stammbaum - Frontend-Root
  *
  * Actions: list, add, edit, delete (POST), adopt (POST), tree (auch als Popup: &popup=1),
- * link_request/link_accept/link_decline (POST). Siehe PROJECT_CONTEXT.md "Interaktiver Stammbaum" und "Konto-Verknuepfung".
+ * link_request/link_accept/link_decline (POST), delete_vote (POST). Siehe PROJECT_CONTEXT.md "Interaktiver Stammbaum" und "Konto-Verknuepfung".
  */
 
 define('IN_MYBB', 1);
@@ -20,6 +20,8 @@ require_once MYBB_ROOT . 'inc/plugins/relatives/core/Graph.php';
 require_once MYBB_ROOT . 'inc/plugins/relatives/core/TreeBuilder.php';
 require_once MYBB_ROOT . 'inc/plugins/relatives/core/TreePlaceholders.php';
 require_once MYBB_ROOT . 'inc/plugins/relatives/core/LinkManager.php';
+require_once MYBB_ROOT . 'inc/plugins/relatives/core/Alerts.php';
+require_once MYBB_ROOT . 'inc/plugins/relatives/core/DeleteRequests.php';
 
 $lang->load('relatives');
 
@@ -130,7 +132,7 @@ function relatives_self_anchor_label(int $account_person_id): string
  */
 function relatives_nav(int $popup_uid, string $active = '', string $action_url = '', string $action_label = '', string $action_icon = 'relatives_icon_person_add'): string
 {
-    global $lang, $templates;
+    global $lang, $templates, $mybb;
 
     // Attribute strings per nav entry: the current section gets a visible marker and
     // aria-current, so users can tell where they are.
@@ -142,6 +144,14 @@ function relatives_nav(int $popup_uid, string $active = '', string $action_url =
     $relatives_nav_attr_list = $nav_attr('list');
     $relatives_nav_attr_families = $nav_attr('families');
     $relatives_nav_attr_tree = $nav_attr('tree');
+
+    // Offene Loeschantraege, auf die ich antworten muss -- auch ohne MyAlerts sichtbar.
+    $relatives_nav_open_badge = '';
+    $open_votes = Relatives_DeleteRequests::count_open_for_voter((int)$mybb->user['uid']);
+    if ($open_votes > 0) {
+        $badge_title = htmlspecialchars_uni($lang->sprintf($lang->relatives_nav_open_delete_requests, $open_votes));
+        $relatives_nav_open_badge = ' <span class="relatives_nav_count" title="' . $badge_title . '">' . $open_votes . '</span>';
+    }
 
     // Icon only; the link itself (incl. window.open) comes from relatives_tree_link.
     eval('$relatives_popup_icon = "' . $templates->get('relatives_tree_popup_button') . '";');
@@ -404,15 +414,49 @@ if ($action === 'delete') {
     if (!Relatives_Database::is_owner($id, $my_uid)) {
         error_no_permission();
     }
-    // Entfernt die Person nur aus der eigenen Liste; bei anderen Charakteren bleibt sie.
-    Relatives_Database::remove_owner($id, $my_uid);
-    // Der eigene Baum hat sich geaendert -- und mit ihm die Verwandtschaft aller
-    // uebrigen Personen darin (eine geloeschte Bezugsperson reisst Ketten auseinander).
-    Relatives_Kinship::recompute_owner($my_uid);
-    if ($mybb->get_input('ajax')) {
-        relatives_json_response(['success' => true]);
+    // NPCs gehoeren dem gemeinsamen Geflecht: Loeschen stellt einen Antrag an alle
+    // anderen Besitzer*innen (oder loescht sofort, wenn es keine gibt). Gespielte
+    // Charaktere werden nur aus der eigenen Liste ausgetragen.
+    $outcome = Relatives_DeleteRequests::request($id, $my_uid);
+    if ($outcome['result'] === Relatives_DeleteRequests::RESULT_PENDING_EXISTS) {
+        relatives_error_response($lang->relatives_error_delete_pending);
     }
-    redirect('relatives.php?action=list', $lang->relatives_deleted);
+    if ($outcome['result'] === Relatives_DeleteRequests::RESULT_FAILED) {
+        relatives_error_response($lang->relatives_error_generic);
+    }
+    if ($outcome['result'] === Relatives_DeleteRequests::RESULT_REQUESTED) {
+        $message = $outcome['waiting'] === 1
+            ? $lang->relatives_delete_requested_one
+            : $lang->sprintf($lang->relatives_delete_requested, $outcome['waiting']);
+    } elseif ($outcome['result'] === Relatives_DeleteRequests::RESULT_DELETED) {
+        $message = $lang->relatives_deleted_completely;
+    } else {
+        $message = $lang->relatives_deleted;
+    }
+    if ($mybb->get_input('ajax')) {
+        relatives_json_response(['success' => true, 'result' => $outcome['result'], 'message' => $message]);
+    }
+    redirect('relatives.php?action=list', $message);
+}
+
+// --- action: delete_vote (POST) --------------------------------------------------------
+
+// Antwort auf einen Loeschantrag: vote=confirm stimmt zu, alles andere lehnt ab.
+if ($action === 'delete_vote') {
+    relatives_verify_post();
+    $request_id = $mybb->get_input('id', MyBB::INPUT_INT);
+    $confirm = $mybb->get_input('vote') === 'confirm';
+
+    $vote_result = Relatives_DeleteRequests::vote($request_id, $my_uid, $confirm);
+    if ($vote_result === Relatives_DeleteRequests::VOTE_RESULT_FAILED) {
+        relatives_error_response($lang->relatives_error_delete_vote);
+    }
+    $messages = [
+        Relatives_DeleteRequests::VOTE_RESULT_CONFIRMED => $lang->relatives_delete_vote_confirmed,
+        Relatives_DeleteRequests::VOTE_RESULT_COMPLETED => $lang->relatives_delete_vote_completed,
+        Relatives_DeleteRequests::VOTE_RESULT_DECLINED  => $lang->relatives_delete_vote_declined,
+    ];
+    redirect('relatives.php?action=list', $messages[$vote_result]);
 }
 
 // --- action: adopt (POST) --------------------------------------------------------------
@@ -1395,6 +1439,8 @@ if ($action === 'tree') {
         'save_failed'                => $lang->relatives_error_generic,
         'delete'                      => $lang->relatives_delete,
         'confirm_delete'             => $lang->relatives_confirm_delete,
+        'confirm_delete_npc'         => $lang->relatives_confirm_delete_npc,
+        'deleted'                    => $lang->relatives_deleted,
         'cancel'                      => $lang->relatives_cancel,
         'node_you'                    => $lang->relatives_tree_node_you,
         'node_account'               => $lang->relatives_tree_node_account,
@@ -1444,6 +1490,9 @@ if ($action === 'tree') {
 
 $persons = Relatives_Database::get_persons_by_owner($my_uid);
 $relationship_labels = relatives_get_relationship_labels($persons);
+$my_delete_requests = Relatives_DeleteRequests::get_pending_by_requester($my_uid);
+$open_delete_requests = Relatives_DeleteRequests::get_open_for_voter($my_uid);
+$open_delete_person_ids = array_flip(array_map('intval', array_column($open_delete_requests, 'person_id')));
 $relatives_rows = '';
 foreach ($persons as $person) {
     $relatives_row_id = (int)$person['id'];
@@ -1452,6 +1501,19 @@ foreach ($persons as $person) {
     $relatives_row_relationship = htmlspecialchars_uni($relationship_labels[$relatives_row_id]);
     $relatives_row_age = $person['age'] !== null ? (int)$person['age'] : '-';
     $relatives_row_confirm_title = htmlspecialchars_uni($lang->sprintf($lang->relatives_confirm_title_named, $person['name']));
+    $relatives_row_confirm_message = htmlspecialchars_uni(Relatives_DeleteRequests::is_npc($person)
+        ? $lang->relatives_confirm_delete_npc
+        : $lang->relatives_confirm_delete);
+    $relatives_row_delete_status = '';
+    if (isset($my_delete_requests[$relatives_row_id])) {
+        $state = $my_delete_requests[$relatives_row_id];
+        $relatives_row_delete_status = '<span class="relatives_badge relatives_badge_delete_requested">'
+            . htmlspecialchars_uni($lang->sprintf($lang->relatives_badge_delete_requested, $state['confirmed'], $state['total']))
+            . '</span>';
+    } elseif (isset($open_delete_person_ids[$relatives_row_id])) {
+        $relatives_row_delete_status = '<span class="relatives_badge relatives_badge_delete_requested">'
+            . htmlspecialchars_uni($lang->relatives_badge_delete_vote_open) . '</span>';
+    }
     $relatives_row_wanted_badge = (int)$person['is_wanted'] === 1
         ? '<span class="relatives_badge relatives_badge_wanted">' . htmlspecialchars_uni($lang->relatives_badge_wanted) . '</span>'
         : '';
@@ -1506,6 +1568,27 @@ if (!empty($pending)) {
         $relatives_link_requests_rows .= $relatives_lr_row;
     }
     eval('$relatives_link_requests_box = "' . $templates->get('relatives_link_requests') . '";');
+}
+
+$relatives_delete_requests_box = '';
+if (!empty($open_delete_requests)) {
+    $relatives_delete_requests_rows = '';
+    $requesters = relatives_get_users_bulk(array_column($open_delete_requests, 'requested_by'));
+    foreach ($open_delete_requests as $request) {
+        $relatives_dr_id = (int)$request['id'];
+        $requester_uid = (int)$request['requested_by'];
+        $requester = $requesters[$requester_uid] ?? null;
+        $requester_html = $requester
+            ? build_profile_link(format_name(htmlspecialchars_uni($requester['username']), (int)$requester['usergroup'], (int)$requester['displaygroup']), $requester_uid)
+            : htmlspecialchars_uni($lang->relatives_link_request_unknown_user);
+        $relatives_dr_text = $lang->sprintf($lang->relatives_delete_request_text, $requester_html, htmlspecialchars_uni($request['person_name']));
+        $relatives_dr_date = htmlspecialchars_uni($lang->sprintf($lang->relatives_delete_request_date, my_date('normal', (int)$request['created_at'])));
+        $relatives_dr_confirm_title = htmlspecialchars_uni($lang->sprintf($lang->relatives_confirm_title_named, $request['person_name']));
+        $relatives_dr_confirm_message = htmlspecialchars_uni($lang->relatives_delete_vote_confirm_message);
+        eval('$relatives_dr_row = "' . $templates->get('relatives_delete_requests_row') . '";');
+        $relatives_delete_requests_rows .= $relatives_dr_row;
+    }
+    eval('$relatives_delete_requests_box = "' . $templates->get('relatives_delete_requests') . '";');
 }
 
 add_breadcrumb($lang->relatives_my_persons_title, 'relatives.php?action=list');

@@ -25,6 +25,8 @@ require_once MYBB_ROOT . "inc/plugins/relatives/core/Graph.php";
 require_once MYBB_ROOT . "inc/plugins/relatives/core/TreeBuilder.php";
 require_once MYBB_ROOT . "inc/plugins/relatives/core/TreePlaceholders.php";
 require_once MYBB_ROOT . "inc/plugins/relatives/core/LinkManager.php";
+require_once MYBB_ROOT . "inc/plugins/relatives/core/Alerts.php";
+require_once MYBB_ROOT . "inc/plugins/relatives/core/DeleteRequests.php";
 require_once MYBB_ROOT . "inc/plugins/relatives/core/SearchApi.php";
 require_once MYBB_ROOT . "inc/plugins/relatives/core/Migration.php";
 require_once MYBB_ROOT . "inc/plugins/relatives/core/StructureInference.php";
@@ -87,6 +89,9 @@ $plugins->add_hook("postbit_prev", "relatives_handle_postbit");
 $plugins->add_hook("memberlist_user", "relatives_handle_memberlist_user");
 $plugins->add_hook("usercp_menu", "relatives_handle_usercp_menu");
 $plugins->add_hook("datahandler_user_delete_start", "relatives_handle_user_delete");
+// MyAlerts-Formatter (optional): global_start fuer die Alert-Seite, xmlhttp fuers Glocken-Dropdown.
+$plugins->add_hook("global_start", "relatives_register_alert_formatter");
+$plugins->add_hook("xmlhttp", "relatives_register_alert_formatter");
 
 $plugins->add_hook("admin_tools_menu", "relatives_admin_menu");
 $plugins->add_hook("admin_tools_action_handler", "relatives_admin_action");
@@ -407,6 +412,10 @@ function relatives_handle_user_delete(&$userhandler): void
         return;
     }
 
+    // Vor dem Austragen: eigene offene Loeschantraege platzen, eigene offene Antworten
+    // entfallen (und koennen fremde Antraege damit abschliessen).
+    Relatives_DeleteRequests::handle_user_delete($uid);
+
     $own_persons = Relatives_Database::get_persons_by_owner($uid);
     foreach ($own_persons as $person) {
         Relatives_Database::remove_owner((int)$person['id'], $uid);
@@ -421,6 +430,46 @@ function relatives_handle_user_delete(&$userhandler): void
             'link_confirmed_at' => null,
         ]);
     }
+}
+
+// --- MyAlerts ------------------------------------------------------------------------------
+
+/**
+ * Registriert je Alert-Typ einen Formatter. Best effort: tut still nichts, wenn MyAlerts
+ * fehlt oder inkompatibel ist. Statischer Guard gegen Doppelregistrierung.
+ */
+function relatives_register_alert_formatter(): void
+{
+    static $registered = false;
+    global $mybb, $lang;
+
+    if ($registered) {
+        return;
+    }
+    if (!class_exists('MybbStuff_MyAlerts_AlertFormatterManager')
+        || !class_exists('MybbStuff_MyAlerts_Formatter_AbstractFormatter')) {
+        return;
+    }
+
+    $lang->load('relatives_myalerts');
+
+    $manager = MybbStuff_MyAlerts_AlertFormatterManager::getInstance();
+    if (!$manager) {
+        $manager = MybbStuff_MyAlerts_AlertFormatterManager::createInstance($mybb, $lang);
+    }
+    if (!$manager) {
+        return;
+    }
+
+    require_once MYBB_ROOT . 'inc/plugins/relatives/myalerts_formatter.php';
+    if (!class_exists('Relatives_MyAlerts_Formatter')) {
+        return;
+    }
+
+    foreach (Relatives_Alerts::codes() as $code) {
+        $manager->registerFormatter(new Relatives_MyAlerts_Formatter($mybb, $lang, $code));
+    }
+    $registered = true;
 }
 
 // --- ACP-Registrierung -------------------------------------------------------------------

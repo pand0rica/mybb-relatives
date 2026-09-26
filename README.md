@@ -18,6 +18,9 @@ sheet alone can't show who belongs to whom.
 - **No dependencies.** Optional integrations: the *jobliste* plugin (job list) picks up persons
   through provider hooks, and *anschluss suchmaschine* (connection search) queries wanted roles
   through the public API. Both are separate plugins and not required.
+  [MyAlerts](https://github.com/euantorano/MyAlerts) is optional as well: with it, members are
+  notified about deletion requests for NPCs. Without it, open requests still show up under
+  *My relatives*.
 
 ## Installation
 
@@ -76,9 +79,30 @@ the pop-out icon opens your tree in its own window.
 
 ![Add person form](docs/screenshots/person-form.png)
 
-**Edit / remove:** use the links in your list. *Remove* only takes the person off **your**
-list; the person disappears from the network once nobody lists them, they are not a played
-character and they have no connections left.
+**Edit:** use the *Edit* link in your list or the box menu in the tree.
+
+**Delete an NPC (deletion request):** NPCs belong to the shared network, so *Delete* (in your
+list or in the tree's box menu) asks everyone else who has the person in their list:
+
+1. If nobody else lists the person, they are deleted right away – together with all their
+   connections.
+2. Otherwise a **deletion request** is created. Everyone else who lists the person gets a MyAlert
+   (if MyAlerts is installed) and sees the request under **User CP → Relatives & Family Tree →
+   My relatives → Open deletion requests** (a red counter next to *My relatives* shows how many
+   are waiting). There they click **Agree to delete** or **Keep**.
+3. Once **everyone** has agreed, the person is deleted completely and the requester is notified.
+4. If **anyone** clicks *Keep*, the request fails: the person stays in the network, the requester
+   is removed from the person's list and is notified.
+
+While a request is open, the requester's list shows *Deletion requested (x/y approvals)*. There
+is no deadline; the team can decide stuck requests in the ACP (see below). Everything you do
+gets a short confirmation message – in the list as a redirect notice, in the tree as a status
+message at the bottom of the screen.
+
+![Open deletion requests](docs/screenshots/delete-requests.png)
+
+**Played characters** are never deleted this way: *Delete* only takes them off **your** list.
+
 
 **Who may edit a person?** Everyone who has the person in their list, everyone whose character
 belongs to the same family, the account of a played character (for its own node) and the team
@@ -166,6 +190,10 @@ have access right away; other administrators need **ACP → Users & Groups → A
 - **Shared network** – preview and merge of the per-character lists into the shared network,
   the list of contradicting statements (accept/discard) and a tool to take back guesses made by
   the legacy migration.
+- **Deletion requests** – all open deletion requests for NPCs with requester, date, approvals and
+  the members who have not answered yet. **Delete now** carries the request out without waiting;
+  **Discard** keeps the person and removes the requester from its list (the requester is
+  notified in both cases).
 
 ![ACP relationship types](docs/screenshots/acp-relationship-types.png)
 
@@ -242,11 +270,13 @@ Other plugins must not read the `relatives_*` tables directly. Public contract:
    the templates, the stylesheets from all themes and the User CP menu item; your data and
    settings are kept.
 2. **Uninstall** – drops all `relatives_*` tables and removes the settings. This deletes all
-   persons, connections and families irrevocably. Legacy tables of the old plugin are not
+   persons, connections, families and deletion requests irrevocably, and removes the plugin's
+   MyAlerts alert types together with their alerts. Legacy tables of the old plugin are not
    touched.
 3. Delete the uploaded files (`relatives.php`, `inc/plugins/relatives.php`,
-   `inc/plugins/relatives/`, `admin/modules/tools/relatives.php` and the `relatives.lang.php`
-   files in `inc/languages/*/` and `inc/languages/*/admin/`).
+   `inc/plugins/relatives/`, `admin/modules/tools/relatives.php`, the `relatives.lang.php`
+   files in `inc/languages/*/` and `inc/languages/*/admin/` and the `relatives_myalerts.lang.php`
+   files in `inc/languages/*/`).
 4. Remove the template variables you added manually (`member_profile`, `postbit`, …).
 
 ## Changelog

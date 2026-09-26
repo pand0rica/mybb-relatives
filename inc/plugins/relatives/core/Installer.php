@@ -26,6 +26,8 @@ class Relatives_Installer
         'relatives_attribute_options',
         'relatives_person_attributes',
         'relatives_family_attributes',
+        'relatives_delete_requests',
+        'relatives_delete_votes',
     ];
 
     public static function install(): void
@@ -69,6 +71,7 @@ class Relatives_Installer
         self::create_relations_table();
         self::create_conflicts_table();
         self::create_families_table();
+        self::create_delete_requests_tables();
 
         $db->query("CREATE TABLE IF NOT EXISTS `" . TABLE_PREFIX . "relatives_relationship_types` (
             `id` INT(11) NOT NULL AUTO_INCREMENT,
@@ -139,6 +142,7 @@ class Relatives_Installer
     public static function uninstall(): void
     {
         global $db;
+        Relatives_Alerts::unregister_types();
         foreach (self::$tables as $table) {
             $db->drop_table($table);
         }
@@ -164,6 +168,8 @@ class Relatives_Installer
         self::install_stylesheets();
         self::attach_usercp_stylesheet();
         self::install_usercp_nav_misc_link();
+        // Alert-Typen bleiben beim Deaktivieren bestehen (siehe Relatives_Alerts::unregister_types()).
+        Relatives_Alerts::register_types();
 
         rebuild_settings();
     }
@@ -305,6 +311,41 @@ class Relatives_Installer
     }
 
     /**
+     * Loeschantraege fuer NPCs (Relatives_DeleteRequests): ein Antrag je Person und
+     * Vorgang, dazu je betroffener Besitzer*in eine Stimme. person_name haelt den Namen
+     * fuer die Abschluss-Benachrichtigung fest, wenn die Person schon geloescht ist.
+     */
+    private static function create_delete_requests_tables(): void
+    {
+        global $db;
+
+        $collation = " DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci";
+        $db->query("CREATE TABLE IF NOT EXISTS `" . TABLE_PREFIX . "relatives_delete_requests` (
+            `id` INT(11) NOT NULL AUTO_INCREMENT,
+            `person_id` INT(11) NOT NULL DEFAULT 0,
+            `person_name` VARCHAR(255) NOT NULL DEFAULT '',
+            `requested_by` INT(11) NOT NULL DEFAULT 0,
+            `status` TINYINT(1) NOT NULL DEFAULT 0,
+            `created_at` INT(11) NOT NULL DEFAULT 0,
+            `resolved_at` INT(11) NOT NULL DEFAULT 0,
+            PRIMARY KEY (`id`),
+            KEY `person_status` (`person_id`, `status`),
+            KEY `requested_by` (`requested_by`)
+        ) ENGINE=InnoDB{$collation};");
+
+        $db->query("CREATE TABLE IF NOT EXISTS `" . TABLE_PREFIX . "relatives_delete_votes` (
+            `id` INT(11) NOT NULL AUTO_INCREMENT,
+            `request_id` INT(11) NOT NULL DEFAULT 0,
+            `uid` INT(11) NOT NULL DEFAULT 0,
+            `vote` TINYINT(1) NOT NULL DEFAULT 0,
+            `answered_at` INT(11) NOT NULL DEFAULT 0,
+            PRIMARY KEY (`id`),
+            UNIQUE KEY `request_uid` (`request_id`, `uid`),
+            KEY `uid_vote` (`uid`, `vote`)
+        ) ENGINE=InnoDB{$collation};");
+    }
+
+    /**
      * Ruestet Spalten spaeterer Versionen an bestehenden Tabellen nach. Idempotent
      * ueber field_exists(), damit activate() beliebig oft laufen darf.
      */
@@ -380,6 +421,7 @@ class Relatives_Installer
         self::create_relations_table();
         self::create_conflicts_table();
         self::create_families_table();
+        self::create_delete_requests_tables();
         // Groups that already hold several values per person must stay multi-select once
         // the column exists -- otherwise the next save would silently drop values.
         $adds_is_multiple = $db->table_exists('relatives_attribute_groups')

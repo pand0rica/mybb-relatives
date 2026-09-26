@@ -68,6 +68,8 @@ Plugin `anschluss suchmaschine` gebaut (siehe „Abhängigkeiten" unten), nicht 
 | `relatives_attribute_options` | Werte je Gruppe | `id, group_id (FK), label, sort_order, is_active` |
 | `relatives_person_attributes` | Zuordnung Person↔Attributwert (n:m) | `id, person_id (FK relatives_persons), group_id (FK), option_id (FK relatives_attribute_options)` |
 | `relatives_family_attributes` | Attributwert je Familie und Gruppe | `id, family_id, group_id, option_id (bei Vorauswahl), value (bei Freitext, max. 255)`, UNIQUE (family_id, group_id) |
+| `relatives_delete_requests` | Löschantrag für einen NPC (`Relatives_DeleteRequests`) | `id, person_id, person_name (Snapshot für die Abschluss-Benachrichtigung), requested_by, status (0 offen, 1 gelöscht, 2 abgelehnt, 3 abgebrochen), created_at, resolved_at` |
+| `relatives_delete_votes` | Antwort je betroffener Besitzer*in | `id, request_id, uid, vote (0 offen, 1 zugestimmt, 2 abgelehnt), answered_at`; UNIQUE (request_id, uid) |
 
 **Neu in v2.1** (Migration über `Relatives_Installer::upgrade_schema()`, idempotent bei jedem Aktivieren):
 
@@ -235,9 +237,16 @@ sagen, gilt für Verbindungen jetzt dieser Abschnitt.
   Knoten. `relatives_relations.owner_uid` ist nach der Zusammenführung 0 und wird nicht mehr
   gelesen; wer eine Kante angelegt hat, steht in `created_by`.
 - **`relatives_person_owners`** heißt nur noch „mein Charakter ist mit dieser Person verbunden":
-  steuert Liste, Rechte, Beziehungstext und den Verwandtschafts-Cache. „Löschen" entfernt nur aus
-  der eigenen Liste; die Person verschwindet erst, wenn sie in keiner Liste mehr steht, kein
-  gespielter Charakter ist und keine Verbindungen mehr hat.
+  steuert Liste, Rechte, Beziehungstext und den Verwandtschafts-Cache. „Löschen" trägt einen
+  gespielten Charakter nur aus der eigenen Liste aus. Bei einem **NPC** stellt es einen
+  Löschantrag (`Relatives_DeleteRequests`): Steht er in keiner anderen Liste, wird er sofort
+  komplett gelöscht (samt Verbindungen). Sonst müssen alle anderen Besitzer*innen zustimmen
+  (MyAlerts `relatives_delete_request`, Box „Offene Löschanträge“ unter „Meine Verwandten“);
+  dann wird er komplett gelöscht und die antragstellende Person bekommt
+  `relatives_delete_completed`. Ein „Behalten“ lässt den Antrag platzen: der NPC bleibt, die
+  antragstellende Person wird ausgetragen (`relatives_delete_declined`). Keine Frist; das Team
+  entscheidet hängende Anträge im ACP-Tab „Löschanträge“. Wer die Person während eines offenen
+  Antrags übernimmt, wird beim Abschluss nachträglich gefragt.
 - **Rechte (`Relatives_Graph::can_edit_person()`):** nicht bespielte Person → alle, die sie in
   ihrer Liste haben **oder deren Charakter derselben Familie angehört**; gespielter Charakter →
   nur sein Account; Team (`canmodcp`/`cancp`) → alles. Familienmitglieder
@@ -461,7 +470,8 @@ fehlende nach (`debugging.md` #21).
 | `usercp_menu` | `relatives_handle_usercp_menu` | Eigener, sauberer UserCP-Menüpunkt „Verwandtschaften" (ersetzt die alte zusammengewürfelte 3-Link-Nav) |
 | `admin_tools_permissions` | `relatives_admin_permissions` | Registriert `tools → relatives` als Admin-Recht (sonst hätten alle Admins Zugriff, ohne Einschränkungsmöglichkeit) |
 | `admin_config_settings_begin` | `relatives_admin_settings_lang` | Lädt die Admin-Sprachdatei, damit MyBB die Setting-Titel über `setting_<name>`/`_desc`/`setting_group_relatives` übersetzt; die deutschen Texte in der DB sind nur Fallback |
-| `datahandler_user_delete_start` | `relatives_handle_user_delete` | Entfernt den gelöschten User als Besitzer*in aller seiner Personen (Personen ohne weitere Besitzer*innen werden gelöscht); setzt bei allen Zeilen, die diesen User als `linked_uid` referenzieren, `linked_uid`/`link_status` zurück |
+| `global_start` / `xmlhttp` | `relatives_register_alert_formatter` | Registriert den MyAlerts-Formatter (nur wenn MyAlerts installiert ist) |
+| `datahandler_user_delete_start` | `relatives_handle_user_delete` | Lässt offene Löschanträge des Users platzen und streicht seine offenen Antworten (kann fremde Anträge abschließen); entfernt den gelöschten User als Besitzer*in aller seiner Personen (Personen ohne weitere Besitzer*innen werden gelöscht); setzt bei allen Zeilen, die diesen User als `linked_uid` referenzieren, `linked_uid`/`link_status` zurück |
 
 ## Eigene Hooks / API (andere Plugins docken hier an)
 

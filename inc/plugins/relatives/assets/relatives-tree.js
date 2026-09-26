@@ -970,10 +970,14 @@
 			openPersonForm(isOwnCharacter || !node.person_id ? null : node);
 		}));
 
-		// "Loeschen" entfernt nur aus der eigenen Liste; im Geflecht bleibt die Person.
+		// NPCs: "Loeschen" stellt einen Loeschantrag an alle anderen Besitzer*innen (bzw.
+		// loescht sofort, wenn es keine gibt). Gespielte Charaktere: nur aus der Liste austragen.
 		if (node.type === "person" && node.in_viewer_list) {
+			var isPlayed = node.link_status === 2 && !!node.linked_uid;
 			menu.appendChild(menuButton(t("delete", "Loeschen"), function () {
-				var question = t("confirm_delete", "Diese Person wirklich loeschen?");
+				var question = isPlayed
+					? t("confirm_delete", "Diese Person wirklich loeschen?")
+					: t("confirm_delete_npc", "Diese Person komplett loeschen?");
 				if (!window.RelativesConfirm) {
 					if (window.confirm(question)) { deletePersonAjax(node.id); }
 					return;
@@ -1005,6 +1009,7 @@
 				if (data && data.success) {
 					closePanel();
 					reloadTree();
+					showToast(data.message || t("deleted", "Gelöscht."));
 				} else {
 					window.alert((data && data.error) || t("save_failed", "Fehlgeschlagen."));
 				}
@@ -1012,6 +1017,26 @@
 			.catch(function () {
 				window.alert(t("save_failed", "Fehlgeschlagen."));
 			});
+	}
+
+	/** Short, non-blocking status message (e.g. after deleting), announced to screen readers. */
+	var toastEl = null;
+	var toastTimer = null;
+	function showToast(message) {
+		if (!message) { return; }
+		if (!toastEl) {
+			toastEl = document.createElement("div");
+			toastEl.className = "relatives_tree_toast";
+			toastEl.setAttribute("role", "status");
+			toastEl.setAttribute("aria-live", "polite");
+			document.body.appendChild(toastEl);
+		}
+		toastEl.textContent = message;
+		toastEl.classList.add("is-visible");
+		if (toastTimer) { window.clearTimeout(toastTimer); }
+		toastTimer = window.setTimeout(function () {
+			toastEl.classList.remove("is-visible");
+		}, 7000);
 	}
 
 	// --- Panel: read-only Info ------------------------------------------------------------

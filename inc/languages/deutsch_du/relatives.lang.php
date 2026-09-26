@@ -213,3 +213,24 @@ $l['relatives_tree_placeholder_add'] = 'Diese Person eintragen';
 $l['relatives_tree_adopt'] = 'In meine Liste übernehmen';
 $l['relatives_tree_adopt_note'] = 'Diese Person hat ein*e andere*r Spieler*in eingetragen. Übernimm sie in deine Liste, um sie bearbeiten zu können – die Angaben bleiben für alle gleich.';
 $l['relatives_adopted'] = 'Die Person steht jetzt auch in deiner Liste.';
+
+// Löschanträge für NPCs
+$l['relatives_confirm_delete_npc'] = 'Diese Person komplett aus dem Stammbaum löschen? Alle anderen, die sie in ihrer Liste haben, müssen zustimmen. Erst dann wird sie mit allen Verbindungen gelöscht. Hat sie niemand sonst in der Liste, wird sie sofort gelöscht.';
+$l['relatives_deleted_completely'] = 'Die Person wurde komplett aus dem Stammbaum gelöscht.';
+$l['relatives_delete_requested_one'] = 'Löschantrag gestellt. Eine weitere Person muss noch zustimmen, danach wird der NPC komplett gelöscht und du bekommst Bescheid.';
+$l['relatives_delete_requested'] = 'Löschantrag gestellt. {1} weitere Personen müssen noch zustimmen, danach wird der NPC komplett gelöscht und du bekommst Bescheid.';
+$l['relatives_error_delete_pending'] = 'Für diese Person läuft bereits ein Löschantrag. Offene Anträge findest du unter „Meine Verwandten“.';
+$l['relatives_error_delete_vote'] = 'Dieser Löschantrag ist nicht mehr offen oder betrifft dich nicht.';
+$l['relatives_pending_delete_requests'] = 'Offene Löschanträge';
+$l['relatives_pending_delete_requests_hint'] = 'Diese Personen stehen auch in deiner Liste. Sie werden erst komplett gelöscht, wenn alle zugestimmt haben. Lehnst du ab, bleibt die Person erhalten.';
+$l['relatives_delete_request_text'] = '{1} möchte <strong>{2}</strong> komplett aus dem Stammbaum löschen.';
+$l['relatives_delete_request_date'] = 'Beantragt am {1}';
+$l['relatives_delete_vote_confirm'] = 'Löschen zustimmen';
+$l['relatives_delete_vote_decline'] = 'Behalten';
+$l['relatives_delete_vote_confirm_message'] = 'Zustimmen, dass diese Person mit allen Verbindungen aus dem Stammbaum gelöscht wird? Das lässt sich nicht rückgängig machen.';
+$l['relatives_delete_vote_confirmed'] = 'Danke, deine Zustimmung ist gespeichert. Die Person wird gelöscht, sobald alle zugestimmt haben.';
+$l['relatives_delete_vote_completed'] = 'Alle haben zugestimmt, die Person wurde komplett aus dem Stammbaum gelöscht.';
+$l['relatives_delete_vote_declined'] = 'Die Person bleibt erhalten. Der Löschantrag wurde abgelehnt.';
+$l['relatives_badge_delete_requested'] = 'Löschung beantragt ({1}/{2} Zustimmungen)';
+$l['relatives_badge_delete_vote_open'] = 'Löschantrag offen';
+$l['relatives_nav_open_delete_requests'] = 'Offene Löschanträge: {1}';

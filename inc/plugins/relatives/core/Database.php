@@ -804,6 +804,10 @@ class Relatives_Database
         }
         $db->delete_query('relatives_person_owners', "person_id = " . (int)$id);
         $db->delete_query('relatives_persons', "id = " . (int)$id, 1);
+        // Ein offener Loeschantrag fuer sie ist damit gegenstandslos.
+        if (class_exists('Relatives_DeleteRequests')) {
+            Relatives_DeleteRequests::purge_for_person($id);
+        }
         Relatives_Attributes::delete_person_attributes($id);
 
         // Wer eine Kante zu ihr als Hauptverbindung hatte, braucht eine neue.

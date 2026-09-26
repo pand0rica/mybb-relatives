@@ -557,6 +557,11 @@
 	font-weight: bold;
 }
 
+/* Confirm dialogs: the question is running text, not a heading */
+.relatives_confirm_panel .relatives_tree_panel_lead {
+	font-weight: normal;
+}
+
 .relatives_tree_panel_note {
 	margin: 0 0 14px;
 	font-size: 0.85em;
@@ -760,4 +765,30 @@
 	background: #b3261e;
 	border-color: #b3261e;
 	color: #ffffff;
+}
+
+/* Status message after tree actions (e.g. delete / deletion request) */
+.relatives_tree_toast {
+	position: fixed;
+	left: 50%;
+	bottom: 24px;
+	transform: translate(-50%, 12px);
+	max-width: calc(100% - 32px);
+	width: max-content;
+	padding: 10px 16px;
+	background: var(--relatives-text, #2c3540);
+	color: var(--relatives-surface, #ffffff);
+	border-radius: 6px;
+	box-shadow: 0 6px 20px rgba(20, 34, 51, 0.3);
+	font-size: 13px;
+	line-height: 1.4;
+	opacity: 0;
+	pointer-events: none;
+	transition: opacity 0.2s ease, transform 0.2s ease;
+	z-index: 1001;
+}
+
+.relatives_tree_toast.is-visible {
+	opacity: 1;
+	transform: translate(-50%, 0);
 }

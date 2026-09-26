@@ -494,3 +494,29 @@ fieldset.relatives_attribute_group {
 .relatives_status_badges .relatives_badge {
 	margin: 0 4px 2px 0;
 }
+
+/* Deletion requests */
+.relatives_badge_delete_requested {
+	background: #c0392b;
+	color: #fff;
+}
+
+.relatives_delete_requests_hint {
+	margin: 0 0 8px;
+	font-size: 12px;
+	opacity: 0.8;
+}
+
+.relatives_nav_count {
+	display: inline-block;
+	min-width: 18px;
+	padding: 0 5px;
+	margin-left: 4px;
+	border-radius: 9px;
+	background: #c0392b;
+	color: #ffffff;
+	font-size: 11px;
+	line-height: 18px;
+	text-align: center;
+	font-weight: bold;
+}

@@ -226,3 +226,20 @@ $l['setting_relatives_tree_link_postbit'] = 'Family tree link in postbit';
 $l['setting_relatives_tree_link_postbit_desc'] = 'Shows a link to the author\'s family tree in the postbit. Template variable {$post[\'relatives_tree_link\']} in the templates postbit and postbit_classic.';
 $l['setting_relatives_tree_link_memberlist'] = 'Family tree link in member list';
 $l['setting_relatives_tree_link_memberlist_desc'] = 'Shows a link to each member\'s family tree in the member list. Template variable {$user[\'relatives_tree_link\']} in the template memberlist_user.';
+
+// Deletion requests
+$l['relatives_tab_delete_requests'] = 'Deletion requests';
+$l['relatives_tab_desc_delete_requests'] = 'Open requests to delete an NPC from the family tree completely. There is no deadline: if a request is stuck, you can carry it out or discard it here right away.';
+$l['relatives_acp_delete_request_person'] = 'Person';
+$l['relatives_acp_delete_request_by'] = 'Requested by';
+$l['relatives_acp_delete_request_date'] = 'Requested on';
+$l['relatives_acp_delete_request_state'] = 'Approvals';
+$l['relatives_acp_delete_request_waiting'] = 'Waiting for';
+$l['relatives_acp_delete_requests_none'] = 'No open deletion requests.';
+$l['relatives_acp_delete_request_do_delete'] = 'Delete now';
+$l['relatives_acp_delete_request_do_discard'] = 'Discard';
+$l['relatives_acp_delete_request_confirm_delete'] = 'Delete the person with all connections from the family tree now, without waiting for the remaining approvals? This cannot be undone.';
+$l['relatives_acp_delete_request_confirm_discard'] = 'Discard the request? The person is kept, the requester is removed from their list.';
+$l['relatives_acp_delete_request_deleted'] = 'The person was deleted completely.';
+$l['relatives_acp_delete_request_discarded'] = 'The deletion request was discarded.';
+$l['relatives_acp_delete_request_error'] = 'This deletion request is no longer open.';

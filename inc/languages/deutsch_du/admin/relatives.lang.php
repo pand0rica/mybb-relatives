@@ -226,3 +226,20 @@ $l['setting_relatives_tree_link_postbit'] = 'Stammbaum-Link im Postbit';
 $l['setting_relatives_tree_link_postbit_desc'] = 'Zeigt im Postbit einen Link zum Stammbaum der Autor*in. Template-Variable {$post[\'relatives_tree_link\']} in den Templates postbit und postbit_classic.';
 $l['setting_relatives_tree_link_memberlist'] = 'Stammbaum-Link in der Mitgliederliste';
 $l['setting_relatives_tree_link_memberlist_desc'] = 'Zeigt in der Mitgliederliste je Mitglied einen Link zum Stammbaum. Template-Variable {$user[\'relatives_tree_link\']} im Template memberlist_user.';
+
+// Löschanträge
+$l['relatives_tab_delete_requests'] = 'Löschanträge';
+$l['relatives_tab_desc_delete_requests'] = 'Offene Anträge, einen NPC komplett aus dem Stammbaum zu löschen. Es gibt keine Frist: Hängt ein Antrag, könnt ihr ihn hier sofort ausführen oder verwerfen.';
+$l['relatives_acp_delete_request_person'] = 'Person';
+$l['relatives_acp_delete_request_by'] = 'Beantragt von';
+$l['relatives_acp_delete_request_date'] = 'Beantragt am';
+$l['relatives_acp_delete_request_state'] = 'Zustimmungen';
+$l['relatives_acp_delete_request_waiting'] = 'Wartet auf';
+$l['relatives_acp_delete_requests_none'] = 'Keine offenen Löschanträge.';
+$l['relatives_acp_delete_request_do_delete'] = 'Jetzt löschen';
+$l['relatives_acp_delete_request_do_discard'] = 'Verwerfen';
+$l['relatives_acp_delete_request_confirm_delete'] = 'Die Person jetzt mit allen Verbindungen aus dem Stammbaum löschen, ohne auf die übrigen Zustimmungen zu warten? Das lässt sich nicht rückgängig machen.';
+$l['relatives_acp_delete_request_confirm_discard'] = 'Den Antrag verwerfen? Die Person bleibt erhalten, die antragstellende Person wird aus ihrer Liste ausgetragen.';
+$l['relatives_acp_delete_request_deleted'] = 'Die Person wurde komplett gelöscht.';
+$l['relatives_acp_delete_request_discarded'] = 'Der Löschantrag wurde verworfen.';
+$l['relatives_acp_delete_request_error'] = 'Dieser Löschantrag ist nicht mehr offen.';
