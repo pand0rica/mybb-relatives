@@ -35,8 +35,8 @@ $action = $mybb->get_input('action');
 // (inkl. ihres AJAX-Nachladens) -- nur lesend, bewusst mit geheimen Verbindungen.
 // Die Gruppenberechtigung "Forum ansehen" gilt trotzdem.
 $is_guest_popup = $action === 'tree' && $mybb->get_input('popup', MyBB::INPUT_INT) === 1;
-// Ebenso die oeffentliche Familienliste, sofern im ACP fuer Gaeste freigegeben.
-$is_guest_family_list = $action === 'family_list' && !empty($mybb->settings['relatives_family_list_guests']);
+// Ebenso die oeffentliche Familienliste samt Familienseiten, sofern im ACP fuer Gaeste freigegeben.
+$is_guest_family_list = ($action === 'family_list' || $action === 'family') && !empty($mybb->settings['relatives_family_list_guests']);
 if ($my_uid <= 0 && (!($is_guest_popup || $is_guest_family_list) || empty($mybb->usergroup['canview']))) {
     error_no_permission();
 }
@@ -1118,6 +1118,162 @@ if ($action === 'family_add' || $action === 'family_edit') {
     exit;
 }
 
+/** Laenge des Beschreibungs-Anrisses auf den Familienkarten (Zeichen). */
+const RELATIVES_FAMILY_TEASER_LENGTH = 200;
+
+/**
+ * Link zur Familienseite. Aus dem UserCP (families) bleibt sie im UserCP-Rahmen, aus der
+ * oeffentlichen Liste im oeffentlichen Rahmen. Roh -- beim Ausgeben escapen.
+ */
+function relatives_family_url(int $family_id, bool $read_only): string
+{
+    return 'relatives.php?action=family&id=' . $family_id . ($read_only ? '' : '&from=families');
+}
+
+/** Anriss eines Textes ohne Zeilenumbrueche, gekuerzt an einer Wortgrenze. Roh. */
+function relatives_text_teaser(string $text, int $length): string
+{
+    $text = trim((string)preg_replace('/\s+/u', ' ', $text));
+    if (my_strlen($text) <= $length) {
+        return $text;
+    }
+    $cut = my_substr($text, 0, $length);
+    $space = strrpos($cut, ' ');
+    if ($space !== false && $space > strlen($cut) / 2) {
+        $cut = substr($cut, 0, $space);
+    }
+    return rtrim($cut, " ,.;:-") . "\u{2026}";
+}
+
+/** Familien-Attribute als <dl> (leer, wenn keine). */
+function relatives_family_attributes_html(array $attributes): string
+{
+    $html = '';
+    foreach ($attributes as $attribute) {
+        $html .= '<dt>' . htmlspecialchars_uni($attribute['label']) . '</dt>'
+            . '<dd>' . htmlspecialchars_uni($attribute['value']) . '</dd>';
+    }
+    return $html !== '' ? '<dl class="relatives_family_card_attributes">' . $html . '</dl>' : '';
+}
+
+/** Ist die Person ein gespielter Charakter (bestaetigt verknuepfter Account)? */
+function relatives_is_played(array $person): bool
+{
+    return (int)$person['link_status'] === 2 && !empty($person['linked_uid']);
+}
+
+/**
+ * "X Personen, davon Y bespielt" -- gezaehlt ueber die volle Mitgliedschaft.
+ *
+ * @return array ['total' => int, 'played' => int]
+ */
+function relatives_family_member_counts(array $member_ids, array $persons): array
+{
+    $total = 0;
+    $played = 0;
+    foreach ($member_ids as $member_id) {
+        if (!isset($persons[$member_id])) {
+            continue;
+        }
+        $total++;
+        if (relatives_is_played($persons[$member_id])) {
+            $played++;
+        }
+    }
+    return ['total' => $total, 'played' => $played];
+}
+
+/** Bearbeiten/Loeschen einer Familie (nur anlegende Person und Team), sonst ''. */
+function relatives_family_manage_actions(array $family): string
+{
+    global $mybb, $lang;
+
+    if (!relatives_can_manage_family($family)) {
+        return '';
+    }
+    $family_id = (int)$family['id'];
+    return '<div class="relatives_family_card_actions">'
+        . relatives_nav_button('relatives.php?action=family_edit&id=' . $family_id, $lang->relatives_edit)
+        . ' <form action="relatives.php?action=family_delete" method="post" class="relatives_inline_form"'
+        . ' data-relatives-confirm="' . htmlspecialchars_uni($lang->relatives_family_confirm_delete) . '"'
+        . ' data-relatives-confirm-title="' . htmlspecialchars_uni($lang->sprintf($lang->relatives_confirm_title_named, $family['name'])) . '"'
+        . ' data-relatives-confirm-ok="' . htmlspecialchars_uni($lang->relatives_delete) . '"'
+        . ' data-relatives-confirm-cancel="' . htmlspecialchars_uni($lang->relatives_cancel) . '">'
+        . '<input type="hidden" name="my_post_key" value="' . $mybb->post_code . '" />'
+        . '<input type="hidden" name="id" value="' . $family_id . '" />'
+        . '<input type="submit" class="button" value="' . htmlspecialchars_uni($lang->relatives_delete) . '" />'
+        . '</form></div>';
+}
+
+/**
+ * Mitglieder einer Familie, gruppiert in bespielt / gesucht / NPCs, als HTML-Bloecke.
+ * Gespielte Charaktere als formatierter Profil-Link plus Link auf ihren Stammbaum
+ * (Gaest*innen: die oeffentliche Popup-Ansicht).
+ */
+function relatives_family_member_groups_html(array $member_ids, array $persons): string
+{
+    global $lang, $templates, $mybb;
+
+    $uids = [];
+    foreach ($member_ids as $member_id) {
+        if (isset($persons[$member_id]) && relatives_is_played($persons[$member_id])) {
+            $uids[] = (int)$persons[$member_id]['linked_uid'];
+        }
+    }
+    $users = relatives_get_users_bulk($uids);
+    $tree_suffix = (int)$mybb->user['uid'] > 0 ? '' : '&amp;popup=1';
+
+    $groups = ['played' => [], 'wanted' => [], 'npc' => []];
+    foreach ($member_ids as $member_id) {
+        if (!isset($persons[$member_id])) {
+            continue;
+        }
+        $member = $persons[$member_id];
+        $sort_key = (string)$member['name'] . '#' . $member_id;
+        $name = htmlspecialchars_uni((string)$member['name']);
+        if (relatives_is_played($member)) {
+            $linked_uid = (int)$member['linked_uid'];
+            if (isset($users[$linked_uid])) {
+                $user = $users[$linked_uid];
+                $name = build_profile_link(
+                    format_name(htmlspecialchars_uni((string)$user['username']), (int)$user['usergroup'], (int)$user['displaygroup']),
+                    $linked_uid
+                );
+            }
+            $name .= ' <a class="relatives_family_member_tree" href="relatives.php?action=tree&amp;uid=' . $linked_uid . $tree_suffix . '">'
+                . htmlspecialchars_uni($lang->relatives_family_member_tree) . '</a>';
+            $groups['played'][$sort_key] = '<li>' . $name . '</li>';
+        } elseif ((int)$member['is_wanted'] === 1) {
+            $thread = relatives_sanitize_url((string)($member['wanted_thread_link'] ?? ''));
+            if ($thread !== '') {
+                $name = '<a href="' . htmlspecialchars_uni($thread) . '">' . $name . '</a>';
+            }
+            $groups['wanted'][$sort_key] = '<li>' . $name . '</li>';
+        } else {
+            $groups['npc'][$sort_key] = '<li>' . $name . '</li>';
+        }
+    }
+
+    $titles = [
+        'played' => $lang->relatives_family_group_played,
+        'wanted' => $lang->relatives_family_group_wanted,
+        'npc'    => $lang->relatives_family_group_npc,
+    ];
+    $html = '';
+    foreach ($groups as $group => $items) {
+        if (!$items) {
+            continue;
+        }
+        uksort($items, 'strnatcasecmp');
+        $relatives_family_group_title = htmlspecialchars_uni($titles[$group]);
+        $relatives_family_group_count = count($items);
+        $relatives_family_group_items = implode('', $items);
+        $relatives_family_group_class = htmlspecialchars_uni($group);
+        eval('$html .= "' . $templates->get('relatives_family_page_group') . '";');
+    }
+    return $html;
+}
+
 /**
  * Filter + Familienkarten -- geteilt von der UserCP-Seite (action=families, mit
  * Bearbeiten/Loeschen) und der oeffentlichen Liste (action=family_list, reines Ansehen).
@@ -1218,81 +1374,26 @@ function relatives_render_family_overview(string $page_action, bool $read_only):
     $member_lists = Relatives_Graph::family_member_lists();
     $persons = Relatives_Kinship::world()['persons'];
 
-    // Oeffentliche Liste: gespielte Charaktere wie in den uebrigen Forenlisten als
-    // formatierter Profil-Link -- dafuer die Gruppen aller verlinkten Accounts auf einmal.
-    $users = [];
-    if ($read_only) {
-        $uids = [];
-        foreach ($families as $family) {
-            foreach ($member_lists[(int)$family['id']] ?? [] as $member_id) {
-                $member = $persons[$member_id] ?? null;
-                if ($member !== null && (int)$member['link_status'] === 2 && !empty($member['linked_uid'])) {
-                    $uids[(int)$member['linked_uid']] = (int)$member['linked_uid'];
-                }
-            }
-        }
-        $users = relatives_get_users_bulk($uids);
-    }
-
     $rows = '';
     foreach ($families as $family) {
         $relatives_family_id = (int)$family['id'];
         $relatives_family_name = htmlspecialchars_uni((string)$family['name']);
         $relatives_family_color = htmlspecialchars_uni(Relatives_Families::sanitize_color((string)$family['color']));
-        $relatives_family_description = nl2br(htmlspecialchars_uni((string)$family['description']));
+        // Die Uebersicht zeigt nur einen Anriss; die volle Vorstellung steht auf der
+        // Familienseite (action=family).
+        $relatives_family_url = relatives_family_url($relatives_family_id, $read_only);
+        $relatives_family_teaser = htmlspecialchars_uni(relatives_text_teaser((string)$family['description'], RELATIVES_FAMILY_TEASER_LENGTH));
         $relatives_family_closed = Relatives_Families::welcomes_new_members($family)
             ? ''
             : '<div class="relatives_family_card_closed">' . htmlspecialchars_uni($lang->relatives_family_closed_badge) . '</div>';
-        $relatives_family_attributes = '';
-        foreach ($family_attributes[$relatives_family_id] ?? [] as $attribute) {
-            $relatives_family_attributes .= '<dt>' . htmlspecialchars_uni($attribute['label']) . '</dt>'
-                . '<dd>' . htmlspecialchars_uni($attribute['value']) . '</dd>';
-        }
-        if ($relatives_family_attributes !== '') {
-            $relatives_family_attributes = '<dl class="relatives_family_card_attributes">' . $relatives_family_attributes . '</dl>';
-        }
-        $member_names = [];
-        foreach ($member_lists[$relatives_family_id] ?? [] as $member_id) {
-            if (!isset($persons[$member_id])) {
-                continue;
-            }
-            $member = $persons[$member_id];
-            $member_name = htmlspecialchars_uni((string)$member['name']);
-            if ((int)$member['link_status'] === 2 && !empty($member['linked_uid'])) {
-                $linked_uid = (int)$member['linked_uid'];
-                if (!$read_only) {
-                    // UserCP: gespielte Charaktere verlinken auf ihren Stammbaum.
-                    $member_name = '<a href="relatives.php?action=tree&amp;uid=' . $linked_uid . '">' . $member_name . '</a>';
-                } elseif (isset($users[$linked_uid])) {
-                    $user = $users[$linked_uid];
-                    $member_name = build_profile_link(
-                        format_name(htmlspecialchars_uni((string)$user['username']), (int)$user['usergroup'], (int)$user['displaygroup']),
-                        $linked_uid
-                    );
-                }
-            }
-            $member_names[(string)$member['name'] . '#' . $member_id] = '<li>' . $member_name . '</li>';
-        }
-        uksort($member_names, 'strnatcasecmp');
-        $relatives_family_members = count($member_names);
-        $relatives_family_member_list = $member_names
-            ? '<details class="relatives_family_card_member_list"><summary>' . htmlspecialchars_uni($lang->relatives_families_show_members)
-                . '</summary><ul>' . implode('', $member_names) . '</ul></details>'
-            : '';
-        $relatives_family_actions = '';
-        if (!$read_only && relatives_can_manage_family($family)) {
-            $relatives_family_actions = '<div class="relatives_family_card_actions">'
-                . relatives_nav_button('relatives.php?action=family_edit&id=' . $relatives_family_id, $lang->relatives_edit)
-                . ' <form action="relatives.php?action=family_delete" method="post" class="relatives_inline_form"'
-                . ' data-relatives-confirm="' . htmlspecialchars_uni($lang->relatives_family_confirm_delete) . '"'
-                . ' data-relatives-confirm-title="' . htmlspecialchars_uni($lang->sprintf($lang->relatives_confirm_title_named, $family['name'])) . '"'
-                . ' data-relatives-confirm-ok="' . htmlspecialchars_uni($lang->relatives_delete) . '"'
-                . ' data-relatives-confirm-cancel="' . htmlspecialchars_uni($lang->relatives_cancel) . '">'
-                . '<input type="hidden" name="my_post_key" value="' . $mybb->post_code . '" />'
-                . '<input type="hidden" name="id" value="' . $relatives_family_id . '" />'
-                . '<input type="submit" class="button" value="' . htmlspecialchars_uni($lang->relatives_delete) . '" />'
-                . '</form></div>';
-        }
+        $relatives_family_attributes = relatives_family_attributes_html($family_attributes[$relatives_family_id] ?? []);
+        $counts = relatives_family_member_counts($member_lists[$relatives_family_id] ?? [], $persons);
+        $relatives_family_members_text = htmlspecialchars_uni($lang->sprintf(
+            $lang->relatives_families_members_played,
+            $counts['total'],
+            $counts['played']
+        ));
+        $relatives_family_actions = $read_only ? '' : relatives_family_manage_actions($family);
         eval('$rows .= "' . $templates->get('relatives_families_row') . '";');
     }
 
@@ -1376,6 +1477,74 @@ if ($action === 'family_list') {
     $nav_template = trim((string)($mybb->settings['relatives_family_list_nav_template'] ?? ''));
     if ($layout_template !== '' && relatives_template_exists($layout_template)) {
         $headline = $lang->relatives_family_list_title;
+        $listen_content = $relatives_family_list_content;
+        $listen_nav = '';
+        if ($nav_template !== '' && relatives_template_exists($nav_template)) {
+            eval('$listen_nav = "' . $templates->get($nav_template) . '";');
+        }
+        $relatives_list_nav = $listen_nav;
+        eval('$page = "' . $templates->get($layout_template) . '";');
+    } else {
+        eval('$page = "' . $templates->get('relatives_family_list') . '";');
+    }
+    output_page($page);
+    exit;
+}
+
+// --- action: family (Familienseite: Vorstellung, Mitglieder, Aktionen) -----------------
+
+if ($action === 'family') {
+    $family = Relatives_Families::get_by_id($mybb->get_input('id', MyBB::INPUT_INT));
+    if ($family === null) {
+        error($lang->relatives_error_invalid_family);
+    }
+    $in_usercp = $my_uid > 0 && $mybb->get_input('from') === 'families';
+
+    $relatives_family_id = (int)$family['id'];
+    $relatives_family_name = htmlspecialchars_uni((string)$family['name']);
+    $relatives_family_color = htmlspecialchars_uni(Relatives_Families::sanitize_color((string)$family['color']));
+    $relatives_family_description = nl2br(htmlspecialchars_uni(trim((string)$family['description'])));
+    $relatives_family_closed = Relatives_Families::welcomes_new_members($family)
+        ? ''
+        : '<div class="relatives_family_card_closed">' . htmlspecialchars_uni($lang->relatives_family_closed_badge) . '</div>';
+    $relatives_family_attributes = relatives_family_attributes_html(
+        Relatives_Attributes::get_family_attributes_bulk([$relatives_family_id])[$relatives_family_id] ?? []
+    );
+    $member_ids = Relatives_Graph::family_member_lists()[$relatives_family_id] ?? [];
+    $persons = Relatives_Kinship::world()['persons'];
+    $counts = relatives_family_member_counts($member_ids, $persons);
+    $relatives_family_members_text = htmlspecialchars_uni($lang->sprintf(
+        $lang->relatives_families_members_played,
+        $counts['total'],
+        $counts['played']
+    ));
+    $relatives_family_groups = relatives_family_member_groups_html($member_ids, $persons);
+    if ($relatives_family_groups === '') {
+        $relatives_family_groups = '<p class="relatives_hint">' . $lang->relatives_family_no_members . '</p>';
+    }
+    $relatives_family_join = '';
+    $relatives_family_actions = $my_uid > 0 ? relatives_family_manage_actions($family) : '';
+    $relatives_family_back_url = $in_usercp ? 'relatives.php?action=families' : 'relatives.php?action=family_list';
+
+    eval('$relatives_family_page_content = "' . $templates->get('relatives_family_page_content') . '";');
+
+    if ($in_usercp) {
+        add_breadcrumb($lang->relatives_families_title, 'relatives.php?action=families');
+        add_breadcrumb((string)$family['name'], relatives_family_url($relatives_family_id, false));
+        $relatives_nav = relatives_nav($my_uid, 'families', 'relatives.php?action=family_add', $lang->relatives_family_add, 'relatives_icon_family_add');
+        eval('$page = "' . $templates->get('relatives_family_page') . '";');
+        output_page($page);
+        exit;
+    }
+
+    add_breadcrumb($lang->relatives_family_list_title, 'relatives.php?action=family_list');
+    add_breadcrumb((string)$family['name'], relatives_family_url($relatives_family_id, true));
+    // Gleicher Rahmen wie die oeffentliche Familienliste (optional forumseigenes Listen-Template).
+    $relatives_family_list_content = $relatives_family_page_content;
+    $layout_template = trim((string)($mybb->settings['relatives_family_list_layout_template'] ?? ''));
+    $nav_template = trim((string)($mybb->settings['relatives_family_list_nav_template'] ?? ''));
+    if ($layout_template !== '' && relatives_template_exists($layout_template)) {
+        $headline = (string)$family['name'];
         $listen_content = $relatives_family_list_content;
         $listen_nav = '';
         if ($nav_template !== '' && relatives_template_exists($nav_template)) {
