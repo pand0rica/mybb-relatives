@@ -62,6 +62,8 @@ class Relatives_MyAlerts_Formatter extends MybbStuff_MyAlerts_Formatter_Abstract
 
         $person_name = isset($details['person_name']) ? (string)$details['person_name'] : '';
         $message = str_replace('{person_name}', htmlspecialchars_uni($person_name), $message);
+        $relation_text = isset($details['relation_text']) ? (string)$details['relation_text'] : '';
+        $message = str_replace('{relation_text}', htmlspecialchars_uni($relation_text), $message);
 
         return $message;
     }

@@ -1096,6 +1096,27 @@
 			});
 	}
 
+	function deleteRelationAjax(id) {
+		var payload = new FormData();
+		payload.append("my_post_key", config.postCode || "");
+		payload.append("ajax", "1");
+		payload.append("id", id);
+
+		fetch("relatives.php?action=relation_delete", { method: "POST", body: payload, credentials: "same-origin" })
+			.then(function (resp) { return resp.json(); })
+			.then(function (data) {
+				if (data && data.success) {
+					reloadTree();
+					showToast(data.message || t("deleted", "Gelöscht."));
+				} else {
+					window.alert((data && data.error) || t("save_failed", "Fehlgeschlagen."));
+				}
+			})
+			.catch(function () {
+				window.alert(t("save_failed", "Fehlgeschlagen."));
+			});
+	}
+
 	/** Short, non-blocking status message (e.g. after deleting), announced to screen readers. */
 	var toastEl = null;
 	var toastTimer = null;
@@ -1198,6 +1219,25 @@
 					focusNode(relation.other_key);
 				});
 				item.appendChild(link);
+				// Trennen: fuer alle, die eine der beiden Personen bearbeiten duerfen.
+				if (relation.can_edit && relation.relation_id && !config.readOnly) {
+					var unlink = document.createElement("button");
+					unlink.type = "button";
+					unlink.className = "relatives_tree_relation_unlink";
+					unlink.textContent = "×";
+					unlink.title = t("relation_delete", "Verbindung trennen");
+					unlink.setAttribute("aria-label", t("relation_delete", "Verbindung trennen") + ": " + label + " " + relation.other_name);
+					unlink.addEventListener("click", function () {
+						closePanel();
+						window.RelativesConfirm.open({
+							title: t("relation_delete", "Verbindung trennen"),
+							message: t("relation_delete_confirm", "Verbindung wirklich trennen?"),
+							ok: t("relation_delete", "Verbindung trennen"),
+							cancel: t("cancel", "Abbrechen")
+						}, function () { deleteRelationAjax(relation.relation_id); });
+					});
+					item.appendChild(unlink);
+				}
 			});
 			list.appendChild(item);
 		});
@@ -1683,6 +1723,10 @@
 						reloadTree();
 						if (data.joined_existing) {
 							alert(t("added_existing", ""));
+						}
+						// Verbindung zu einem fremden gespielten Charakter: wartet auf Bestaetigung.
+						if (data.pending) {
+							showToast(data.message || "");
 						}
 					} else {
 						submit.disabled = false;

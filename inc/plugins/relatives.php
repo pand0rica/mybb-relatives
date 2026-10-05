@@ -27,6 +27,7 @@ require_once MYBB_ROOT . "inc/plugins/relatives/core/TreePlaceholders.php";
 require_once MYBB_ROOT . "inc/plugins/relatives/core/LinkManager.php";
 require_once MYBB_ROOT . "inc/plugins/relatives/core/Alerts.php";
 require_once MYBB_ROOT . "inc/plugins/relatives/core/DeleteRequests.php";
+require_once MYBB_ROOT . "inc/plugins/relatives/core/RelationRequests.php";
 require_once MYBB_ROOT . "inc/plugins/relatives/core/SearchApi.php";
 require_once MYBB_ROOT . "inc/plugins/relatives/core/Migration.php";
 require_once MYBB_ROOT . "inc/plugins/relatives/core/StructureInference.php";
@@ -509,6 +510,7 @@ function relatives_cleanup_deleted_user(int $uid): void
     // Vor dem Austragen: eigene offene Loeschantraege platzen, eigene offene Antworten
     // entfallen (und koennen fremde Antraege damit abschliessen).
     Relatives_DeleteRequests::handle_user_delete($uid);
+    Relatives_RelationRequests::handle_user_delete($uid);
 
     $own_persons = Relatives_Database::get_persons_by_owner($uid);
     foreach ($own_persons as $person) {

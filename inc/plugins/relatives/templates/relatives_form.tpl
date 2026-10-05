@@ -118,6 +118,8 @@
 	</form>
 	{$relatives_cancel_form}
 
+	{$relatives_form_incoming}
+
 	{$relatives_form_link_section}
 	</td>
 </tr>
@@ -470,6 +472,7 @@
 	toggleWrap(deceasedCheckbox, deathWrap);
 })();
 </script>
+<script src="inc/plugins/relatives/assets/relatives.js?v={$relatives_js_version}"></script>
 {$footer}
 </body>
 </html>

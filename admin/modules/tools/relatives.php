@@ -21,6 +21,7 @@ require_once MYBB_ROOT . 'inc/plugins/relatives/core/Kinship.php';
 require_once MYBB_ROOT . 'inc/plugins/relatives/core/Graph.php';
 require_once MYBB_ROOT . 'inc/plugins/relatives/core/Alerts.php';
 require_once MYBB_ROOT . 'inc/plugins/relatives/core/DeleteRequests.php';
+require_once MYBB_ROOT . 'inc/plugins/relatives/core/RelationRequests.php';
 
 $page->add_breadcrumb_item($lang->relatives, "index.php?module=tools-relatives");
 

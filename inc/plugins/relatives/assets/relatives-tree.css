@@ -425,6 +425,22 @@
 	text-decoration: underline;
 }
 
+.relatives_tree_relation_unlink {
+	margin-left: 2px;
+	padding: 0 4px;
+	border: 0;
+	background: none;
+	color: inherit;
+	opacity: .55;
+	cursor: pointer;
+	font: inherit;
+}
+
+.relatives_tree_relation_unlink:hover,
+.relatives_tree_relation_unlink:focus {
+	opacity: 1;
+}
+
 .relatives_tree_relation_link.is-secret {
 	opacity: .7;
 	font-style: italic;

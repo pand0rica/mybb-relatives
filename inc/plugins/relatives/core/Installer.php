@@ -28,6 +28,7 @@ class Relatives_Installer
         'relatives_family_attributes',
         'relatives_delete_requests',
         'relatives_delete_votes',
+        'relatives_relation_requests',
     ];
 
     public static function install(): void
@@ -73,6 +74,7 @@ class Relatives_Installer
         self::create_conflicts_table();
         self::create_families_table();
         self::create_delete_requests_tables();
+        self::create_relation_requests_table();
 
         $db->query("CREATE TABLE IF NOT EXISTS `" . TABLE_PREFIX . "relatives_relationship_types` (
             `id` INT(11) NOT NULL AUTO_INCREMENT,
@@ -348,6 +350,36 @@ class Relatives_Installer
     }
 
     /**
+     * Verbindungsanfragen zu fremden gespielten Charakteren (Relatives_RelationRequests).
+     * 0 statt NULL fuer "kein Anker"/"neue Kante", damit Vergleiche einfach bleiben.
+     */
+    private static function create_relation_requests_table(): void
+    {
+        global $db;
+
+        $collation = " DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci";
+        $db->query("CREATE TABLE IF NOT EXISTS `" . TABLE_PREFIX . "relatives_relation_requests` (
+            `id` INT(11) NOT NULL AUTO_INCREMENT,
+            `person_id` INT(11) NOT NULL DEFAULT 0,
+            `related_to_person_id` INT(11) NOT NULL DEFAULT 0,
+            `related_to_family_id` INT(11) NOT NULL DEFAULT 0,
+            `relationship_type_id` INT(11) NOT NULL DEFAULT 0,
+            `relationship_custom_label` VARCHAR(255) NOT NULL DEFAULT '',
+            `is_secret` TINYINT(1) NOT NULL DEFAULT 0,
+            `replaces_relation_id` INT(11) NOT NULL DEFAULT 0,
+            `requested_by` INT(11) NOT NULL DEFAULT 0,
+            `target_uid` INT(11) NOT NULL DEFAULT 0,
+            `status` TINYINT(1) NOT NULL DEFAULT 0,
+            `created_at` INT(11) NOT NULL DEFAULT 0,
+            `resolved_at` INT(11) NOT NULL DEFAULT 0,
+            PRIMARY KEY (`id`),
+            KEY `target_status` (`target_uid`, `status`),
+            KEY `requested_status` (`requested_by`, `status`),
+            KEY `person_id` (`person_id`)
+        ) ENGINE=InnoDB{$collation};");
+    }
+
+    /**
      * Ruestet Spalten spaeterer Versionen an bestehenden Tabellen nach. Idempotent
      * ueber field_exists(), damit activate() beliebig oft laufen darf.
      */
@@ -425,6 +457,7 @@ class Relatives_Installer
         self::create_conflicts_table();
         self::create_families_table();
         self::create_delete_requests_tables();
+        self::create_relation_requests_table();
         // Groups that already hold several values per person must stay multi-select once
         // the column exists -- otherwise the next save would silently drop values.
         $adds_is_multiple = $db->table_exists('relatives_attribute_groups')

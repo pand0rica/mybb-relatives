@@ -21,6 +21,8 @@
 
 		{$relatives_delete_requests_box}
 
+		{$relatives_relation_requests_box}
+
 		<table class="relatives_table{$relatives_table_class}" cellspacing="0" cellpadding="4" width="100%">
 			<thead>
 				<tr>

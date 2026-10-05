@@ -17,6 +17,9 @@ class Relatives_Alerts
     public const CODE_DELETE_REQUEST = 'relatives_delete_request';
     public const CODE_DELETE_COMPLETED = 'relatives_delete_completed';
     public const CODE_DELETE_DECLINED = 'relatives_delete_declined';
+    public const CODE_RELATION_REQUEST = 'relatives_relation_request';
+    public const CODE_RELATION_ACCEPTED = 'relatives_relation_accepted';
+    public const CODE_RELATION_DECLINED = 'relatives_relation_declined';
 
     /** Single source of truth fuer Installer, Formatter-Registrierung und Versand. */
     public static function codes(): array
@@ -25,6 +28,9 @@ class Relatives_Alerts
             self::CODE_DELETE_REQUEST,
             self::CODE_DELETE_COMPLETED,
             self::CODE_DELETE_DECLINED,
+            self::CODE_RELATION_REQUEST,
+            self::CODE_RELATION_ACCEPTED,
+            self::CODE_RELATION_DECLINED,
         ];
     }
 
@@ -65,6 +71,24 @@ class Relatives_Alerts
             'reason'      => $reason,
             'link'        => 'relatives.php?action=list',
         ], $request_id, $reason === 'user' ? -1 : 0);
+    }
+
+    /** "X hat eingetragen: <Aussage>. Bitte bestaetigen." an die Spieler*in des Charakters. */
+    public static function send_relation_request(int $uid, int $request_id, string $relation_text, int $from_uid): int
+    {
+        return self::send(self::CODE_RELATION_REQUEST, [$uid], [
+            'relation_text' => $relation_text,
+            'link'          => 'relatives.php?action=list#relatives_relation_requests',
+        ], $request_id, $from_uid);
+    }
+
+    /** Antwort auf eine Verbindungsanfrage an die anfragende Person. */
+    public static function send_relation_answer(int $uid, int $request_id, string $relation_text, bool $accepted): int
+    {
+        return self::send($accepted ? self::CODE_RELATION_ACCEPTED : self::CODE_RELATION_DECLINED, [$uid], [
+            'relation_text' => $relation_text,
+            'link'          => 'relatives.php?action=tree',
+        ], $request_id, -1);
     }
 
     /**

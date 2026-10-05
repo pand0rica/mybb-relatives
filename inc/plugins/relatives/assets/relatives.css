@@ -300,6 +300,19 @@
 	padding-left: 18px;
 }
 
+.relatives_incoming_edit {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 6px;
+	margin-top: 6px;
+}
+
+.relatives_incoming_pending {
+	margin: 4px 0 0;
+	padding-left: 18px;
+}
+
 .relatives_family_join {
 	margin: 14px 0 10px;
 	padding-top: 10px;

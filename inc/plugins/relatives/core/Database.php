@@ -862,6 +862,9 @@ class Relatives_Database
         if (class_exists('Relatives_DeleteRequests')) {
             Relatives_DeleteRequests::purge_for_person($id);
         }
+        if (class_exists('Relatives_RelationRequests')) {
+            Relatives_RelationRequests::purge_for_person($id);
+        }
         Relatives_Attributes::delete_person_attributes($id);
 
         // Wer eine Kante zu ihr als Hauptverbindung hatte, braucht eine neue.

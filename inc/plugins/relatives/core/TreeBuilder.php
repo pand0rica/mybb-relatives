@@ -506,6 +506,7 @@ class Relatives_TreeBuilder
             }
             $relation = $world['relations'][$index];
             $this->relations[] = [
+                'id'      => (int)($relation['id'] ?? 0),
                 'node'    => $subject,
                 'anchor'  => $anchor,
                 'concept' => $type !== null ? $type['concept'] : null,
@@ -675,14 +676,22 @@ class Relatives_TreeBuilder
         if ($label === '') {
             return;
         }
+        // Gespeicherte Kanten darf trennen, wer eine der beiden Personen bearbeiten darf
+        // (Relatives_Graph::can_edit_relation()) -- abgeleitete gibt es nicht als Kante.
+        $relation_id = $derived ? 0 : (int)($relation['id'] ?? 0);
+        $editable = static function (?array $node): bool {
+            return $node !== null && !empty($node['can_edit']) && in_array($node['type'] ?? '', ['person', 'self'], true);
+        };
         $this->node_relations[$key][] = [
-            'kind'       => $kind,
-            'label'      => $label,
-            'other_key'  => $other,
-            'other_name' => $this->node_label($other),
-            'style'      => $relation['style'] ?? 'solid',
-            'secret'     => !empty($relation['secret']),
-            'derived'    => $derived,
+            'kind'        => $kind,
+            'label'       => $label,
+            'other_key'   => $other,
+            'other_name'  => $this->node_label($other),
+            'style'       => $relation['style'] ?? 'solid',
+            'secret'      => !empty($relation['secret']),
+            'derived'     => $derived,
+            'relation_id' => $relation_id,
+            'can_edit'    => $relation_id > 0 && ($editable($this->nodes[$key] ?? null) || $editable($this->nodes[$other] ?? null)),
         ];
 
         if (isset($this->nodes[$key])) {

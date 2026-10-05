@@ -22,6 +22,7 @@ require_once MYBB_ROOT . 'inc/plugins/relatives/core/TreePlaceholders.php';
 require_once MYBB_ROOT . 'inc/plugins/relatives/core/LinkManager.php';
 require_once MYBB_ROOT . 'inc/plugins/relatives/core/Alerts.php';
 require_once MYBB_ROOT . 'inc/plugins/relatives/core/DeleteRequests.php';
+require_once MYBB_ROOT . 'inc/plugins/relatives/core/RelationRequests.php';
 
 $lang->load('relatives');
 
@@ -148,9 +149,10 @@ function relatives_nav(int $popup_uid, string $active = '', string $action_url =
 
     // Offene Loeschantraege, auf die ich antworten muss -- auch ohne MyAlerts sichtbar.
     $relatives_nav_open_badge = '';
-    $open_votes = Relatives_DeleteRequests::count_open_for_voter((int)$mybb->user['uid']);
+    $open_votes = Relatives_DeleteRequests::count_open_for_voter((int)$mybb->user['uid'])
+        + Relatives_RelationRequests::count_open_for_target((int)$mybb->user['uid']);
     if ($open_votes > 0) {
-        $badge_title = htmlspecialchars_uni($lang->sprintf($lang->relatives_nav_open_delete_requests, $open_votes));
+        $badge_title = htmlspecialchars_uni($lang->sprintf($lang->relatives_nav_open_requests, $open_votes));
         $relatives_nav_open_badge = ' <span class="relatives_nav_count" title="' . $badge_title . '">' . $open_votes . '</span>';
     }
 
@@ -248,6 +250,73 @@ function relatives_is_child_type($type_id): bool
     $type = (int)$type_id > 0 ? Relatives_RelationshipTypes::get_by_id((int)$type_id) : null;
     return $type !== null
         && Relatives_Kinship::classify_relation((string)$type['concept_key'], (int)$type['generation_offset']) === 'child';
+}
+
+/**
+ * Abschnitt "Von anderen eingetragene Verbindungen" im Personenformular: Kanten, die an
+ * dieser Person haengen, aber bei der anderen Person gespeichert sind ("Nick ist
+ * Urgrossvater von Sienna" steht bei Nick). Wer eine der beiden Personen bearbeiten
+ * darf, kann den Grad aendern oder trennen -- ohne die andere Person bearbeiten zu
+ * muessen. Dazu offene Anfragen, die diese Person betreffen.
+ */
+function relatives_render_incoming_relations(int $person_id): string
+{
+    global $mybb, $lang, $templates;
+
+    $uid = (int)$mybb->user['uid'];
+    $rows = '';
+    $type_options_cache = [];
+    foreach (Relatives_Database::get_relations_touching($person_id) as $relation) {
+        if ((int)$relation['person_id'] === $person_id || (int)($relation['related_to_person_id'] ?? 0) !== $person_id) {
+            continue;
+        }
+        if (!Relatives_Graph::can_edit_relation($relation, $uid)) {
+            continue;
+        }
+        $subject = Relatives_Database::get_person((int)$relation['person_id']);
+        if ($subject === null) {
+            continue;
+        }
+
+        $relatives_in_id = (int)$relation['id'];
+        $relatives_in_text = htmlspecialchars_uni(Relatives_RelationRequests::describe($relation));
+        $gender = (int)$subject['gender'];
+        if (!isset($type_options_cache[$gender])) {
+            $type_options_cache[$gender] = Relatives_RelationshipTypes::get_for_person_gender($gender);
+        }
+        $options = '<option value="0">' . htmlspecialchars_uni($lang->relatives_relationship_other) . '</option>';
+        foreach ($type_options_cache[$gender] as $type) {
+            if (strpos((string)$type['concept_key'], 'distant_') === 0) {
+                continue;
+            }
+            $selected = (int)$type['id'] === (int)$relation['relationship_type_id'] ? ' selected="selected"' : '';
+            $options .= '<option value="' . (int)$type['id'] . '"' . $selected . '>' . htmlspecialchars_uni((string)$type['label']) . '</option>';
+        }
+        $relatives_in_type_options = $options;
+        $relatives_in_custom = htmlspecialchars_uni((string)($relation['relationship_custom_label'] ?? ''));
+        $relatives_in_subject = htmlspecialchars_uni((string)$subject['name']);
+        $relatives_in_return = 'edit:' . $person_id;
+        $row = '';
+        eval('$row = "' . $templates->get('relatives_incoming_relations_row') . '";');
+        $rows .= $row;
+    }
+
+    $pending = '';
+    foreach (Relatives_RelationRequests::get_open_for_person($person_id) as $request) {
+        $pending .= '<li>' . htmlspecialchars_uni(Relatives_RelationRequests::describe($request)) . '</li>';
+    }
+    if ($pending !== '') {
+        $pending = '<p class="relatives_hint">' . $lang->relatives_incoming_pending . '</p><ul class="relatives_incoming_pending">' . $pending . '</ul>';
+    }
+
+    if ($rows === '' && $pending === '') {
+        return '';
+    }
+    $relatives_incoming_rows = $rows;
+    $relatives_incoming_pending = $pending;
+    $box = '';
+    eval('$box = "' . $templates->get('relatives_incoming_relations') . '";');
+    return $box;
 }
 
 /**
@@ -507,6 +576,148 @@ if ($action === 'delete_vote') {
     redirect('relatives.php?action=list', $messages[$vote_result]);
 }
 
+// --- Verbindungen einzeln: Anfragen beantworten, trennen, aendern (POST) ----------------
+
+/**
+ * Ziel nach einer Verbindungs-Aktion: zurueck ins Personenformular ("edit:<id>"), in den
+ * Baum oder in die Liste. Nur diese festen Ziele.
+ */
+function relatives_relation_return_url(): string
+{
+    global $mybb;
+    $return = $mybb->get_input('return');
+    if (preg_match('/^edit:(\d+)$/', $return, $match)) {
+        return 'relatives.php?action=edit&id=' . (int)$match[1];
+    }
+    if ($return === 'tree') {
+        return 'relatives.php?action=tree';
+    }
+    return 'relatives.php?action=list';
+}
+
+// Antwort auf eine Verbindungsanfrage: accept / decline (angefragte Spieler*in) bzw.
+// cancel (anfragende Person).
+if ($action === 'relation_request') {
+    relatives_verify_post();
+    $request_id = $mybb->get_input('id', MyBB::INPUT_INT);
+    $answer = $mybb->get_input('answer');
+    if ($answer === 'accept') {
+        $result = Relatives_RelationRequests::accept($request_id, $my_uid);
+        if ($result === Relatives_RelationRequests::RESULT_CONFLICT) {
+            relatives_error_response($lang->relatives_relation_request_conflict);
+        }
+        if ($result !== Relatives_RelationRequests::RESULT_ACCEPTED) {
+            relatives_error_response($lang->relatives_error_generic);
+        }
+        $message = $lang->relatives_relation_request_accepted;
+    } elseif ($answer === 'decline') {
+        if (!Relatives_RelationRequests::decline($request_id, $my_uid)) {
+            relatives_error_response($lang->relatives_error_generic);
+        }
+        $message = $lang->relatives_relation_request_declined;
+    } else {
+        if (!Relatives_RelationRequests::cancel($request_id, $my_uid)) {
+            relatives_error_response($lang->relatives_error_generic);
+        }
+        $message = $lang->relatives_relation_request_cancelled;
+    }
+    redirect('relatives.php?action=list', $message);
+}
+
+// Trennen geht immer sofort -- fuer alle, die eine der beiden Personen bearbeiten duerfen.
+if ($action === 'relation_delete') {
+    relatives_verify_post();
+    $relation = Relatives_Database::get_relation($mybb->get_input('id', MyBB::INPUT_INT));
+    if ($relation === null || !Relatives_Graph::can_edit_relation($relation, $my_uid)) {
+        error_no_permission();
+    }
+    $subject_id = (int)$relation['person_id'];
+    $anchor_id = (int)($relation['related_to_person_id'] ?? 0);
+    Relatives_Database::delete_relation((int)$relation['id']);
+    Relatives_Database::normalize_primary($subject_id, 0);
+    Relatives_Graph::reset_family_memberships();
+    Relatives_Kinship::recompute_for_person($subject_id);
+    if ($anchor_id > 0) {
+        Relatives_Kinship::recompute_for_person($anchor_id);
+    }
+    if ($mybb->get_input('ajax')) {
+        relatives_json_response(['success' => true, 'message' => $lang->relatives_relation_deleted]);
+    }
+    redirect(relatives_relation_return_url(), $lang->relatives_relation_deleted);
+}
+
+// Grad einer bestehenden Verbindung aendern -- auch von der anderen Seite aus ("Nick ist
+// Urgrossvater von Sienna" aus Siennas Formular). Betrifft es einen fremden gespielten
+// Charakter, wird daraus eine Anfrage; bis zur Bestaetigung bleibt die alte Aussage.
+if ($action === 'relation_edit') {
+    relatives_verify_post();
+    $relation = Relatives_Database::get_relation($mybb->get_input('id', MyBB::INPUT_INT));
+    if ($relation === null || !Relatives_Graph::can_edit_relation($relation, $my_uid)) {
+        error_no_permission();
+    }
+    $subject_id = (int)$relation['person_id'];
+    $subject = Relatives_Database::get_person($subject_id);
+    if ($subject === null) {
+        error_no_permission();
+    }
+
+    $type_id = $mybb->get_input('relationship_type_id', MyBB::INPUT_INT);
+    $custom_label = trim($mybb->get_input('relationship_custom_label'));
+    $type = null;
+    if ($type_id > 0) {
+        $type = Relatives_RelationshipTypes::get_by_id($type_id);
+        if ($type === null || (int)$type['is_active'] !== 1) {
+            relatives_error_response($lang->relatives_error_invalid_relationship_type);
+        }
+        if ((int)$type['gender'] !== Relatives_RelationshipTypes::map_person_gender_to_label_gender((int)$subject['gender'])) {
+            relatives_error_response($lang->relatives_error_existing_gender_mismatch);
+        }
+        $custom_label = '';
+    } elseif ($custom_label === '') {
+        relatives_error_response($lang->relatives_error_custom_label_required);
+    }
+
+    $changes = [
+        'relationship_type_id'      => $type !== null ? (int)$type['id'] : null,
+        'relationship_custom_label' => $type !== null ? null : mb_substr($custom_label, 0, 255),
+    ];
+    $anchor_id = (int)($relation['related_to_person_id'] ?? 0);
+
+    // Widerspricht die neue Aussage einer anderen Kante zwischen denselben Personen?
+    $existing_statement = Relatives_Graph::find_existing_statement(
+        $subject_id,
+        $anchor_id > 0 ? $anchor_id : null,
+        !empty($relation['related_to_family_id']) ? (int)$relation['related_to_family_id'] : null,
+        $type !== null ? (string)$type['concept_key'] : null,
+        $changes['relationship_custom_label']
+    );
+    if ($existing_statement !== null && (int)$existing_statement['id'] !== (int)$relation['id'] && empty($existing_statement['same'])) {
+        relatives_error_response($lang->sprintf(
+            $lang->relatives_error_relation_conflict,
+            htmlspecialchars_uni(relatives_person_name($anchor_id)),
+            htmlspecialchars_uni(relatives_get_relationship_label($existing_statement))
+        ));
+    }
+
+    $target = Relatives_RelationRequests::confirming_uid($subject_id, $anchor_id > 0 ? $anchor_id : null, $my_uid);
+    if ($target > 0) {
+        Relatives_RelationRequests::create($subject_id, array_merge($relation, $changes), $target, $my_uid, (int)$relation['id']);
+        $message = $lang->sprintf($lang->relatives_relation_requests_created, 1);
+    } else {
+        Relatives_Database::update_relation((int)$relation['id'], $changes);
+        Relatives_Graph::reset_family_memberships();
+        Relatives_Kinship::recompute_for_person($subject_id);
+        if ($anchor_id > 0) {
+            Relatives_Kinship::recompute_for_person($anchor_id);
+        }
+        $message = $lang->relatives_saved;
+    }
+    if ($mybb->get_input('ajax')) {
+        relatives_json_response(['success' => true, 'message' => $message, 'pending' => $target > 0]);
+    }
+    redirect(relatives_relation_return_url(), $message);
+}
+
 // --- action: adopt (POST) --------------------------------------------------------------
 
 // Nimmt eine von anderen eingetragene, nicht bespielte Person in die eigene Liste auf --
@@ -699,6 +910,13 @@ if ($action === 'add' || $action === 'edit') {
             }
         }
 
+        // Verbindungen zu fremden gespielten Charakteren muss deren Spieler*in erst
+        // bestaetigen (Relatives_RelationRequests) -- sie werden als Anfrage gespeichert.
+        $pending_relations = [];
+        if ($relations) {
+            [$relations, $pending_relations] = Relatives_RelationRequests::split($own_person_id, $relations, $my_uid);
+        }
+
         $joined_existing = false;
         if ($is_edit) {
             Relatives_Database::update_person($id, $person_data);
@@ -757,17 +975,31 @@ if ($action === 'add' || $action === 'edit') {
             }
         }
 
+        foreach ($pending_relations as $pending) {
+            Relatives_RelationRequests::create($person_id, $pending['relation'], $pending['target_uid'], $my_uid, $pending['replaces']);
+        }
+
         // Verwandtschaft zu den Besitzer*innen neu berechnen -- geteilte Personen
         // haengen in mehreren Baeumen, und schon eine geaenderte Geschlechtsangabe
         // veraendert dort das Label.
         Relatives_Kinship::recompute_for_person($person_id);
 
-        if ($mybb->get_input('ajax')) {
-            relatives_json_response(['success' => true, 'id' => $person_id, 'joined_existing' => $joined_existing]);
-        }
-        redirect(relatives_form_return_url(), $is_edit
+        $message = $is_edit
             ? $lang->relatives_saved
-            : ($joined_existing ? $lang->relatives_added_existing : $lang->relatives_added));
+            : ($joined_existing ? $lang->relatives_added_existing : $lang->relatives_added);
+        if ($pending_relations) {
+            $message .= ' ' . $lang->sprintf($lang->relatives_relation_requests_created, count($pending_relations));
+        }
+        if ($mybb->get_input('ajax')) {
+            relatives_json_response([
+                'success'         => true,
+                'id'              => $person_id,
+                'joined_existing' => $joined_existing,
+                'pending'         => count($pending_relations),
+                'message'         => $message,
+            ]);
+        }
+        redirect(relatives_form_return_url(), $message);
     }
 
     // GET: Formular rendern
@@ -956,6 +1188,7 @@ if ($action === 'add' || $action === 'edit') {
     if ($in_my_list) {
         $relatives_form_link_section = relatives_render_link_section($existing);
     }
+    $relatives_form_incoming = $is_edit ? relatives_render_incoming_relations((int)$existing['id']) : '';
 
     $relatives_relationship_types_json = relatives_json_for_script(Relatives_RelationshipTypes::get_active_json_payload());
 
@@ -1827,6 +2060,8 @@ if ($action === 'tree') {
         'node_family' => $lang->relatives_tree_node_family,
         'family_members' => $lang->relatives_tree_family_members,
         'connections' => $lang->relatives_connections,
+        'relation_delete' => $lang->relatives_incoming_delete,
+        'relation_delete_confirm' => $lang->relatives_incoming_confirm_delete,
         'relation_of_word' => $lang->relatives_relation_of_word,
         'deceased' => $lang->relatives_deceased,
         'field_is_deceased' => $lang->relatives_field_is_deceased,
@@ -1966,6 +2201,51 @@ if (!empty($open_delete_requests)) {
         $relatives_delete_requests_rows .= $relatives_dr_row;
     }
     eval('$relatives_delete_requests_box = "' . $templates->get('relatives_delete_requests') . '";');
+}
+
+// Verbindungsanfragen: an mich (bestaetigen/ablehnen) und von mir (zurueckziehen).
+$relatives_relation_requests_box = '';
+$incoming_requests = Relatives_RelationRequests::get_open_for_target($my_uid);
+$outgoing_requests = Relatives_RelationRequests::get_open_by_requester($my_uid);
+if ($incoming_requests || $outgoing_requests) {
+    $request_users = relatives_get_users_bulk(array_merge(
+        array_column($incoming_requests, 'requested_by'),
+        array_column($outgoing_requests, 'target_uid')
+    ));
+    $user_html = static function (int $uid) use ($request_users, $lang): string {
+        $user = $request_users[$uid] ?? null;
+        return $user
+            ? build_profile_link(format_name(htmlspecialchars_uni($user['username']), (int)$user['usergroup'], (int)$user['displaygroup']), $uid)
+            : htmlspecialchars_uni($lang->relatives_link_request_unknown_user);
+    };
+    $relatives_relation_requests_rows = '';
+    foreach (array_merge($incoming_requests, $outgoing_requests) as $request) {
+        $relatives_rr_id = (int)$request['id'];
+        $incoming = in_array($request, $incoming_requests, true);
+        $statement = htmlspecialchars_uni(Relatives_RelationRequests::describe($request));
+        $relatives_rr_text = $incoming
+            ? $lang->sprintf($lang->relatives_relation_request_incoming, $user_html((int)$request['requested_by']), $statement)
+            : $lang->sprintf($lang->relatives_relation_request_outgoing, $statement, $user_html((int)$request['target_uid']));
+        if ((int)$request['replaces_relation_id'] > 0) {
+            $relatives_rr_text .= ' <span class="relatives_badge">' . htmlspecialchars_uni($lang->relatives_relation_request_change) . '</span>';
+        }
+        $relatives_rr_date = htmlspecialchars_uni($lang->sprintf($lang->relatives_delete_request_date, my_date('normal', (int)$request['created_at'])));
+        $answers = $incoming
+            ? ['accept' => $lang->relatives_relation_request_accept, 'decline' => $lang->relatives_relation_request_decline]
+            : ['cancel' => $lang->relatives_relation_request_cancel];
+        $relatives_rr_actions = '';
+        foreach ($answers as $answer => $label) {
+            $relatives_rr_actions .= '<form action="relatives.php?action=relation_request" method="post" class="relatives_inline_form">'
+                . '<input type="hidden" name="id" value="' . $relatives_rr_id . '" />'
+                . '<input type="hidden" name="answer" value="' . $answer . '" />'
+                . '<input type="hidden" name="my_post_key" value="' . $mybb->post_code . '" />'
+                . '<input type="submit" class="button" value="' . htmlspecialchars_uni($label) . '" />'
+                . '</form> ';
+        }
+        eval('$relatives_rr_row = "' . $templates->get('relatives_relation_requests_row') . '";');
+        $relatives_relation_requests_rows .= $relatives_rr_row;
+    }
+    eval('$relatives_relation_requests_box = "' . $templates->get('relatives_relation_requests') . '";');
 }
 
 add_breadcrumb($lang->relatives_my_persons_title, 'relatives.php?action=list');
