@@ -315,6 +315,11 @@ class Relatives_TreeBuilder
                 continue;
             }
             $type = $types[(int)($relation['relationship_type_id'] ?? 0)] ?? null;
+            // Freund*innen, Clique & Co. (freie Bezeichnung) gehoeren nicht in den
+            // Stammbaum -- sie stehen nur in der Liste.
+            if (self::is_non_kin($relation, $type)) {
+                continue;
+            }
             $concept = $type !== null ? $type['concept'] : null;
             $offset = $type !== null ? $type['offset'] : 0;
             $kind = self::classify_relation($concept, $offset);
@@ -755,6 +760,18 @@ class Relatives_TreeBuilder
     {
         return !empty($relation['related_to_family_id']) && $type === null
             && trim((string)($relation['relationship_custom_label'] ?? '')) === '';
+    }
+
+    /**
+     * Verbindung ohne Verwandtschaft: freie Bezeichnung ohne Grad (keine reine
+     * Familien-Mitgliedschaft) oder ein Grad mit dem Konzept "other".
+     */
+    public static function is_non_kin(array $relation, ?array $type): bool
+    {
+        if ($type === null) {
+            return trim((string)($relation['relationship_custom_label'] ?? '')) !== '';
+        }
+        return ($type['concept'] ?? '') === 'other';
     }
 
     private static function family_member_label(): string

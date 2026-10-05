@@ -149,6 +149,7 @@ $l['relatives_tree_legend_line_solid'] = 'Blood relation / married';
 $l['relatives_tree_legend_line_dashed'] = 'Adopted / foster / separated';
 $l['relatives_tree_legend_line_dotted'] = 'Step / in-law / engaged';
 $l['relatives_tree_legend_line_secret'] = 'Secret in-play connection';
+$l['relatives_tree_legend_non_kin'] = 'Friends, acquaintances & co. are only shown in the list, not in the family tree.';
 $l['relatives_field_is_deceased'] = 'Deceased';
 $l['relatives_field_death_note'] = 'Year or date of death';
 $l['relatives_field_relations'] = 'Connections';

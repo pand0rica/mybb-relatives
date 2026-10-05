@@ -20,5 +20,6 @@
 			<span class="relatives_tree_legend_item"><span class="relatives_tree_legend_line relatives_tree_legend_line_dashed"></span>{$lang->relatives_tree_legend_line_dashed}</span>
 			<span class="relatives_tree_legend_item"><span class="relatives_tree_legend_line relatives_tree_legend_line_dotted"></span>{$lang->relatives_tree_legend_line_dotted}</span>
 			<span class="relatives_tree_legend_item"><span class="relatives_tree_legend_line relatives_tree_legend_line_secret"></span>{$lang->relatives_tree_legend_line_secret}</span>
+			<span class="relatives_tree_legend_item relatives_tree_legend_note">{$lang->relatives_tree_legend_non_kin}</span>
 		</div>
 	</div>

@@ -149,6 +149,7 @@ $l['relatives_tree_legend_line_solid'] = 'Leiblich / verheiratet';
 $l['relatives_tree_legend_line_dashed'] = 'Adoptiert / Pflege / getrennt';
 $l['relatives_tree_legend_line_dotted'] = 'Stief / angeheiratet / verlobt';
 $l['relatives_tree_legend_line_secret'] = 'Inplay geheime Verbindung';
+$l['relatives_tree_legend_non_kin'] = 'Freund*innen, Bekannte & Co. stehen nur in der Liste, nicht im Stammbaum.';
 $l['relatives_field_is_deceased'] = 'Verstorben';
 $l['relatives_field_death_note'] = 'Todesjahr oder -datum';
 $l['relatives_field_relations'] = 'Verbindungen';

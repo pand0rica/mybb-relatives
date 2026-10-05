@@ -131,16 +131,14 @@ function relatives_handle_member_profile(): void
         $relatives_tree_link = relatives_tree_link_html((int)$memprofile['uid'], (string)$memprofile['username']);
     }
 
+    global $plugins;
+
     $relatives_wanted_box = '';
     $owner_uid = (int)$memprofile['uid'];
-    if (!isset(relatives_uids_with_tree()[$owner_uid])) {
-        return;
-    }
-
-    $wanted = relatives_profile_wanted_persons($owner_uid);
-    if (empty($wanted)) {
-        return;
-    }
+    // Nur Verwandte (freie Bezeichnungen stehen nicht im Stammbaum, siehe
+    // Relatives_TreeBuilder::is_non_kin()). Nicht-verwandte Gesuche haengen andere
+    // Plugins ueber den Hook relatives_profile_wanted_cards an.
+    $wanted = isset(relatives_uids_with_tree()[$owner_uid]) ? relatives_profile_wanted_persons($owner_uid) : [];
 
     $lang->load('relatives');
 
@@ -184,7 +182,19 @@ function relatives_handle_member_profile(): void
         $cards .= $relatives_wanted_card;
     }
 
-    $count = count($wanted);
+    // Provider-Hook: Fremdplugins (z. B. eine Anschluss-Suche) haengen fertig
+    // gerendertes, selbst escaptes Karten-HTML an und erhoehen den Zaehler.
+    $hook_args = ['uid' => $owner_uid, 'cards' => '', 'count' => 0];
+    if (is_object($plugins)) {
+        $plugins->run_hooks('relatives_profile_wanted_cards', $hook_args);
+    }
+    if (is_string($hook_args['cards'] ?? null) && $hook_args['cards'] !== '') {
+        $cards .= $hook_args['cards'];
+    }
+    $count = count($wanted) + max(0, (int)($hook_args['count'] ?? 0));
+    if ($count === 0 && $cards === '') {
+        return;
+    }
     eval('$relatives_wanted_box = "' . $templates->get('relatives_profile_wanted_box') . '";');
 }
 

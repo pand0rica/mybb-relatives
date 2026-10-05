@@ -113,6 +113,7 @@
 .relatives_tree_legend_line_dashed { border-top-style: dashed; }
 .relatives_tree_legend_line_dotted { border-top-style: dotted; }
 .relatives_tree_legend_line_secret { border-top-style: solid; opacity: .5; }
+.relatives_tree_legend_note { font-style: italic; opacity: .75; }
 
 /* --- Viewport & Zeichenflaeche --------------------------------------------------- */
 
