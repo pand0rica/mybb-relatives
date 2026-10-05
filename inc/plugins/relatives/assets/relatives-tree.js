@@ -1621,7 +1621,6 @@
 		form.appendChild(relWrap);
 
 		var customLabelInput = labeledInput(form, "text", t("field_relationship_custom", "Freie Bezeichnung"), "");
-		var relDescTextarea = labeledTextarea(form, t("field_relationship_description", "Eure Beziehung"), "");
 
 		rebuildRelationshipOptions(relSelect, genderSelect.value, null);
 
@@ -1666,15 +1665,24 @@
 
 		// Mit Inplay-Jahr wird das Geburtsjahr erfasst, das Alter daraus berechnet.
 		var useBirthYear = !!config.inplayYear;
-		var ageInput = labeledInput(form, "number", useBirthYear ? t("field_birth_year", "Geburtsjahr") : t("field_age", "Alter"), "");
-		var originInput = labeledInput(form, "text", t("field_origin", "Herkunft"), "");
-		var avatarInput = labeledInput(form, "text", t("field_avatar", "Avatarperson"), "");
+		// Gleiche Reihenfolge wie im Personenformular: Beschreibung, Geburtsjahr, verstorben
+		// (+ Todesjahr), Herkunft, gesucht (+ Link), Attribute, eure Beziehung.
 		var descTextarea = labeledTextarea(form, t("field_description", "Beschreibung"), "");
+		var ageInput = labeledInput(form, "number", useBirthYear ? t("field_birth_year", "Geburtsjahr") : t("field_age", "Alter"), "");
+		var deceasedCheckbox = labeledCheckbox(form, t("field_is_deceased", "Verstorben"), false);
+		var deathNoteInput = labeledInput(form, "text", t("field_death_note", "Todesjahr oder -datum (optional)"), "");
+		var originInput = labeledInput(form, "text", t("field_origin", "Herkunft"), "");
 		var wantedCheckbox = labeledCheckbox(form, t("field_is_wanted", "Als gesucht markieren"), false);
 		var wantedLinkInput = labeledInput(form, "url", t("field_wanted_thread_link", "Link zum Gesuchs-Thread"), "");
 		wantedLinkInput.placeholder = t("wanted_placeholder", "");
-		var deceasedCheckbox = labeledCheckbox(form, t("field_is_deceased", "Verstorben"), false);
-		var deathNoteInput = labeledInput(form, "text", t("field_death_note", "Todesjahr oder -datum (optional)"), "");
+		// Todesjahr und Gesuchs-Link nur, wenn die Checkbox davor angehakt ist.
+		function toggleDependent(checkbox, input) {
+			input.parentNode.style.display = checkbox.checked ? "" : "none";
+		}
+		deceasedCheckbox.addEventListener("change", function () { toggleDependent(deceasedCheckbox, deathNoteInput); });
+		wantedCheckbox.addEventListener("change", function () { toggleDependent(wantedCheckbox, wantedLinkInput); });
+		toggleDependent(deceasedCheckbox, deathNoteInput);
+		toggleDependent(wantedCheckbox, wantedLinkInput);
 
 		if (attributeGroups.length) {
 			var attrLabel = document.createElement("label");
@@ -1683,6 +1691,7 @@
 			form.appendChild(attrLabel);
 			form.appendChild(buildAttributeFieldset([]));
 		}
+		var relDescTextarea = labeledTextarea(form, t("field_relationship_description", "Eure Beziehung"), "");
 
 		var submit = document.createElement("button");
 		submit.type = "submit";
@@ -1703,7 +1712,6 @@
 			payload.append("origin", originInput.value);
 			payload.append("description", descTextarea.value);
 			payload.append("relationship_description", relDescTextarea.value);
-			payload.append("avatar", avatarInput.value);
 			payload.append("wanted_thread_link", wantedLinkInput.value);
 			if (wantedCheckbox.checked) {
 				payload.append("is_wanted", "1");

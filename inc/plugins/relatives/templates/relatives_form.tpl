@@ -62,8 +62,8 @@
 		<h3 class="relatives_form_section">{$lang->relatives_form_section_optional}</h3>
 
 		<div class="relatives_field">
-			<label for="relatives_relationship_description">{$lang->relatives_field_relationship_description}</label>
-			<textarea id="relatives_relationship_description" name="relationship_description" rows="4">{$relatives_form_relationship_description}</textarea>
+			<label for="relatives_description">{$lang->relatives_field_description}</label>
+			<textarea id="relatives_description" name="description" rows="6">{$relatives_form_description}</textarea>
 		</div>
 
 		<div class="relatives_field">
@@ -88,16 +88,6 @@
 		</div>
 
 		<div class="relatives_field">
-			<label for="relatives_avatar">{$lang->relatives_field_avatar}</label>
-			<input type="text" id="relatives_avatar" name="avatar" maxlength="255" value="{$relatives_form_avatar}" />
-		</div>
-
-		<div class="relatives_field">
-			<label for="relatives_description">{$lang->relatives_field_description}</label>
-			<textarea id="relatives_description" name="description" rows="6">{$relatives_form_description}</textarea>
-		</div>
-
-		<div class="relatives_field">
 			<label for="relatives_is_wanted">
 				<input type="checkbox" id="relatives_is_wanted" name="is_wanted" value="1" {$relatives_form_is_wanted_checked} />
 				{$lang->relatives_field_is_wanted}
@@ -110,6 +100,11 @@
 		</div>
 
 		{$relatives_form_attribute_groups}
+
+		<div class="relatives_field">
+			<label for="relatives_relationship_description">{$lang->relatives_field_relationship_description}</label>
+			<textarea id="relatives_relationship_description" name="relationship_description" rows="4">{$relatives_form_relationship_description}</textarea>
+		</div>
 
 		<div class="relatives_form_actions">
 			<input type="submit" class="button" value="{$lang->relatives_save}" />

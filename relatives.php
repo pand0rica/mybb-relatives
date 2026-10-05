@@ -859,7 +859,6 @@ if ($action === 'add' || $action === 'edit') {
             'gender'             => $gender,
             'age'                => $age,
             'origin'             => $origin !== '' ? $origin : null,
-            'avatar'             => $avatar_final,
             'description'        => $description !== '' ? $description : null,
             'is_wanted'          => $is_wanted,
             'wanted_thread_link' => $wanted_thread_link_final,
@@ -868,6 +867,11 @@ if ($action === 'add' || $action === 'edit') {
             // "Winter 1987" oder ein reines Jahr.
             'death_note'         => ($is_deceased && $death_note !== '') ? mb_substr($death_note, 0, 64) : null,
         ];
+        // Die Formulare haben kein Feld "Avatarperson" mehr: einen gespeicherten Wert nur
+        // anfassen, wenn ein Aufrufer das Feld ausdruecklich mitschickt.
+        if (isset($mybb->input['avatar'])) {
+            $person_data['avatar'] = $avatar_final;
+        }
         if ($inplay_year !== null) {
             // Das Geburtsjahr ersetzt ein altes, fest eingetragenes Alter.
             $person_data['birth_year'] = $birth_year;
@@ -1025,7 +1029,6 @@ if ($action === 'add' || $action === 'edit') {
         $relatives_form_age_field = '<label for="relatives_age">' . $lang->relatives_field_age . '</label>'
             . '<input type="number" id="relatives_age" name="age" min="0" max="999" value="' . $form_age . '" />';
     }
-    $relatives_form_avatar = htmlspecialchars_uni($is_edit ? (string)$existing['avatar'] : '');
     $relatives_form_description = htmlspecialchars_uni($is_edit ? (string)$existing['description'] : '');
     $relatives_form_relationship_description = htmlspecialchars_uni($is_edit ? (string)($existing['relationship_description'] ?? '') : '');
 

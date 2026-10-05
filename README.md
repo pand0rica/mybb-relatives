@@ -84,15 +84,19 @@ the pop-out icon opens your tree in its own window.
 - **Family** – assign the person to one or more families from the family overview, no
   relationship degree needed. With **Show family as parents** the family box takes the place of
   the parents in the tree; without it the person simply belongs to the family.
-- **Year of birth** (or **Age** if no in-play year is set), **Origin, Face claim, Description of
-  the person, Your relationship** – optional details; *Your relationship* is personal to your
-  character, the rest is shared with everyone who has this person in their list. With a year of
-  birth the form shows the resulting age next to the field.
-- **Deceased** / **Year or date of death** – shows a cross and a dimmed box in the tree.
-- **Mark as wanted** / **Link to the wanted thread** – the person appears as a wanted card in
-  the profile of every character whose family tree contains them (see
-  [Wanted box in the profile](#wanted-box-in-the-profile)).
-- **Attributes** – the attribute groups configured in the ACP.
+- **Optional details**, in this order:
+  - **Description of the person**
+  - **Year of birth** (or **Age** if no in-play year is set) – with a year of birth the form
+    shows the resulting age next to the field.
+  - **Deceased** – only when ticked, **Year or date of death** appears; shows a cross and a
+    dimmed box in the tree.
+  - **Origin**
+  - **Mark as wanted** – only when ticked, **Link to the wanted thread** appears; the person then
+    appears as a wanted card in the profile of every character whose family tree contains them
+    (see [Wanted box in the profile](#wanted-box-in-the-profile)).
+  - **Attributes** – the attribute groups configured in the ACP.
+  - **Your relationship** – personal to your character; everything else is shared with everyone
+    who has this person in their list.
 
 ![Add person form](docs/screenshots/person-form.png)
 
