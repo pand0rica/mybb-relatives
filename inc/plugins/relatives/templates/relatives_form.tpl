@@ -380,26 +380,22 @@
 		var custom = row.querySelector('[data-role="custom"]');
 		var primary = row.querySelector('[data-role="primary"]');
 		var secret = row.querySelector('[data-role="secret"]');
-		var asParent = row.querySelector('[data-role="as-parent"]');
 		var remove = row.querySelector('[data-role="remove"]');
 
 		anchor.name = "relations[" + index + "][anchor]";
 		typeSelect.name = "relations[" + index + "][relationship_type_id]";
 		custom.name = "relations[" + index + "][relationship_custom_label]";
 		secret.name = "relations[" + index + "][is_secret]";
-		asParent.name = "relations[" + index + "][family_as_parent]";
 		primary.value = index;
 
 		fillAnchor(anchor, data.anchor);
 		typeSelect.setAttribute("data-selected", data.type_id ? String(data.type_id) : "");
 		custom.value = data.custom_label || "";
 		secret.checked = !!data.secret;
-		asParent.checked = !!data.as_parent;
 		primary.checked = !!data.primary;
 
 		typeSelect.addEventListener("change", function () { toggleCustom(row); updateSentence(row); });
 		anchor.addEventListener("change", function () { toggleCustom(row); updateSentence(row); });
-		asParent.addEventListener("change", function () { updateSentence(row); });
 		custom.addEventListener("input", function () { updateSentence(row); });
 		remove.addEventListener("click", function () {
 			var wasPrimary = primary.checked;
