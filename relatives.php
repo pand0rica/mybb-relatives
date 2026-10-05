@@ -320,6 +320,79 @@ function relatives_render_incoming_relations(int $person_id): string
 }
 
 /**
+ * Kontext fuer die Formular-Hooks anderer Plugins (z. B. Jobliste: Beruf eintragen).
+ * linked_uid ist bei gespielten Charakteren der Account -- deren Beruf haengt dort.
+ */
+function relatives_person_hook_context(int $person_id): array
+{
+    global $mybb;
+
+    $linked_uid = 0;
+    if ($person_id > 0 && ($person = Relatives_Database::get_person($person_id)) !== null
+        && (int)$person['link_status'] === 2 && !empty($person['linked_uid'])) {
+        $linked_uid = (int)$person['linked_uid'];
+    }
+    return [
+        'person_id'  => $person_id,
+        'linked_uid' => $linked_uid,
+        'uid'        => (int)$mybb->user['uid'],
+    ];
+}
+
+/**
+ * Provider-Hook relatives_person_form_fields: Felder anderer Plugins im Personenformular.
+ * Listener haengen fertiges, selbst escaptes HTML an $args['html'] an (eigene, eindeutig
+ * benannte Input-Namen verwenden).
+ */
+function relatives_person_form_extra_fields(int $person_id): string
+{
+    global $plugins;
+
+    if (!is_object($plugins)) {
+        return '';
+    }
+    $args = relatives_person_hook_context($person_id) + ['html' => ''];
+    $plugins->run_hooks('relatives_person_form_fields', $args);
+    return is_string($args['html'] ?? null) ? $args['html'] : '';
+}
+
+/**
+ * Provider-Hook relatives_person_validate: laeuft vor jedem Schreibzugriff. Listener
+ * pruefen ihre Felder und haengen Fehlertexte (roh) an $args['errors'] an; der erste
+ * Fehler bricht das Speichern ab. person_id ist 0, wenn die Person neu angelegt wird.
+ */
+function relatives_person_validate_extra(int $person_id): void
+{
+    global $plugins;
+
+    if (!is_object($plugins)) {
+        return;
+    }
+    $args = relatives_person_hook_context($person_id) + ['errors' => []];
+    $plugins->run_hooks('relatives_person_validate', $args);
+    foreach ((array)($args['errors'] ?? []) as $error) {
+        if (is_scalar($error) && trim((string)$error) !== '') {
+            relatives_error_response(htmlspecialchars_uni((string)$error));
+        }
+    }
+}
+
+/**
+ * Provider-Hook relatives_person_saved: nach dem Speichern (Person existiert jetzt).
+ * Listener speichern ihre Felder, z. B. den Beruf.
+ */
+function relatives_person_saved_extra(int $person_id, bool $is_new): void
+{
+    global $plugins;
+
+    if (!is_object($plugins) || $person_id <= 0) {
+        return;
+    }
+    $args = relatives_person_hook_context($person_id) + ['is_new' => $is_new];
+    $plugins->run_hooks('relatives_person_saved', $args);
+}
+
+/**
  * Liest die Verbindungen aus dem Formular und validiert sie.
  *
  * Das Formular schickt sie als relations[i][...]; Aufrufer, die nur eine einzige
@@ -914,6 +987,9 @@ if ($action === 'add' || $action === 'edit') {
             }
         }
 
+        // Felder anderer Plugins (z. B. Beruf aus der Jobliste) vor jedem Schreibzugriff pruefen.
+        relatives_person_validate_extra($own_person_id);
+
         // Verbindungen zu fremden gespielten Charakteren muss deren Spieler*in erst
         // bestaetigen (Relatives_RelationRequests) -- sie werden als Anfrage gespeichert.
         $pending_relations = [];
@@ -982,6 +1058,8 @@ if ($action === 'add' || $action === 'edit') {
         foreach ($pending_relations as $pending) {
             Relatives_RelationRequests::create($person_id, $pending['relation'], $pending['target_uid'], $my_uid, $pending['replaces']);
         }
+
+        relatives_person_saved_extra($person_id, !$is_edit && !$joined_existing);
 
         // Verwandtschaft zu den Besitzer*innen neu berechnen -- geteilte Personen
         // haengen in mehreren Baeumen, und schon eine geaenderte Geschlechtsangabe
@@ -1192,6 +1270,7 @@ if ($action === 'add' || $action === 'edit') {
         $relatives_form_link_section = relatives_render_link_section($existing);
     }
     $relatives_form_incoming = $is_edit ? relatives_render_incoming_relations((int)$existing['id']) : '';
+    $relatives_form_extra_fields = relatives_person_form_extra_fields($is_edit ? (int)$existing['id'] : 0);
 
     $relatives_relationship_types_json = relatives_json_for_script(Relatives_RelationshipTypes::get_active_json_payload());
 
@@ -2033,6 +2112,7 @@ if ($action === 'tree') {
         'field_age'                  => $lang->relatives_field_age,
         'field_birth_year'           => $lang->relatives_field_birth_year,
         'field_job'                  => $lang->relatives_field_job,
+        'quick_add_more_hint'        => $lang->relatives_quick_add_more_hint,
         'field_origin'               => $lang->relatives_field_origin,
         'field_description'         => $lang->relatives_field_description,
         'field_relationship_description' => $lang->relatives_field_relationship_description,

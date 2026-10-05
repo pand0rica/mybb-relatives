@@ -67,6 +67,7 @@ $l['relatives_field_relationship_custom'] = "Freie Bezeichnung";
 $l['relatives_field_age'] = "Alter";
 $l['relatives_field_birth_year'] = "Geburtsjahr";
 $l['relatives_field_job'] = "Beruf";
+$l['relatives_quick_add_more_hint'] = "Weitere Angaben wie den Beruf trägst du nach dem Speichern über „Person bearbeiten“ ein.";
 $l['relatives_birth_year_age'] = "= {1} Jahre (Inplay-Jahr {2})";
 $l['relatives_age_born'] = "{1} (geb. {2})";
 $l['relatives_error_invalid_birth_year'] = "Bitte gib ein gültiges Geburtsjahr ein (nicht nach dem aktuellen Inplay-Jahr).";

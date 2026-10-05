@@ -87,6 +87,8 @@
 			{$relatives_form_origin_field}
 		</div>
 
+		{$relatives_form_extra_fields}
+
 		<div class="relatives_field">
 			<label for="relatives_is_wanted">
 				<input type="checkbox" id="relatives_is_wanted" name="is_wanted" value="1" {$relatives_form_is_wanted_checked} />

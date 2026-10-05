@@ -91,6 +91,7 @@ the pop-out icon opens your tree in its own window.
   - **Deceased** – only when ticked, **Year or date of death** appears; shows a cross and a
     dimmed box in the tree.
   - **Origin**
+  - **Occupation** – only with the *jobliste* plugin, which adds its own fields here.
   - **Mark as wanted** – only when ticked, **Link to the wanted thread** appears; the person then
     appears as a wanted card in the profile of every character whose family tree contains them
     (see [Wanted box in the profile](#wanted-box-in-the-profile)).
@@ -355,6 +356,14 @@ Other plugins must not read the `relatives_*` tables directly. Public contract:
   'linked_uids' => [person_id => uid], 'details' => []]`, `linked_uids` = confirmed accounts of
   played characters): set `$args['details'][$person_id]['job']` to a plain-text occupation; it is shown in
   the tree panel, the list and the wanted cards.
+- Person form hooks (all with `person_id` – `0` for a new person in `relatives_person_validate` –,
+  `linked_uid` – account of a played character, else `0` – and `uid` – the editing user):
+  - `relatives_person_form_fields` (`+ 'html' => ''`): append your own, already escaped form fields;
+    they appear in the person form between *Origin* and *Mark as wanted*. Use unique input names.
+  - `relatives_person_validate` (`+ 'errors' => []`): runs before anything is written; add plain-text
+    error messages to abort saving. The tree quick-add form posts to the same action without your
+    fields – only validate when your fields were submitted.
+  - `relatives_person_saved` (`+ 'is_new' => bool`): runs after saving; store your fields here.
 - `relatives_profile_wanted_cards` (provider hook, `$args = ['uid' => …, 'cards' => '', 'count'
   => 0]`): append your own, already escaped card HTML to `cards` and raise `count` – e.g. wanted
   non-relatives from a search plugin.

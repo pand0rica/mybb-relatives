@@ -560,6 +560,17 @@ Kaputte/fremde Aufrufer werden ignoriert, Escaping bleibt bei Jobliste.
   (`linked_uids` = bestätigt verknüpfte Accounts gespielter Charaktere); ein
   Listener setzt `$args['details'][person_id]['job']` (reiner Text). Relatives verwirft unbekannte
   Personen/Keys, kürzt auf 255 Zeichen und escapet beim Rendern (`Relatives_Database::person_details()`).
+- Personenformular (Kontext je Aufruf: `person_id` (0 = neu, nur bei validate), `linked_uid` (Account
+  eines gespielten Charakters, sonst 0), `uid` (bearbeitende Person); Helfer
+  `relatives_person_hook_context()` in `relatives.php`):
+  - `relatives_person_form_fields` (+ `'html' => ''`) – eigene, selbst escapte Felder; stehen im
+    Formular zwischen Herkunft und „Als gesucht markieren“.
+  - `relatives_person_validate` (+ `'errors' => []`) – vor jedem Schreibzugriff; ein roher Fehlertext
+    bricht das Speichern ab (Relatives escapet). Das Baum-Schnellformular postet auf dieselbe Action
+    ohne diese Felder → Listener prüfen nur, wenn ihre Felder mitgeschickt wurden.
+  - `relatives_person_saved` (+ `'is_new' => bool`) – nach dem Speichern, Listener speichern hier.
+  Gedacht für die Jobliste (Beruf eintragen); das Baum-Schnellformular zeigt nur einen Hinweis aufs
+  volle Formular.
 - `relatives_profile_wanted_cards` – `$args = ['uid' => int, 'cards' => '', 'count' => 0]`; ein
   Listener hängt fertig escaptes Karten-HTML an `cards` an und erhöht `count`.
 

@@ -1687,6 +1687,11 @@
 			form.appendChild(buildAttributeFieldset([]));
 		}
 		var relDescTextarea = labeledTextarea(form, t("field_relationship_description", "Eure Beziehung"), "");
+		// Weitere Angaben (z. B. Beruf aus der Jobliste) gibt es nur im vollen Formular.
+		var moreHint = document.createElement("p");
+		moreHint.className = "relatives_hint";
+		moreHint.textContent = t("quick_add_more_hint", "");
+		if (moreHint.textContent) { form.appendChild(moreHint); }
 
 		var submit = document.createElement("button");
 		submit.type = "submit";
