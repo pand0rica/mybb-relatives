@@ -1275,6 +1275,56 @@ function relatives_family_member_groups_html(array $member_ids, array $persons):
 }
 
 /**
+ * Formular "Zu dieser Familie hinzufuegen" fuer die Familienseite: der eigene Charakter
+ * und alle Personen der eigenen Liste, die man bearbeiten darf und die noch nicht
+ * Mitglied sind. '' fuer Gaest*innen oder wenn es niemanden mehr hinzuzufuegen gibt.
+ */
+function relatives_family_join_form(array $family, array $member_ids, bool $in_usercp): string
+{
+    global $mybb, $lang, $templates;
+
+    $uid = (int)$mybb->user['uid'];
+    if ($uid <= 0) {
+        return '';
+    }
+    $members = array_flip(array_map('intval', $member_ids));
+
+    $options = '';
+    $account_person = Relatives_Graph::find_account_person_id($uid);
+    if ($account_person === 0 || !isset($members[$account_person])) {
+        $options .= '<option value="0">' . htmlspecialchars_uni(relatives_self_anchor_label($account_person)) . '</option>';
+    }
+    $person_options = [];
+    foreach (Relatives_Database::get_persons_by_owner($uid) as $person) {
+        $person_id = (int)$person['id'];
+        if (isset($members[$person_id]) || $person_id === $account_person
+            || !Relatives_Graph::can_edit_person($person_id, $uid, $person)) {
+            continue;
+        }
+        $person_options[(string)$person['name'] . '#' . $person_id] = '<option value="' . $person_id . '">'
+            . htmlspecialchars_uni((string)$person['name']) . '</option>';
+    }
+    if ($person_options) {
+        uksort($person_options, 'strnatcasecmp');
+        $options .= '<optgroup label="' . htmlspecialchars_uni($lang->relatives_anchor_group_persons) . '">'
+            . implode('', $person_options) . '</optgroup>';
+    }
+    if ($options === '') {
+        return '';
+    }
+
+    $relatives_family_join_id = (int)$family['id'];
+    $relatives_family_join_options = $options;
+    $relatives_family_join_from = $in_usercp ? 'families' : '';
+    $relatives_family_join_closed_hint = Relatives_Families::welcomes_new_members($family) || relatives_can_manage_family($family)
+        ? ''
+        : '<p class="relatives_hint">' . htmlspecialchars_uni($lang->relatives_family_join_closed_hint) . '</p>';
+    $form = '';
+    eval('$form = "' . $templates->get('relatives_family_join') . '";');
+    return $form;
+}
+
+/**
  * Filter + Familienkarten -- geteilt von der UserCP-Seite (action=families, mit
  * Bearbeiten/Loeschen) und der oeffentlichen Liste (action=family_list, reines Ansehen).
  *
@@ -1491,6 +1541,76 @@ if ($action === 'family_list') {
     exit;
 }
 
+// --- action: family_join (POST) -------------------------------------------------------
+
+// Ordnet den eigenen Charakter oder eine bearbeitbare Person einer Familie zu -- dieselbe
+// Kante wie der Abschnitt "Familie" im Personenformular (Mitgliedschaft ohne Grad bzw.
+// Kind-Kante bei "als Eltern anzeigen").
+if ($action === 'family_join') {
+    relatives_verify_post();
+    $family = Relatives_Families::get_by_id($mybb->get_input('id', MyBB::INPUT_INT));
+    if ($family === null) {
+        error($lang->relatives_error_invalid_family);
+    }
+    $family_id = (int)$family['id'];
+    $back_url = relatives_family_url($family_id, $mybb->get_input('from') !== 'families');
+
+    $person_id = $mybb->get_input('person_id', MyBB::INPUT_INT);
+    if ($person_id <= 0) {
+        // Eigener Charakter: Knoten bei Bedarf anlegen.
+        $person_id = Relatives_Graph::account_person_id($my_uid);
+    }
+    $person = $person_id > 0 ? Relatives_Database::get_person($person_id) : null;
+    if ($person === null || !Relatives_Graph::can_edit_person($person_id, $my_uid, $person)) {
+        error_no_permission();
+    }
+
+    $type_id = null;
+    $concept = null;
+    if ($mybb->get_input('family_as_parent', MyBB::INPUT_INT) === 1) {
+        $label_gender = Relatives_RelationshipTypes::map_person_gender_to_label_gender((int)$person['gender']);
+        $type = Relatives_RelationshipTypes::find_by_concept_and_gender('child', $label_gender)
+            ?? Relatives_RelationshipTypes::find_by_concept_and_gender('child', Relatives_RelationshipTypes::LABEL_NEUTRAL);
+        if ($type === null) {
+            error($lang->relatives_error_invalid_relationship_type);
+        }
+        $type_id = (int)$type['id'];
+        $concept = (string)$type['concept_key'];
+    }
+
+    if (Relatives_Graph::find_existing_statement($person_id, null, $family_id, $concept, null) !== null) {
+        redirect($back_url, $lang->relatives_family_join_exists);
+    }
+
+    $relation = [
+        'relationship_type_id'      => $type_id,
+        'relationship_custom_label' => null,
+        'related_to_person_id'      => null,
+        'related_to_family_id'      => $family_id,
+        'is_secret'                 => 0,
+        'is_primary'                => 0,
+    ];
+    foreach (Relatives_Graph::closed_family_violations($person_id, [$relation], false) as $violation) {
+        if (!relatives_can_manage_family($violation['family'])) {
+            error($lang->sprintf(
+                $lang->relatives_error_family_closed,
+                htmlspecialchars_uni((string)$violation['family']['name']),
+                htmlspecialchars_uni((string)$violation['person']['name'])
+            ));
+        }
+    }
+
+    $relation['person_id'] = $person_id;
+    // Ohne andere Verbindung positioniert die Familie die Person im Baum.
+    $relation['is_primary'] = Relatives_Database::get_primary_relation($person_id) === null ? 1 : 0;
+    $relation['created_by'] = $my_uid;
+    Relatives_Database::add_relation($relation);
+    Relatives_Graph::reset_family_memberships();
+    Relatives_Kinship::recompute_all();
+
+    redirect($back_url, $lang->sprintf($lang->relatives_family_joined, htmlspecialchars_uni((string)$person['name']), htmlspecialchars_uni((string)$family['name'])));
+}
+
 // --- action: family (Familienseite: Vorstellung, Mitglieder, Aktionen) -----------------
 
 if ($action === 'family') {
@@ -1522,7 +1642,7 @@ if ($action === 'family') {
     if ($relatives_family_groups === '') {
         $relatives_family_groups = '<p class="relatives_hint">' . $lang->relatives_family_no_members . '</p>';
     }
-    $relatives_family_join = '';
+    $relatives_family_join = relatives_family_join_form($family, $member_ids, $in_usercp);
     $relatives_family_actions = $my_uid > 0 ? relatives_family_manage_actions($family) : '';
     $relatives_family_back_url = $in_usercp ? 'relatives.php?action=families' : 'relatives.php?action=family_list';
 

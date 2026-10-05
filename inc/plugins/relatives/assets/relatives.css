@@ -300,6 +300,17 @@
 	padding-left: 18px;
 }
 
+.relatives_family_join {
+	margin: 14px 0 10px;
+	padding-top: 10px;
+	border-top: 1px solid rgba(128, 128, 128, 0.35);
+}
+
+.relatives_family_join h3 {
+	margin: 0 0 6px;
+	font-size: 1em;
+}
+
 .relatives_family_member_tree {
 	font-size: 0.85em;
 	opacity: .8;

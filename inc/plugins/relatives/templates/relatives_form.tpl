@@ -44,11 +44,19 @@
 				data-self-name="{$relatives_form_self_name}"
 				data-sentence="{$lang->relatives_relation_sentence}"
 				data-sentence-subject="{$lang->relatives_relation_sentence_subject}"
+				data-persons-label="{$lang->relatives_anchor_group_persons}"></div>
+			<button type="button" class="button" id="relatives-relation-add">{$lang->relatives_relation_add}</button>
+		</div>
+
+		<div class="relatives_field relatives_field_families">
+			<label>{$lang->relatives_field_families}</label>
+			<p class="relatives_hint">{$lang->relatives_field_families_hint}</p>
+			<p class="relatives_hint" id="relatives-families-empty" hidden>{$lang->relatives_field_families_none}</p>
+			<div id="relatives-families"
 				data-sentence-family="{$lang->relatives_relation_sentence_family}"
 				data-sentence-family-parent="{$lang->relatives_relation_sentence_family_parent}"
-				data-persons-label="{$lang->relatives_anchor_group_persons}"
-				data-families-label="{$lang->relatives_families_title}"></div>
-			<button type="button" class="button" id="relatives-relation-add">{$lang->relatives_relation_add}</button>
+				data-sentence-subject="{$lang->relatives_relation_sentence_subject}"></div>
+			<button type="button" class="button" id="relatives-family-add">{$lang->relatives_family_row_add}</button>
 		</div>
 
 		<h3 class="relatives_form_section">{$lang->relatives_form_section_optional}</h3>
@@ -125,10 +133,6 @@
 			<label>{$lang->relatives_relation_anchor}</label>
 			<select data-role="anchor"></select>
 		</div>
-		<div class="relatives_field" data-role="family-wrap">
-			<label><input type="checkbox" value="1" data-role="as-parent" /> {$lang->relatives_relation_family_as_parent}</label>
-			<p class="relatives_hint">{$lang->relatives_relation_family_hint}</p>
-		</div>
 		<div class="relatives_field" data-role="type-wrap">
 			<label>{$lang->relatives_field_relationship}</label>
 			<select data-role="type"><option value="">{$lang->relatives_relationship_other}</option></select>
@@ -136,6 +140,25 @@
 		<div class="relatives_field" data-role="custom-wrap">
 			<label>{$lang->relatives_field_relationship_custom}</label>
 			<input type="text" maxlength="255" data-role="custom" />
+		</div>
+		<p class="relatives_relation_sentence" data-role="sentence"></p>
+		<div class="relatives_relation_flags">
+			<label><input type="radio" name="relations_primary" data-role="primary" /> {$lang->relatives_relation_primary}</label>
+			<label title="{$lang->relatives_relation_secret_desc}"><input type="checkbox" value="1" data-role="secret" /> {$lang->relatives_relation_secret}</label>
+			<button type="button" class="button" data-role="remove">{$lang->relatives_relation_remove}</button>
+		</div>
+	</fieldset>
+</template>
+
+<template id="relatives-family-row-template">
+	<fieldset class="relatives_relation_row relatives_family_row">
+		<div class="relatives_field">
+			<label>{$lang->relatives_family_row_family}</label>
+			<select data-role="family"><option value="">{$lang->relatives_family_row_choose}</option></select>
+		</div>
+		<div class="relatives_field">
+			<label><input type="checkbox" value="1" data-role="as-parent" /> {$lang->relatives_relation_family_as_parent}</label>
+			<p class="relatives_hint">{$lang->relatives_relation_family_hint}</p>
 		</div>
 		<p class="relatives_relation_sentence" data-role="sentence"></p>
 		<div class="relatives_relation_flags">
@@ -169,6 +192,10 @@
 	var container = document.getElementById("relatives-relations");
 	var rowTemplate = document.getElementById("relatives-relation-row-template");
 	var addButton = document.getElementById("relatives-relation-add");
+	var familyContainer = document.getElementById("relatives-families");
+	var familyTemplate = document.getElementById("relatives-family-row-template");
+	var familyAddButton = document.getElementById("relatives-family-add");
+	var familiesEmpty = document.getElementById("relatives-families-empty");
 	var wantedCheckbox = document.getElementById("relatives_is_wanted");
 	var wantedWrap = document.getElementById("relatives_wanted_thread_wrap");
 	var deceasedCheckbox = document.getElementById("relatives_is_deceased");
@@ -202,17 +229,6 @@
 			});
 			select.appendChild(personGroup);
 		}
-		if (families.length) {
-			var familyGroup = document.createElement("optgroup");
-			familyGroup.label = container.getAttribute("data-families-label") || "";
-			families.forEach(function (family) {
-				var opt = document.createElement("option");
-				opt.value = "f:" + family.id;
-				opt.textContent = family.name;
-				familyGroup.appendChild(opt);
-			});
-			select.appendChild(familyGroup);
-		}
 		select.value = value || "0";
 		if (select.value === "") { select.value = "0"; }
 	}
@@ -241,18 +257,9 @@
 		toggleCustom(row);
 	}
 
-	function isFamilyRow(row) {
-		return row.querySelector('[data-role="anchor"]').value.indexOf("f:") === 0;
-	}
-
-	// Familie: kein Grad, nur "als Eltern anzeigen" -- Grad und freie Bezeichnung
-	// verschwinden (der Server leitet die Kante selbst ab).
 	function toggleCustom(row) {
 		var typeSelect = row.querySelector('[data-role="type"]');
-		var family = isFamilyRow(row);
-		row.querySelector('[data-role="family-wrap"]').style.display = family ? "" : "none";
-		row.querySelector('[data-role="type-wrap"]').style.display = family ? "none" : "";
-		row.querySelector('[data-role="custom-wrap"]').style.display = !family && typeSelect.value === "" ? "" : "none";
+		row.querySelector('[data-role="custom-wrap"]').style.display = typeSelect.value === "" ? "" : "none";
 	}
 
 	// "Finian Hari ist Sohn von Rian MacCrea." -- makes the direction of each connection
@@ -267,14 +274,6 @@
 		var typeSelect = row.querySelector('[data-role="type"]');
 		var anchor = row.querySelector('[data-role="anchor"]');
 		var subject = (nameInput && nameInput.value.trim()) || container.getAttribute("data-sentence-subject") || "";
-		if (isFamilyRow(row)) {
-			var asParent = row.querySelector('[data-role="as-parent"]').checked;
-			sentence.textContent = (container.getAttribute(asParent ? "data-sentence-family-parent" : "data-sentence-family") || "")
-				.split("{1}").join(subject)
-				.split("{3}").join(personNames[anchor.value] || "");
-			sentence.style.display = "";
-			return;
-		}
 		var degree = typeSelect.value !== ""
 			? typeSelect.options[typeSelect.selectedIndex].textContent
 			: row.querySelector('[data-role="custom"]').value.trim();
@@ -293,9 +292,81 @@
 		sentence.style.display = "";
 	}
 
+	// Familien haben einen eigenen Abschnitt; die Kante bleibt dieselbe wie frueher
+	// (relations[i][anchor] = "f:<id>"), nur ohne Grad.
+	function updateFamilySentence(row) {
+		var sentence = row.querySelector('[data-role="sentence"]');
+		var select = row.querySelector('[data-role="family"]');
+		if (!select.value) {
+			sentence.textContent = "";
+			sentence.style.display = "none";
+			return;
+		}
+		var asParent = row.querySelector('[data-role="as-parent"]').checked;
+		var subject = (nameInput && nameInput.value.trim()) || familyContainer.getAttribute("data-sentence-subject") || "";
+		sentence.textContent = (familyContainer.getAttribute(asParent ? "data-sentence-family-parent" : "data-sentence-family") || "")
+			.split("{1}").join(subject)
+			.split("{3}").join(personNames[select.value] || "");
+		sentence.style.display = "";
+	}
+
 	function updateAllSentences() {
 		var rows = container.querySelectorAll(".relatives_relation_row");
 		for (var i = 0; i < rows.length; i++) { updateSentence(rows[i]); }
+		if (familyContainer) {
+			var familyRows = familyContainer.querySelectorAll(".relatives_family_row");
+			for (var j = 0; j < familyRows.length; j++) { updateFamilySentence(familyRows[j]); }
+		}
+	}
+
+	function addFamilyRow(data) {
+		data = data || {};
+		var index = counter++;
+		var row = familyTemplate.content.firstElementChild.cloneNode(true);
+
+		var select = row.querySelector('[data-role="family"]');
+		var asParent = row.querySelector('[data-role="as-parent"]');
+		var primary = row.querySelector('[data-role="primary"]');
+		var secret = row.querySelector('[data-role="secret"]');
+		var remove = row.querySelector('[data-role="remove"]');
+
+		families.forEach(function (family) {
+			var opt = document.createElement("option");
+			opt.value = "f:" + family.id;
+			opt.textContent = family.name;
+			select.appendChild(opt);
+		});
+		select.name = "relations[" + index + "][anchor]";
+		asParent.name = "relations[" + index + "][family_as_parent]";
+		secret.name = "relations[" + index + "][is_secret]";
+		primary.value = index;
+		// Gespeicherte Kind-Variante (z. B. Adoptivkind) mitschicken -- der Server
+		// behaelt sie bei "als Eltern anzeigen", sonst gilt "Kind".
+		if (data.type_id) {
+			var typeInput = document.createElement("input");
+			typeInput.type = "hidden";
+			typeInput.name = "relations[" + index + "][relationship_type_id]";
+			typeInput.value = String(data.type_id);
+			row.appendChild(typeInput);
+		}
+
+		select.value = data.anchor || "";
+		if (select.value !== (data.anchor || "")) { select.value = ""; }
+		asParent.checked = !!data.as_parent;
+		secret.checked = !!data.secret;
+		primary.checked = !!data.primary;
+
+		select.addEventListener("change", function () { updateFamilySentence(row); });
+		asParent.addEventListener("change", function () { updateFamilySentence(row); });
+		remove.addEventListener("click", function () {
+			var wasPrimary = primary.checked;
+			row.parentNode.removeChild(row);
+			if (wasPrimary) { ensurePrimary(); }
+		});
+
+		familyContainer.appendChild(row);
+		updateFamilySentence(row);
+		ensurePrimary();
 	}
 
 	function addRow(data) {
@@ -342,7 +413,7 @@
 	}
 
 	function ensurePrimary() {
-		var radios = container.querySelectorAll('[data-role="primary"]');
+		var radios = document.querySelectorAll('#relatives-relations [data-role="primary"], #relatives-families [data-role="primary"]');
 		for (var i = 0; i < radios.length; i++) {
 			if (radios[i].checked) { return; }
 		}
@@ -355,10 +426,21 @@
 	}
 
 	if (container && rowTemplate) {
-		if (existing.length) {
-			existing.forEach(addRow);
-		} else {
+		var existingPersons = existing.filter(function (item) { return String(item.anchor || "").indexOf("f:") !== 0; });
+		var existingFamilies = existing.filter(function (item) { return String(item.anchor || "").indexOf("f:") === 0; });
+		if (existingPersons.length) {
+			existingPersons.forEach(addRow);
+		} else if (!existingFamilies.length) {
 			addRow({ anchor: "0", primary: true });
+		}
+		if (familyContainer && familyTemplate) {
+			existingFamilies.forEach(addFamilyRow);
+			if (!families.length) {
+				if (familyAddButton) { familyAddButton.hidden = true; }
+				if (familiesEmpty) { familiesEmpty.hidden = false; }
+			} else if (familyAddButton) {
+				familyAddButton.addEventListener("click", function () { addFamilyRow({}); });
+			}
 		}
 		if (addButton) { addButton.addEventListener("click", function () { addRow({ anchor: "0" }); }); }
 		if (genderSelect) {
