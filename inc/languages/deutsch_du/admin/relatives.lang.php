@@ -149,6 +149,12 @@ $l['relatives_acp_line_style_dashdot'] = 'Strichpunkt';
 $l['relatives_acp_recompute_button'] = 'Verwandtschaften neu berechnen';
 $l['relatives_acp_recompute_desc'] = 'Berechnet für alle Stammbäume neu, wie jede Person zum jeweiligen Charakter steht (z. B. für die Jobliste). Nötig nach dem Update und nach Änderungen an den Verwandtschaftsgraden.';
 $l['relatives_acp_recompute_done'] = 'Verwandtschaft für {1} Zuordnungen neu berechnet.';
+$l['setting_relatives_inplay_year'] = 'Aktuelles Inplay-Jahr';
+$l['setting_relatives_inplay_year_desc'] = 'Jahr, in dem das Inplay gerade spielt. Ist es gesetzt, tragt ihr bei Personen ein Geburtsjahr ein und das Alter wird daraus berechnet (auch bei allen Verwandten immer aktuell). Leer = altes Feld „Alter“. Bestehende Alter rechnet ihr unter Werkzeuge → Verwandtschaften → Verwandtschaftsgrade → „Alter in Geburtsjahre umrechnen“ um.';
+$l['relatives_acp_convert_ages_button'] = 'Alter in Geburtsjahre umrechnen';
+$l['relatives_acp_convert_ages_desc'] = 'Einmalig nach dem Setzen des Inplay-Jahres: Personen mit fest eingetragenem Alter bekommen das Geburtsjahr Inplay-Jahr − Alter. Personen, die schon ein Geburtsjahr haben, bleiben unverändert.';
+$l['relatives_acp_convert_ages_done'] = '{1} Alter mit Inplay-Jahr {2} in Geburtsjahre umgerechnet.';
+$l['relatives_acp_convert_ages_no_year'] = 'Bitte zuerst unter Einstellungen → Verwandtschaften das aktuelle Inplay-Jahr eintragen.';
 
 // v2.2: gemeinsames Geflecht
 $l['relatives_relation_of'] = '{1} von {2}';

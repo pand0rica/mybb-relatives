@@ -30,6 +30,60 @@ class Relatives_Database
     /**
      * Laedt die Stammdaten einer Person (ohne Besitzer-Felder).
      */
+    /** Aktuelles Inplay-Jahr aus den Einstellungen, null = nicht gesetzt (Feld "Alter"). */
+    public static function inplay_year(): ?int
+    {
+        global $mybb;
+        $value = trim((string)($mybb->settings['relatives_inplay_year'] ?? ''));
+        if ($value === '' || !preg_match('/^-?\d{1,5}$/', $value)) {
+            return null;
+        }
+        return (int)$value;
+    }
+
+    /**
+     * Alter einer Person: aus dem Geburtsjahr, wenn es und das Inplay-Jahr bekannt sind,
+     * sonst das alte, fest eingetragene Alter.
+     */
+    public static function computed_age(array $person): ?int
+    {
+        $inplay_year = self::inplay_year();
+        if ($inplay_year !== null && isset($person['birth_year']) && $person['birth_year'] !== null && $person['birth_year'] !== '') {
+            return max(0, $inplay_year - (int)$person['birth_year']);
+        }
+        if (isset($person['age']) && $person['age'] !== null && $person['age'] !== '') {
+            return (int)$person['age'];
+        }
+        return null;
+    }
+
+    /** Anzeige "34 (geb. 1957)" bzw. "34", '' ohne Angabe. Roh -- beim Ausgeben escapen. */
+    public static function age_label(array $person): string
+    {
+        global $lang;
+        $age = self::computed_age($person);
+        if ($age === null) {
+            return '';
+        }
+        if (self::inplay_year() !== null && isset($person['birth_year']) && $person['birth_year'] !== null && $person['birth_year'] !== '') {
+            return $lang->sprintf($lang->relatives_age_born, $age, (int)$person['birth_year']);
+        }
+        return (string)$age;
+    }
+
+    /**
+     * Rechnet fest eingetragene Alter einmalig in Geburtsjahre um (ACP-Knopf): fuer alle
+     * Personen mit Alter und ohne Geburtsjahr. Gibt die Anzahl umgerechneter Personen zurueck.
+     */
+    public static function convert_ages_to_birth_years(int $inplay_year): int
+    {
+        global $db;
+        $db->write_query("UPDATE `" . TABLE_PREFIX . "relatives_persons`
+            SET birth_year = " . (int)$inplay_year . " - age, age = NULL
+            WHERE age IS NOT NULL AND birth_year IS NULL");
+        return (int)$db->affected_rows();
+    }
+
     public static function get_person(int $id): ?array
     {
         global $db;
@@ -878,6 +932,9 @@ class Relatives_Database
         }
         if (array_key_exists('age', $data)) {
             $row['age'] = $data['age'] === null || $data['age'] === '' ? null : (int)$data['age'];
+        }
+        if (array_key_exists('birth_year', $data)) {
+            $row['birth_year'] = $data['birth_year'] === null || $data['birth_year'] === '' ? null : (int)$data['birth_year'];
         }
         foreach (['origin', 'avatar', 'description', 'wanted_thread_link', 'death_note', 'legacy_source'] as $field) {
             if (array_key_exists($field, $data)) {

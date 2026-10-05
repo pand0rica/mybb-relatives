@@ -46,6 +46,7 @@ class Relatives_Installer
             `name` VARCHAR(255) NOT NULL DEFAULT '',
             `gender` TINYINT(2) NOT NULL DEFAULT -1,
             `age` INT(11) DEFAULT NULL,
+            `birth_year` INT(11) DEFAULT NULL,
             `origin` VARCHAR(255) DEFAULT NULL,
             `avatar` VARCHAR(255) DEFAULT NULL,
             `description` TEXT,
@@ -358,6 +359,7 @@ class Relatives_Installer
             'relatives_persons' => [
                 'is_deceased' => "ADD COLUMN `is_deceased` TINYINT(1) NOT NULL DEFAULT 0",
                 'death_note'  => "ADD COLUMN `death_note` VARCHAR(64) DEFAULT NULL",
+                'birth_year'  => "ADD COLUMN `birth_year` INT(11) DEFAULT NULL",
             ],
             'relatives_person_owners' => [
                 'computed_concept_key' => "ADD COLUMN `computed_concept_key` VARCHAR(50) DEFAULT NULL",
@@ -637,6 +639,14 @@ class Relatives_Installer
                 'optionscode' => 'yesno',
                 'value'       => '0',
                 'disporder'   => 12,
+            ],
+            [
+                'name'        => 'relatives_inplay_year',
+                'title'       => 'Aktuelles Inplay-Jahr',
+                'description' => 'Jahr, in dem das Inplay gerade spielt. Ist es gesetzt, tragt ihr bei Personen ein Geburtsjahr ein und das Alter wird daraus berechnet. Leer = altes Feld "Alter".',
+                'optionscode' => 'text',
+                'value'       => '',
+                'disporder'   => 13,
             ],
         ];
 

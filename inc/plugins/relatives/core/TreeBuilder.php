@@ -468,7 +468,9 @@ class Relatives_TreeBuilder
                     $kinship[$person_id]['via_person_id'] ?? null
                 ),
                 'computed_category'         => $kinship[$person_id]['category'] ?? null,
-                'age'                       => $person['age'] !== null ? (int)$person['age'] : null,
+                'age'                       => Relatives_Database::computed_age($person),
+                'birth_year'                => isset($person['birth_year']) && $person['birth_year'] !== null ? (int)$person['birth_year'] : null,
+                'age_label'                 => Relatives_Database::age_label($person),
                 'origin'                    => $person['origin'],
                 'avatar'                    => $person['avatar'],
                 'description'               => $person['description'],

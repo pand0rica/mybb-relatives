@@ -1332,9 +1332,9 @@
 			panel.appendChild(deceased);
 		}
 
-		if (node.age !== null && node.age !== undefined && node.age !== "") {
+		if (node.age_label) {
 			var age = document.createElement("p");
-			age.textContent = t("field_age", "Alter") + ": " + node.age;
+			age.textContent = t("field_age", "Alter") + ": " + node.age_label;
 			panel.appendChild(age);
 		}
 		if (node.origin) {
@@ -1619,7 +1619,9 @@
 		});
 		updateSentence();
 
-		var ageInput = labeledInput(form, "number", t("field_age", "Alter"), "");
+		// Mit Inplay-Jahr wird das Geburtsjahr erfasst, das Alter daraus berechnet.
+		var useBirthYear = !!config.inplayYear;
+		var ageInput = labeledInput(form, "number", useBirthYear ? t("field_birth_year", "Geburtsjahr") : t("field_age", "Alter"), "");
 		var originInput = labeledInput(form, "text", t("field_origin", "Herkunft"), "");
 		var avatarInput = labeledInput(form, "text", t("field_avatar", "Avatarperson"), "");
 		var descTextarea = labeledTextarea(form, t("field_description", "Beschreibung"), "");
@@ -1652,7 +1654,7 @@
 			payload.append("gender", genderSelect.value);
 			payload.append("relationship_type_id", relSelect.value);
 			payload.append("relationship_custom_label", customLabelInput.value);
-			payload.append("age", ageInput.value);
+			payload.append(useBirthYear ? "birth_year" : "age", ageInput.value);
 			payload.append("origin", originInput.value);
 			payload.append("description", descTextarea.value);
 			payload.append("relationship_description", relDescTextarea.value);

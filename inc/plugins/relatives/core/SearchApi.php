@@ -40,11 +40,16 @@ class Relatives_SearchApi
         $is_wanted = array_key_exists('is_wanted', $filters) ? (bool)$filters['is_wanted'] : true;
         $where[] = "is_wanted = " . ($is_wanted ? 1 : 0);
 
+        // Alter = Inplay-Jahr - Geburtsjahr, sonst das alte, fest eingetragene Alter.
+        $inplay_year = Relatives_Database::inplay_year();
+        $age_sql = $inplay_year !== null
+            ? "(CASE WHEN birth_year IS NOT NULL THEN " . (int)$inplay_year . " - birth_year ELSE age END)"
+            : "age";
         if (isset($filters['age_min']) && $filters['age_min'] !== '' && $filters['age_min'] !== null) {
-            $where[] = "age >= " . (int)$filters['age_min'];
+            $where[] = $age_sql . " >= " . (int)$filters['age_min'];
         }
         if (isset($filters['age_max']) && $filters['age_max'] !== '' && $filters['age_max'] !== null) {
-            $where[] = "age <= " . (int)$filters['age_max'];
+            $where[] = $age_sql . " <= " . (int)$filters['age_max'];
         }
 
         if (isset($filters['query']) && trim((string)$filters['query']) !== '') {
@@ -73,7 +78,7 @@ class Relatives_SearchApi
         $rows = [];
         $query = $db->simple_select(
             'relatives_persons',
-            'id, name, gender, age, origin, avatar, description, is_wanted, wanted_thread_link',
+            'id, name, gender, age, birth_year, origin, avatar, description, is_wanted, wanted_thread_link',
             implode(' AND ', $where),
             ['order_by' => 'name', 'order_dir' => 'ASC']
         );
@@ -82,7 +87,8 @@ class Relatives_SearchApi
                 'id'                 => (int)$row['id'],
                 'name'               => (string)$row['name'],
                 'gender'             => (int)$row['gender'],
-                'age'                => $row['age'] !== null ? (int)$row['age'] : null,
+                'age'                => Relatives_Database::computed_age($row),
+                'birth_year'         => $row['birth_year'] !== null ? (int)$row['birth_year'] : null,
                 'origin'             => $row['origin'],
                 'avatar'             => $row['avatar'],
                 'description'        => $row['description'],

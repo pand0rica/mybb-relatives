@@ -32,6 +32,21 @@ if ($do === 'recompute' && $mybb->request_method === 'post') {
     admin_redirect('index.php?module=tools-relatives&action=relationship-types');
 }
 
+// --- do=convert_ages (POST) ------------------------------------------------------------
+
+// Einmalig: fest eingetragene Alter -> Geburtsjahr (Inplay-Jahr - Alter).
+if ($do === 'convert_ages' && $mybb->request_method === 'post') {
+    verify_post_check($mybb->get_input('my_post_key'));
+    $inplay_year = Relatives_Database::inplay_year();
+    if ($inplay_year === null) {
+        flash_message($lang->relatives_acp_convert_ages_no_year, 'error');
+    } else {
+        $converted = Relatives_Database::convert_ages_to_birth_years($inplay_year);
+        flash_message($lang->sprintf($lang->relatives_acp_convert_ages_done, $converted, $inplay_year), 'success');
+    }
+    admin_redirect('index.php?module=tools-relatives&action=relationship-types');
+}
+
 // --- do=delete (POST) -----------------------------------------------------------------
 
 if ($do === 'delete' && $mybb->request_method === 'post') {
@@ -157,6 +172,13 @@ $actions_table->construct_cell(
     . '</form>'
     . '<p class="smalltext relatives_acp_action_desc">' . $lang->relatives_acp_recompute_desc . '</p>',
     ['width' => '33%']
+);
+$actions_table->construct_cell(
+    '<form action="index.php?module=tools-relatives&action=relationship-types&do=convert_ages" method="post" class="relatives_acp_action_form">'
+    . '<input type="hidden" name="my_post_key" value="' . $mybb->post_code . '" />'
+    . '<input type="submit" class="submit_button" value="' . htmlspecialchars_uni($lang->relatives_acp_convert_ages_button) . '" />'
+    . '</form>'
+    . '<p class="smalltext relatives_acp_action_desc">' . $lang->relatives_acp_convert_ages_desc . '</p>'
 );
 $actions_table->construct_row();
 $actions_table->output($lang->relatives_acp_actions_title);

@@ -567,6 +567,7 @@ if ($action === 'add' || $action === 'edit') {
         $relationship_type_id = $mybb->get_input('relationship_type_id', MyBB::INPUT_INT);
         $relationship_custom_label = trim($mybb->get_input('relationship_custom_label'));
         $age_raw = trim($mybb->get_input('age'));
+        $birth_year_raw = trim($mybb->get_input('birth_year'));
         $origin = trim($mybb->get_input('origin'));
         $avatar = trim($mybb->get_input('avatar'));
         $description = $mybb->get_input('description');
@@ -608,8 +609,19 @@ if ($action === 'add' || $action === 'edit') {
             $effective_gender = (int)$existing_by_name['gender'];
         }
 
+        // Mit Inplay-Jahr: Geburtsjahr (das Alter wird daraus berechnet), sonst das alte
+        // Feld "Alter".
+        $inplay_year = Relatives_Database::inplay_year();
         $age = null;
-        if ($age_raw !== '') {
+        $birth_year = null;
+        if ($inplay_year !== null) {
+            if ($birth_year_raw !== '') {
+                if (!preg_match('/^-?\d{1,5}$/', $birth_year_raw) || (int)$birth_year_raw > $inplay_year || $inplay_year - (int)$birth_year_raw > 999) {
+                    relatives_error_response($lang->relatives_error_invalid_birth_year);
+                }
+                $birth_year = (int)$birth_year_raw;
+            }
+        } elseif ($age_raw !== '') {
             $age = (int)$age_raw;
             if ($age < 0 || $age > 999) {
                 relatives_error_response($lang->relatives_error_invalid_age);
@@ -645,6 +657,11 @@ if ($action === 'add' || $action === 'edit') {
             // "Winter 1987" oder ein reines Jahr.
             'death_note'         => ($is_deceased && $death_note !== '') ? mb_substr($death_note, 0, 64) : null,
         ];
+        if ($inplay_year !== null) {
+            // Das Geburtsjahr ersetzt ein altes, fest eingetragenes Alter.
+            $person_data['birth_year'] = $birth_year;
+            $person_data['age'] = null;
+        }
         // ... und die eigene Sicht auf die Person.
         $owner_data = [
             'description' => $relationship_description !== '' ? $relationship_description : null,
@@ -700,8 +717,11 @@ if ($action === 'add' || $action === 'edit') {
             if ((int)$existing_by_name['gender'] === -1 && $gender !== -1) {
                 $fill['gender'] = $gender;
             }
-            foreach (['age', 'origin', 'avatar', 'description', 'wanted_thread_link'] as $field) {
-                $current = $existing_by_name[$field];
+            foreach (['age', 'birth_year', 'origin', 'avatar', 'description', 'wanted_thread_link'] as $field) {
+                if (!array_key_exists($field, $person_data)) {
+                    continue;
+                }
+                $current = $existing_by_name[$field] ?? null;
                 if (($current === null || $current === '') && $person_data[$field] !== null) {
                     $fill[$field] = $person_data[$field];
                 }
@@ -757,7 +777,22 @@ if ($action === 'add' || $action === 'edit') {
     $relatives_form_action = $is_edit ? 'edit' : 'add';
     $relatives_form_id = $is_edit ? (int)$existing['id'] : 0;
     $relatives_form_name = htmlspecialchars_uni($is_edit ? $existing['name'] : '');
-    $relatives_form_age = $is_edit && $existing['age'] !== null ? (int)$existing['age'] : '';
+    $form_inplay_year = Relatives_Database::inplay_year();
+    if ($form_inplay_year !== null) {
+        $form_birth_year = $is_edit && isset($existing['birth_year']) && $existing['birth_year'] !== null ? (int)$existing['birth_year'] : '';
+        // Altbestand ohne Geburtsjahr: aus dem gespeicherten Alter vorschlagen.
+        if ($form_birth_year === '' && $is_edit && $existing['age'] !== null) {
+            $form_birth_year = $form_inplay_year - (int)$existing['age'];
+        }
+        $relatives_form_age_field = '<label for="relatives_birth_year">' . $lang->relatives_field_birth_year . '</label>'
+            . '<input type="number" id="relatives_birth_year" name="birth_year" max="' . $form_inplay_year . '" value="' . $form_birth_year . '"'
+            . ' data-inplay-year="' . $form_inplay_year . '" />'
+            . ' <span class="relatives_hint" id="relatives_birth_year_age" data-template="' . htmlspecialchars_uni($lang->relatives_birth_year_age) . '"></span>';
+    } else {
+        $form_age = $is_edit && $existing['age'] !== null ? (int)$existing['age'] : '';
+        $relatives_form_age_field = '<label for="relatives_age">' . $lang->relatives_field_age . '</label>'
+            . '<input type="number" id="relatives_age" name="age" min="0" max="999" value="' . $form_age . '" />';
+    }
     $relatives_form_avatar = htmlspecialchars_uni($is_edit ? (string)$existing['avatar'] : '');
     $relatives_form_description = htmlspecialchars_uni($is_edit ? (string)$existing['description'] : '');
     $relatives_form_relationship_description = htmlspecialchars_uni($is_edit ? (string)($existing['relationship_description'] ?? '') : '');
@@ -1743,6 +1778,7 @@ if ($action === 'tree') {
         'postCode'  => $mybb->post_code,
         'popup'     => $is_popup,
         'readOnly'  => $is_read_only,
+        'inplayYear' => Relatives_Database::inplay_year(),
     ]);
     $relatives_tree_lang_json = relatives_json_for_script([
         'add_person'               => $lang->relatives_add_person,
@@ -1754,6 +1790,7 @@ if ($action === 'tree') {
         'field_relationship'        => $lang->relatives_field_relationship,
         'field_relationship_custom' => $lang->relatives_field_relationship_custom,
         'field_age'                  => $lang->relatives_field_age,
+        'field_birth_year'           => $lang->relatives_field_birth_year,
         'field_origin'               => $lang->relatives_field_origin,
         'field_description'         => $lang->relatives_field_description,
         'field_relationship_description' => $lang->relatives_field_relationship_description,
@@ -1838,7 +1875,8 @@ foreach ($persons as $person) {
     $relatives_row_name = htmlspecialchars_uni($person['name'])
         . ((int)($person['is_deceased'] ?? 0) === 1 ? ' <span class="relatives_deceased_mark" title="' . htmlspecialchars_uni($lang->relatives_deceased) . '">&dagger;</span>' : '');
     $relatives_row_relationship = htmlspecialchars_uni($relationship_labels[$relatives_row_id]);
-    $relatives_row_age = $person['age'] !== null ? (int)$person['age'] : '-';
+    $relatives_row_age = Relatives_Database::age_label($person);
+    $relatives_row_age = $relatives_row_age !== '' ? htmlspecialchars_uni($relatives_row_age) : '-';
     $relatives_row_confirm_title = htmlspecialchars_uni($lang->sprintf($lang->relatives_confirm_title_named, $person['name']));
     $relatives_row_confirm_message = htmlspecialchars_uni(Relatives_DeleteRequests::is_npc($person)
         ? $lang->relatives_confirm_delete_npc

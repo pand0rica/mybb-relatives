@@ -215,6 +215,7 @@ function relatives_profile_wanted_persons(int $uid): array
                 'name'                     => (string)$node['name'],
                 'label'                    => (string)($node['computed_label'] ?? ''),
                 'age'                      => $node['age'],
+                'birth_year'               => $node['birth_year'] ?? null,
                 'avatar'                   => (string)($node['avatar'] ?? ''),
                 'description'              => (string)($node['description'] ?? ''),
                 'relationship_description' => (string)($node['relationship_description'] ?? ''),
@@ -233,7 +234,7 @@ function relatives_profile_wanted_persons(int $uid): array
         $result[] = [
             'name'                     => (string)$person['name'],
             'label'                    => (string)($labels[(int)$person['id']] ?? ''),
-            'age'                      => $person['age'] !== null ? (int)$person['age'] : null,
+            'age'                      => Relatives_Database::computed_age($person),
             'avatar'                   => (string)($person['avatar'] ?? ''),
             'description'              => (string)($person['description'] ?? ''),
             'relationship_description' => (string)($person['relationship_description'] ?? ''),

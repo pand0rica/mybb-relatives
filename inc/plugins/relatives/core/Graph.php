@@ -838,7 +838,7 @@ class Relatives_Graph
         Relatives_Attributes::delete_person_attributes($from);
 
         $fill = [];
-        foreach (['age', 'origin', 'avatar', 'description', 'wanted_thread_link', 'death_note'] as $field) {
+        foreach (['age', 'birth_year', 'origin', 'avatar', 'description', 'wanted_thread_link', 'death_note'] as $field) {
             if (($target[$field] === null || $target[$field] === '') && $source[$field] !== null && $source[$field] !== '') {
                 $fill[$field] = $source[$field];
             }

@@ -149,6 +149,12 @@ $l['relatives_acp_line_style_dashdot'] = 'Dash-dot';
 $l['relatives_acp_recompute_button'] = 'Recalculate relations';
 $l['relatives_acp_recompute_desc'] = 'Recalculates for every tree how each person relates to the character (e.g. for the job list). Needed after updating and after changing relationship types.';
 $l['relatives_acp_recompute_done'] = 'Recalculated the relation for {1} assignments.';
+$l['setting_relatives_inplay_year'] = 'Current in-play year';
+$l['setting_relatives_inplay_year_desc'] = 'The year the in-play currently takes place in. If set, persons get a year of birth and their age is calculated from it (always up to date for all relatives). Empty = old "Age" field. Convert existing ages under Tools → Relatives → Relationship types → "Convert ages to years of birth".';
+$l['relatives_acp_convert_ages_button'] = 'Convert ages to years of birth';
+$l['relatives_acp_convert_ages_desc'] = 'Once after setting the in-play year: persons with a fixed age get the year of birth in-play year − age. Persons that already have a year of birth stay unchanged.';
+$l['relatives_acp_convert_ages_done'] = 'Converted {1} ages to years of birth using in-play year {2}.';
+$l['relatives_acp_convert_ages_no_year'] = 'Please set the current in-play year under Settings → Relatives first.';
 
 // v2.2: gemeinsames Geflecht
 $l['relatives_relation_of'] = '{1} of {2}';

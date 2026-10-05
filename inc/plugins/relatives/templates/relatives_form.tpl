@@ -67,8 +67,7 @@
 		</div>
 
 		<div class="relatives_field">
-			<label for="relatives_age">{$lang->relatives_field_age}</label>
-			<input type="number" id="relatives_age" name="age" min="0" max="999" value="{$relatives_form_age}" />
+			{$relatives_form_age_field}
 		</div>
 
 		<div class="relatives_field">
@@ -451,6 +450,19 @@
 		}
 		if (nameInput) { nameInput.addEventListener("input", updateAllSentences); }
 	}
+
+	// "= 34 Jahre" neben dem Geburtsjahr (Inplay-Jahr aus den Einstellungen).
+	var birthYearInput = document.getElementById("relatives_birth_year");
+	var birthYearAge = document.getElementById("relatives_birth_year_age");
+	function updateBirthYearAge() {
+		if (!birthYearInput || !birthYearAge) { return; }
+		var year = parseInt(birthYearInput.value, 10);
+		var inplay = parseInt(birthYearInput.getAttribute("data-inplay-year"), 10);
+		birthYearAge.textContent = isNaN(year) || isNaN(inplay) || year > inplay
+			? ""
+			: (birthYearAge.getAttribute("data-template") || "").split("{1}").join(String(inplay - year)).split("{2}").join(String(inplay));
+	}
+	if (birthYearInput) { birthYearInput.addEventListener("input", updateBirthYearAge); updateBirthYearAge(); }
 
 	if (wantedCheckbox) { wantedCheckbox.addEventListener("change", function () { toggleWrap(wantedCheckbox, wantedWrap); }); }
 	if (deceasedCheckbox) { deceasedCheckbox.addEventListener("change", function () { toggleWrap(deceasedCheckbox, deathWrap); }); }
