@@ -32,9 +32,15 @@ sheet alone can't show who belongs to whom.
 4. **ACP → Tools & Maintenance → Relatives & Family Tree → Relationship types** → click
    **Create default relationship types**. The plugin ships without any relationship types, so
    the add-person form stays empty until you do this (or create your own types).
-5. Optional – show the tree link and wanted roles in the profile: **ACP → Templates & Style →
-   Templates → *your template set* → Member Templates → `member_profile`** and insert
-   `{$relatives_wanted_box}` and `{$relatives_tree_link}` where they should appear.
+5. The wanted box `{$relatives_wanted_box}` is inserted automatically on activation into every
+   `member_profile` template of every template set – right before `{$signature}`, or before
+   `{$footer}` if the template has no signature variable, and only where it is still missing.
+   You may move it anywhere; re-activating leaves it there. If your theme renders the profile
+   from its own templates (e.g. `member_profile_chara` loaded from `member_profile`), insert
+   `{$relatives_wanted_box}` there manually – the plugin only touches `member_profile`.
+6. Optional – show the tree link in the profile: **ACP → Templates & Style → Templates →
+   *your template set* → Member Templates → `member_profile`** and insert
+   `{$relatives_tree_link}` where it should appear.
 
 Upgrading from the legacy *relatives*/*wanted* plugin (v1.x)? Follow
 [Migrating from the legacy plugin](#migrating-from-the-legacy-plugin) before your users start
@@ -73,8 +79,9 @@ the pop-out icon opens your tree in its own window.
   *Your relationship* is personal to your character, the rest is shared with everyone who has
   this person in their list.
 - **Deceased** / **Year or date of death** – shows a cross and a dimmed box in the tree.
-- **Mark as wanted** / **Link to the wanted thread** – the person appears as a wanted card on
-  your profile.
+- **Mark as wanted** / **Link to the wanted thread** – the person appears as a wanted card in
+  the profile of every character whose family tree contains them (see
+  [Wanted box in the profile](#wanted-box-in-the-profile)).
 - **Attributes** – the attribute groups configured in the ACP.
 
 ![Add person form](docs/screenshots/person-form.png)
@@ -133,6 +140,21 @@ be shared – it is read-only for everyone except the tree owner and is visible 
 (guests still need the usergroup permission *Can view board*). Note: the shared popup shows
 secret connections as well.
 
+### Wanted box in the profile
+
+Every character's profile shows a compact **Wanted** box listing all persons marked as
+*wanted* that appear in that character's family tree – including persons other members
+entered, closest relatives first. Each mini card shows the face claim (or the first letter of
+the name), the name, the relation to the character and the age. **More** unfolds the
+description, **To the wanted thread** opens the linked thread. Characters without wanted
+persons in their tree get no box at all.
+
+The box is inserted into `member_profile` automatically (see [Installation](#installation)).
+Themes can adjust it with the CSS variables `--relatives-wanted-color` (accent colour) and
+`--relatives-wanted-description-height` (height of the unfolded description before it scrolls).
+
+![Wanted box in the profile](docs/screenshots/profile-wanted.png)
+
 ### Linking a person to a real account
 
 When a relative is played by another member, open the person's edit form, scroll to **Link
@@ -146,7 +168,7 @@ plugins are notified as usual.
 
 ### Families
 
-**User CP → Relatives & Family Tree → Families** lists all family boxes of the forum. **Add
+**User CP → Miscellaneous → Relatives & Family Tree → Families** lists all family boxes of the forum. **Add
 family** asks for a **Name**, a **Colour**, a **Description**, **This family welcomes new
 members** and any family attributes (ACP). A family box appears in the tree one generation above
 its members.
@@ -165,7 +187,8 @@ its members.
 ![Families overview](docs/screenshots/families.png)
 
 **Public family list:** `relatives.php?action=family_list` shows the same cards read-only, with
-played characters as formatted profile links. It can be embedded into an existing list layout
+played characters as formatted profile links. On the *Families* tab the pop-out icon in the
+navigation opens this list in a new tab. It can be embedded into an existing list layout
 (see settings *Family list: frame template* / *navigation template*).
 
 ### For administrators: ACP pages
@@ -227,7 +250,7 @@ A fresh installation **without** legacy tables is unlocked immediately.
 - Relations beyond great-grandparents / second cousins are shown as *distant ancestor /
   descendant / relative*; the tree still draws the exact structure.
 - Template variables: `{$relatives_tree_link}` and `{$relatives_wanted_box}` (template
-  `member_profile`), `{$post['relatives_tree_link']}` (`postbit`, `postbit_classic`),
+  `member_profile`, the latter is inserted automatically), `{$post['relatives_tree_link']}` (`postbit`, `postbit_classic`),
   `{$user['relatives_tree_link']}` (`memberlist_user`).
 
 ## Configuration
@@ -262,7 +285,10 @@ Other plugins must not read the `relatives_*` tables directly. Public contract:
 - `relatives_get_relation(int $person_id, int $uid): array` – how a person relates to a
   character: `concept_key`, `label`, `category`, `up`, `down`, `owner_name`, `text`
   (e.g. "Uncle of Megan").
-- Provider hooks for *jobliste*: `jobliste_collect_entities`, `jobliste_resolve_entity_label`.
+- Provider hooks for *jobliste*: `jobliste_collect_entities`, `jobliste_resolve_entity_label`
+  (the latter also fills the optional `relations` list – who added the person and in which
+  degree – shown in the info icon of the jobliste overview – and `linked_uid` for persons with a
+  confirmed account link).
 
 ## Uninstallation
 
@@ -277,7 +303,9 @@ Other plugins must not read the `relatives_*` tables directly. Public contract:
    `inc/plugins/relatives/`, `admin/modules/tools/relatives.php`, the `relatives.lang.php`
    files in `inc/languages/*/` and `inc/languages/*/admin/` and the `relatives_myalerts.lang.php`
    files in `inc/languages/*/`).
-4. Remove the template variables you added manually (`member_profile`, `postbit`, …).
+4. Remove the template variables you added manually (`postbit`, `memberlist_user`,
+   `{$relatives_tree_link}` in `member_profile`, …). `{$relatives_wanted_box}` is removed
+   automatically on deactivation.
 
 ## Changelog
 

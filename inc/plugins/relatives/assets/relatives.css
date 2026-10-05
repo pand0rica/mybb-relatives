@@ -15,14 +15,14 @@
 	margin-bottom: 10px;
 }
 
-.relatives_link_button {
-	background: none;
-	border: none;
-	color: inherit;
-	cursor: pointer;
-	padding: 0;
-	font: inherit;
-	text-decoration: underline;
+/* Every action (edit, delete, accept, cancel, ...) is a <form> + input.button, so all of
+ * them share the theme's native button look. Only the gap between neighbours is set here. */
+.relatives_inline_form + .relatives_inline_form {
+	margin-left: 4px;
+}
+
+.relatives_row_actions {
+	white-space: nowrap;
 }
 
 .relatives_table {
@@ -61,7 +61,7 @@
 
 .relatives_field input::placeholder,
 .relatives_field textarea::placeholder {
-	color: #aaa;
+	color: var(--h4w-text-subtle, #aaa);
 	opacity: 1;
 	font-style: italic;
 }
@@ -106,54 +106,179 @@
 }
 
 .relatives_badge_wanted {
-	background: #e0a200;
-	color: #fff;
+	background: var(--h4w-relatives-badge-wanted-bg, #e0a200);
+	color: var(--h4w-text-on-accent, #fff);
 }
 
 .relatives_badge_link_requested {
-	background: #999;
-	color: #fff;
+	background: var(--h4w-surface-4, #999);
+	color: var(--h4w-text-on-accent, #fff);
 }
 
 .relatives_badge_link_confirmed {
-	background: #3f9142;
-	color: #fff;
+	background: var(--h4w-relatives-badge-link-confirmed-bg, #3f9142);
+	color: var(--h4w-text-on-accent, #fff);
 }
 
+/* --- "Gesucht"-Box im Profil: kompakte Mini-Karten ----------------------------------
+ * Akzentfarbe wie der Gesucht-Knoten im Stammbaum; per --relatives-wanted-color im
+ * Theme ueberschreibbar. Das Grid bricht von selbst um, kein eigenes Mobile-Query. */
 .relatives_profile_wanted_box {
-	margin-top: 15px;
+	margin: 12px 0;
+}
+
+.relatives_profile_wanted_head {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	margin-bottom: 6px;
+}
+
+.relatives_profile_wanted_title {
+	font-size: 1.05em;
+}
+
+.relatives_profile_wanted_count {
+	display: inline-block;
+	min-width: 18px;
+	padding: 0 6px;
+	border-radius: 9px;
+	background: var(--relatives-wanted-color, #d79a1f);
+	color: var(--h4w-text-on-accent, #fff);
+	font-size: 11px;
+	font-weight: bold;
+	line-height: 18px;
+	text-align: center;
 }
 
 .relatives_profile_wanted_cards {
-	display: flex;
-	flex-wrap: wrap;
-	gap: 10px;
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+	gap: 8px;
 }
 
 .relatives_profile_wanted_card {
-	flex: 1 1 220px;
-	max-width: 100%;
-	border: 1px solid rgba(0, 0, 0, 0.15);
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	min-width: 0;
+	padding: 8px 10px;
+	border: 1px solid rgba(128, 128, 128, 0.3);
+	border-left: 4px solid var(--relatives-wanted-color, #d79a1f);
 	border-radius: 6px;
-	padding: 10px;
 	box-sizing: border-box;
+}
+
+.relatives_profile_wanted_card_main {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	min-width: 0;
+}
+
+.relatives_profile_wanted_avatar {
+	flex: 0 0 40px;
+	width: 40px;
+	height: 40px;
+	border-radius: 50%;
+	object-fit: cover;
+}
+
+.relatives_profile_wanted_initial {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	background: var(--relatives-wanted-color, #d79a1f);
+	color: var(--h4w-text-on-accent, #fff);
+	font-weight: bold;
+	font-size: 1.1em;
+}
+
+.relatives_profile_wanted_card_text {
+	min-width: 0;
 }
 
 .relatives_profile_wanted_card_name {
 	font-weight: bold;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
 }
 
-.relatives_profile_wanted_card_relationship {
+.relatives_profile_wanted_card_meta {
+	font-size: 0.85em;
+	opacity: 0.8;
+}
+
+.relatives_profile_wanted_card_meta:empty,
+.relatives_profile_wanted_card_footer:empty {
+	display: none;
+}
+
+.relatives_profile_wanted_card_footer {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: 4px 10px;
+	font-size: 0.85em;
+}
+
+.relatives_profile_wanted_details {
+	flex: 1 1 auto;
+	order: 1;
+}
+
+/* Geoeffnet volle Breite unter dem Link, damit die Beschreibung Platz hat. */
+.relatives_profile_wanted_details[open] {
+	flex-basis: 100%;
+	order: 3;
+}
+
+.relatives_profile_wanted_details summary {
+	cursor: pointer;
+	opacity: 0.8;
+}
+
+.relatives_profile_wanted_details[open] summary {
+	margin-bottom: 4px;
+}
+
+.relatives_profile_wanted_link {
+	order: 2;
+	margin-left: auto;
+	white-space: nowrap;
+}
+
+/* Lange Beschreibungen scrollen innerhalb der Karte; Hoehe per
+ * --relatives-wanted-description-height anpassbar. */
+.relatives_profile_wanted_description {
+	max-height: var(--relatives-wanted-description-height, 8em);
+	overflow-y: auto;
+	overflow-wrap: anywhere;
+	padding-right: 6px;
+	scrollbar-width: thin;
+	scrollbar-color: var(--relatives-wanted-color, #d79a1f) transparent;
+}
+
+.relatives_profile_wanted_description::-webkit-scrollbar {
+	width: 6px;
+}
+
+.relatives_profile_wanted_description::-webkit-scrollbar-thumb {
+	background: var(--relatives-wanted-color, #d79a1f);
+	border-radius: 3px;
+}
+
+.relatives_profile_wanted_relationship_description {
 	font-style: italic;
-	opacity: 0.85;
-	margin-bottom: 6px;
+}
+
+.relatives_profile_wanted_relationship_description:not(:empty) + div:not(:empty) {
+	margin-top: 4px;
 }
 
 @media (max-width: 600px) {
-	.relatives_profile_wanted_card {
-		flex-basis: 100%;
-	}
-
 	.relatives_field input[type="text"],
 	.relatives_field input[type="url"],
 	.relatives_field input[type="number"],
@@ -168,7 +293,7 @@
 .relatives_relation_row {
 	margin: 0 0 10px;
 	padding: 8px 10px;
-	border: 1px solid #d5dbe1;
+	border: 1px solid var(--h4w-relatives-relation-row-border, #d5dbe1);
 	border-radius: 4px;
 }
 
@@ -190,7 +315,7 @@
 
 .relatives_deceased_mark {
 	margin-left: 4px;
-	color: #6b7178;
+	color: var(--h4w-relatives-deceased-mark-color, #6b7178);
 }
 
 .relatives_inline_form {
@@ -214,8 +339,8 @@
 	margin-bottom: 2px;
 }
 
-.relatives_families_filter_actions a {
-	margin-left: 6px;
+.relatives_families_filter_actions input + input {
+	margin-left: 4px;
 }
 
 .relatives_family_cards {
@@ -226,7 +351,7 @@
 
 .relatives_family_card {
 	padding: 10px 12px;
-	border: 1px solid #d5dbe1;
+	border: 1px solid var(--h4w-relatives-family-card-border, #d5dbe1);
 	border-left: 6px solid var(--relatives-family-color, #7d8894);
 	border-radius: 4px;
 }
@@ -237,7 +362,7 @@
 
 .relatives_family_card_members {
 	font-size: 11px;
-	color: #6b7178;
+	color: var(--h4w-relatives-family-card-members-color, #6b7178);
 	margin-bottom: 6px;
 }
 
@@ -246,9 +371,9 @@
 	margin-bottom: 6px;
 	padding: 1px 6px;
 	font-size: 11px;
-	color: #7a4b00;
-	background: #fdf1dc;
-	border: 1px solid #ecd3a6;
+	color: var(--h4w-relatives-family-card-closed-color, #7a4b00);
+	background: var(--h4w-relatives-family-card-closed-bg, #fdf1dc);
+	border: 1px solid var(--h4w-relatives-family-card-closed-border, #ecd3a6);
 	border-radius: 3px;
 }
 
@@ -266,6 +391,38 @@
 
 .relatives_family_card_attributes dd {
 	margin: 0;
+}
+
+/* Lange Beschreibungen scrollen innerhalb der Karte, statt sie in die Laenge zu
+ * ziehen; die Hoehe laesst sich per --relatives-family-description-height im
+ * Theme anpassen. */
+.relatives_family_card_description {
+	max-height: var(--relatives-family-description-height, 8em);
+	overflow-y: auto;
+	overflow-wrap: anywhere;
+	padding-right: 6px;
+	/* Schmaler Scrollbalken in der Familienfarbe (Firefox, Chrome 121+). */
+	scrollbar-width: thin;
+	scrollbar-color: var(--relatives-family-color, #7d8894) transparent;
+}
+
+/* Fallback fuer aeltere WebKit-/Blink-Browser (Safari, aeltere Chrome). */
+.relatives_family_card_description::-webkit-scrollbar {
+	width: 6px;
+}
+
+.relatives_family_card_description::-webkit-scrollbar-track {
+	background: rgba(128, 128, 128, 0.12);
+	border-radius: 3px;
+}
+
+.relatives_family_card_description::-webkit-scrollbar-thumb {
+	background: var(--relatives-family-color, #7d8894);
+	border-radius: 3px;
+}
+
+.relatives_family_card_description::-webkit-scrollbar-thumb:hover {
+	background: var(--h4w-relatives-family-card-description-bg, #6b7178);
 }
 
 .relatives_family_card_actions {
@@ -358,10 +515,6 @@
 	font-weight: bold;
 }
 
-.relatives_nav_primary::before {
-	content: "+ ";
-}
-
 /* Leerzustand der Liste: Hinweis plus Wege nach vorn statt Sackgasse. */
 .relatives_empty_state {
 	margin: 12px 0;
@@ -388,10 +541,6 @@
 .relatives_link_request_actions {
 	white-space: nowrap;
 	text-align: right;
-}
-
-.relatives_link_request_actions .relatives_link_button {
-	margin-left: 8px;
 }
 
 /* Ohne Eintraege keine leere Tabellenkopfzeile ueber dem Leerzustand. */
@@ -497,8 +646,8 @@ fieldset.relatives_attribute_group {
 
 /* Deletion requests */
 .relatives_badge_delete_requested {
-	background: #c0392b;
-	color: #fff;
+	background: var(--h4w-relatives-badge-delete-requested-bg, #c0392b);
+	color: var(--h4w-text-on-accent, #fff);
 }
 
 .relatives_delete_requests_hint {
@@ -513,8 +662,8 @@ fieldset.relatives_attribute_group {
 	padding: 0 5px;
 	margin-left: 4px;
 	border-radius: 9px;
-	background: #c0392b;
-	color: #ffffff;
+	background: var(--h4w-relatives-nav-count-bg, #c0392b);
+	color: var(--h4w-text-on-accent, #ffffff);
 	font-size: 11px;
 	line-height: 18px;
 	text-align: center;

@@ -12,7 +12,7 @@
 		<form action="relatives.php?action=link_decline" method="post" class="relatives_inline_form">
 			<input type="hidden" name="id" value="{$relatives_lr_id}" />
 			<input type="hidden" name="my_post_key" value="{$mybb->post_code}" />
-			<input type="submit" class="relatives_link_button" value="{$lang->relatives_link_decline}" />
+			<input type="submit" class="button" value="{$lang->relatives_link_decline}" />
 		</form>
 	</td>
 </tr>

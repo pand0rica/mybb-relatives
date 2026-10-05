@@ -36,7 +36,9 @@ new code base; 2.0 and 2.1 were internal development stages and are summarised h
   inference (e.g. "uncle on the mother's side" → brother of the mother) and re-run protection.
 - ACP *Shared network* page: merge preview, merge, conflict list, taking back legacy guesses.
 - Public API `relatives_search_persons()` and `relatives_get_relation()`, provider hooks for the
-  *jobliste* plugin.
+  *jobliste* plugin (`jobliste_resolve_entity_label` also returns who added a person and in which
+  degree, and the confirmed linked account so jobliste can show the character instead of a
+  duplicate relative).
 - User CP menu item in the *Miscellaneous* box with its own icon; shared tab navigation on all
   plugin pages.
 - Deletion requests for NPCs: deleting an NPC asks everyone else who has it in their list
@@ -47,8 +49,20 @@ new code base; 2.0 and 2.1 were internal development stages and are summarised h
 - Feedback after deleting in the family tree (status message instead of a silent reload).
 
 ### Changed
-- Wanted cards on the profile use responsive CSS instead of hard-coded widths per theme.
+- The profile wanted box lists every wanted person in the character's family tree (not only the
+  character's own list), closest relatives first, as compact mini cards (face claim or initial,
+  relation, age, collapsible description, wanted-thread link) with a counter. Responsive grid
+  instead of hard-coded widths per theme; themable via `--relatives-wanted-color` and
+  `--relatives-wanted-description-height`.
+- `{$relatives_wanted_box}` is inserted on activation into `member_profile`, per template set before
+  `{$signature}`, fallback `{$footer}`, only where it is still missing (manual placement is
+  kept); removed on deactivation.
 - Relationship types and attribute values are no longer seeded with forum-specific example data.
+- All frontend actions (edit, delete, cancel, accept/decline, reset filter, empty-state buttons)
+  are real theme buttons (`input.button`); mixed links, `a.button` and link-styled buttons with
+  `|` separators are gone.
+- On the family pages the popup icon in the navigation opens the public family list instead of
+  the family tree.
 
 ### Fixed
 - Any logged-in user could edit or delete other users' entries by changing the ID in the URL
@@ -61,6 +75,28 @@ new code base; 2.0 and 2.1 were internal development stages and are summarised h
   install/uninstall only.
 - Fatal error in the ACP forms caused by non-existent Form API methods.
 - Tooltip of the *Family tree* link showed a literal "%s" instead of the character name.
+- The "relative to your character" option in the relationship form showed a literal
+  "%s (your character)" instead of the character name (`$lang->sprintf()` expects `{1}`).
+- Family tree lines crossed each other in many trees (156 crossings over the 46 trees of the
+  test forum, now 4, all in trees with contradicting data):
+  - family boxes and ancestors without parents in the tree (e.g. the *Nott* box of a
+    character's mother) were always placed at the end of their row;
+  - statements were resolved one at a time, so "half-brother of Jolina" plus "cousin of
+    Louisa", two cousin statements or two mutual "aunt of" statements invented extra
+    placeholder ancestors whose lines ran across the tree – they are now read together;
+  - friends and other loose connections of the same row were placed after the whole sibling
+    block, so their line crossed every sibling;
+  - partners of a chain (A – B – C – D) could be separated by other boxes;
+  - overlapping sibling bars were stacked left to right instead of in the order that avoids
+    crossings.
+  The layout now also moves and mirrors the families involved in a crossing and keeps the
+  arrangement with the fewest crossings (deterministic, same tree always looks the same).
+- An only child standing a few pixels beside its parents' stem got a small jog in its line
+  (down, sideways, down), which looked like a drawing error (Sophie below the *Nott* box).
+  The layout now shifts the parent or the child (with its neighbours if needed) exactly
+  below the stem, and offsets of up to 32 px are drawn as one straight line.
+- The User CP menu icon was tiled and overlapped the label in themes that do not style
+  `usercp_nav_item`; deactivating now also removes rows baked by older versions.
 - A fresh installation without legacy data was locked ("network not merged yet") until an admin
   ran a merge on empty tables.
 - The ACP page is registered as an admin permission (*Tools & Maintenance → Can manage
@@ -68,7 +104,9 @@ new code base; 2.0 and 2.1 were internal development stages and are summarised h
   restricted.
 - Setting titles and descriptions are translatable (English and German) instead of fixed German
   text.
-- ACP pages and plugin templates no longer use inline `style`/`onclick` attributes; the ACP delete
+- ACP pages and plugin templates no longer use inline `style`/`onclick` attributes (exceptions:
+  the per-family colour variable and the popup handler of the *Family tree* link, which also
+  appears on profile/postbit/member list pages without the plugin script); the ACP delete
   confirmation no longer breaks on language strings containing an apostrophe.
 - Deleting a user account left all of its relatives data behind: the
   `datahandler_user_delete_start` handler read `$userhandler->user['uid']`, which

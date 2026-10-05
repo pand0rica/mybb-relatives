@@ -1,0 +1,1 @@
+<form action="relatives.php" method="get" class="relatives_inline_form">{$button_hidden}<input type="submit" class="button{$button_class}" value="{$button_label}" /></form>

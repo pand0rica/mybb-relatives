@@ -79,6 +79,22 @@ class Relatives_TreeBuilder
     /** Neutrale Platzhalter-Abgaenge auf ein Elternpaar (siehe Relatives_TreePlaceholders). */
     private array $placeholder_attachments = [];
 
+    /** Lose verbundene Knoten, die fuers Layout in den Geschwisterblock ihres Ankers rutschen: Knoten => Anker. */
+    private array $floating_anchor = [];
+
+    /** Struktur, wie das Frontend sie zeichnet (families inkl. Zweitfamilien, partners, links) -- Grundlage der Kreuzungszaehlung. */
+    private array $drawn = [];
+
+    /**
+     * Hoechstzahl probeweise durchgerechneter Reihenfolgen je Baum (Schritt 2 der
+     * Kreuzungssuche). Bewusst eine Anzahl statt einer Zeit: sonst saehe derselbe Baum je
+     * nach Serverlast bei jedem Aufruf anders aus.
+     */
+    private const CROSSING_BUDGET = 80;
+
+    /** Wie weit (in Plaetzen) eine Einheit bei der Kreuzungssuche hoechstens wandert. */
+    private const CROSSING_WINDOW = 4;
+
     private string $root_key = '';
     private int $root_uid = 0;
     private int $viewer_uid = 0;
@@ -113,6 +129,31 @@ class Relatives_TreeBuilder
     }
 
     /**
+     * Gesuchte Personen (is_wanted=1) im Stammbaum-Ausschnitt eines Charakters -- dieselben
+     * Knoten wie in build(), aber ohne das teure Layout. Aus Sicht des Charakters
+     * (computed_label, relationship_description aus seiner Liste), naechste Verwandte zuerst.
+     *
+     * @return array Liste von Knoten im Format von build()['nodes']
+     */
+    public static function wanted_nodes(int $root_uid): array
+    {
+        Relatives_Kinship::reset();
+
+        $builder = new self();
+        $builder->root_uid = $root_uid;
+        $builder->viewer_uid = $root_uid;
+        $builder->collect([]);
+
+        $wanted = [];
+        foreach ($builder->nodes as $node) {
+            if (($node['type'] ?? '') === 'person' && !empty($node['is_wanted'])) {
+                $wanted[] = $node;
+            }
+        }
+        return $wanted;
+    }
+
+    /**
      * Struktur (inkl. Platzhalter) und Positionen. Ohne DB-Zugriff -- deshalb auch aus
      * tests/cli-tree-placeholders.php aufrufbar.
      *
@@ -134,6 +175,7 @@ class Relatives_TreeBuilder
         }));
         $layout['families'] = $this->with_attached_members($layout['families']);
         $layout['families'] = $this->with_floating_neighbours($layout['families'], $structure['links']);
+        $this->drawn = $structure;
         $this->assign_positions($layout);
 
         return [$structure, $this->with_coparent_partners($layout)];
@@ -1210,6 +1252,7 @@ class Relatives_TreeBuilder
                 $index = $family_index[$anchor];
                 $families[$index]['children'][] = $floating;
                 $family_index[$floating] = $index;
+                $this->floating_anchor[$floating] = $anchor;
             }
         }
         return $families;
@@ -1312,35 +1355,44 @@ class Relatives_TreeBuilder
     private function close_empty_columns(): void
     {
         $xs = [];
-        foreach ($this->nodes as $node) {
-            $xs[] = (float)$node['x'];
+        foreach ($this->nodes as $key => $node) {
+            $xs[$key] = (float)$node['x'];
         }
+        foreach (self::closed_columns($xs) as $key => $x) {
+            $this->nodes[$key]['x'] = $x;
+        }
+    }
+
+    /** Rechenkern von close_empty_columns(): Knoten => x, ohne die Leerstreifen. */
+    private static function closed_columns(array $xs): array
+    {
         if (count($xs) < 2) {
-            return;
+            return $xs;
         }
-        sort($xs);
+        $sorted = array_values($xs);
+        sort($sorted);
 
         $cuts = [];
-        for ($i = 1, $count = count($xs); $i < $count; $i++) {
-            $gap = $xs[$i] - $xs[$i - 1];
+        for ($i = 1, $count = count($sorted); $i < $count; $i++) {
+            $gap = $sorted[$i] - $sorted[$i - 1];
             if ($gap > self::MAX_EMPTY_COLUMN) {
-                $cuts[] = [$xs[$i], $gap - self::MAX_EMPTY_COLUMN];
+                $cuts[] = [$sorted[$i], $gap - self::MAX_EMPTY_COLUMN];
             }
         }
         if (!$cuts) {
-            return;
+            return $xs;
         }
 
-        foreach ($this->nodes as $key => $node) {
-            $x = (float)$node['x'];
+        foreach ($xs as $key => $x) {
             $delta = 0.0;
             foreach ($cuts as [$threshold, $amount]) {
                 if ($x >= $threshold - 0.0001) {
                     $delta += $amount;
                 }
             }
-            $this->nodes[$key]['x'] = $x - $delta;
+            $xs[$key] = $x - $delta;
         }
+        return $xs;
     }
 
     /**
@@ -1364,8 +1416,675 @@ class Relatives_TreeBuilder
         }
         $units = $this->build_units($structure);
         $order = $this->order_units($units, $structure);
-        $this->relax_units($units, $order, $structure);
+        $this->reduce_crossings($units, $order, $structure);
         $this->apply_unit_positions($units);
+    }
+
+    /**
+     * Sucht eine Reihenfolge mit moeglichst wenigen Linienkreuzungen und hinterlaesst die
+     * fertig zentrierten Einheiten in $units.
+     *
+     * 1. Einheiten ohne eigene Eltern im Baum (Familien-Kaesten, Stammeltern) haben beim
+     *    zeilenweisen Sortieren von oben nach unten keinen Anhaltspunkt und landen am
+     *    Zeilenende -- auch wenn ihr Kind weit links steht (Kasten "Nott" ganz rechts,
+     *    Tochter Sophie ganz links). Fuer sie wird jeder Platz ihrer Zeile durchgerechnet.
+     * 2. Danach werden nur die Einheiten, die an einer verbliebenen Kreuzung beteiligt sind,
+     *    versuchsweise verschoben oder gespiegelt (Patchwork-Familien mit Stief- und
+     *    Halbgeschwistern auf beiden Seiten). Eine Aenderung bleibt nur, wenn sie Kreuzungen
+     *    einspart; die Suche endet nach CROSSING_BUDGET probeweise durchgerechneten Reihenfolgen.
+     */
+    private function reduce_crossings(array &$units, array $order, array $structure): void
+    {
+        $budget = self::CROSSING_BUDGET;
+        $best = $this->evaluate_order($units, $order, $structure);
+
+        // 1. Elternlose Eltern.
+        $unit_of = self::unit_lookup($units);
+        $rootless = [];
+        foreach ($structure['families'] as $family) {
+            foreach ($family['parents'] as $parent_key) {
+                $unit_id = $unit_of[$parent_key] ?? null;
+                if ($unit_id !== null && empty($units[$unit_id]['families'])) {
+                    $rootless[$unit_id] = true;
+                }
+            }
+        }
+        $rootless = array_keys($rootless);
+        // Von unten nach oben: tiefere Kaesten stehen fest, bevor ihre Vorfahren suchen.
+        usort($rootless, function ($a, $b) use ($units) {
+            return $units[$b]['generation'] <=> $units[$a]['generation'];
+        });
+        foreach ($rootless as $unit_id) {
+            foreach ($this->slot_variants($best['order'], $unit_id, $units[$unit_id]['generation']) as $trial_order) {
+                $trial = $this->evaluate_order($units, $trial_order, $structure);
+                if ($trial['crossings'] < $best['crossings']
+                    || ($trial['crossings'] === $best['crossings'] && $trial['length'] < $best['length'] - 0.5)) {
+                    $best = $trial;
+                }
+            }
+        }
+
+        // 2. Verbliebene Kreuzungen: beteiligte Einheiten verschieben oder spiegeln.
+        while ($best['crossings'] > 0 && $budget > 0) {
+            $improved = false;
+            $involved = array_keys($best['involved']);
+            usort($involved, function ($a, $b) use ($units) {
+                return $units[$a]['generation'] <=> $units[$b]['generation'];
+            });
+            foreach ($involved as $unit_id) {
+                $candidates = [];
+                if (count($units[$unit_id]['members']) > 1) {
+                    $mirrored = $best['units'];
+                    $mirrored[$unit_id]['members'] = array_reverse($mirrored[$unit_id]['members']);
+                    $candidates[] = [$mirrored, $best['order']];
+                }
+                $generation = $units[$unit_id]['generation'];
+                $has_lower = max(array_keys($best['order'])) > $generation;
+                foreach ($this->slot_variants($best['order'], $unit_id, $generation, self::CROSSING_WINDOW) as $trial_order) {
+                    $candidates[] = [$best['units'], $trial_order];
+                    if ($has_lower) {
+                        // Mit Kaskade: die Generationen darunter ordnen sich neu nach den
+                        // verschobenen Eltern (sonst blieb deren Kinderreihe am alten Platz,
+                        // und jeder einzelne Schritt sah zunaechst schlechter aus).
+                        $candidates[] = [$best['units'], $trial_order, $generation];
+                    }
+                }
+                foreach ($candidates as $candidate) {
+                    [$trial_units, $trial_order] = $candidate;
+                    if ($budget-- <= 0) {
+                        break 3;
+                    }
+                    if (isset($candidate[2])) {
+                        $fixed = array_filter($trial_order, function ($generation) use ($candidate) {
+                            return $generation <= $candidate[2];
+                        }, ARRAY_FILTER_USE_KEY);
+                        $trial_order = $this->order_units($trial_units, $structure, $fixed);
+                    }
+                    $trial = $this->evaluate_order($trial_units, $trial_order, $structure);
+                    if ($trial['crossings'] < $best['crossings']) {
+                        $best = $trial;
+                        $improved = true;
+                        continue 3; // neu bewerten, welche Einheiten noch beteiligt sind
+                    }
+                }
+            }
+            if (!$improved) {
+                break;
+            }
+        }
+
+        $units = $this->straighten_single_children($best['units'], $best['order'], $best['crossings']);
+    }
+
+    /**
+     * Einzelkinder genau unter ihren Elternstiel: steht ein einziges Kind nur ein paar Pixel
+     * neben der Paarmitte, zeichnet das Frontend runter-quer-runter statt einer geraden Linie
+     * -- ein Knick, der wie ein Zeichenfehler aussieht (Sophie unter dem Kasten "Nott").
+     * Versucht wird, den Elternteil oder das Kind um genau diesen Versatz zu schieben (allein
+     * oder mit den Nachbarn auf dieser Seite); uebernommen wird das nur, wenn die Mindestabstaende der Zeile halten, keine Kreuzung
+     * hinzukommt und danach insgesamt weniger Knicke uebrig sind.
+     */
+    private function straighten_single_children(array $units, array $order, int $crossings): array
+    {
+        $position = [];
+        foreach ($order as $sequence) {
+            foreach ($sequence as $index => $unit_id) {
+                $position[$unit_id] = $index;
+            }
+        }
+
+        for ($pass = 0; $pass < 3; $pass++) {
+            $jogs = $this->single_child_jogs($units);
+            $improved = false;
+            foreach ($jogs as [$parent_unit, $child_unit, $dx]) {
+                // Erst die Einheit allein, dann samt allen Nachbarn auf der Seite, in die sie
+                // rueckt (die Nachbarn weichen mit aus, ihre Abstaende bleiben gleich).
+                $moves = [];
+                foreach ([[$parent_unit, $dx], [$child_unit, -$dx]] as [$unit_id, $shift]) {
+                    $sequence = $order[$units[$unit_id]['generation']];
+                    $index = $position[$unit_id];
+                    if (self::can_shift($units, $sequence, $index, $shift)) {
+                        $moves[] = [[$unit_id], $shift];
+                    }
+                    $pushed = $shift > 0 ? array_slice($sequence, $index) : array_slice($sequence, 0, $index + 1);
+                    if (count($pushed) > 1) {
+                        $moves[] = [$pushed, $shift];
+                    }
+                }
+                foreach ($moves as [$unit_ids, $shift]) {
+                    $trial = $units;
+                    foreach ($unit_ids as $unit_id) {
+                        $trial[$unit_id]['x'] += $shift;
+                    }
+                    if (count($this->single_child_jogs($trial)) >= count($jogs)
+                        || $this->count_crossings($trial)['crossings'] > $crossings) {
+                        continue;
+                    }
+                    $units = $trial;
+                    $improved = true;
+                    continue 3; // Knicke neu ermitteln
+                }
+            }
+            if (!$improved) {
+                break;
+            }
+        }
+        return $units;
+    }
+
+    /**
+     * Einzelkinder, die nicht genau unter dem Stiel ihrer Eltern stehen: [Eltern-Einheit,
+     * Kind-Einheit, Versatz in Knotenbreiten]. Nur Familien, deren Eltern in einer Einheit
+     * stehen und die in der Zeile darunter genau ein Kind haben (auch ueber Zweitfamilien
+     * mit denselben Eltern -- die haengen im Frontend am selben Balken).
+     */
+    private function single_child_jogs(array $units): array
+    {
+        $unit_of = self::unit_lookup($units);
+        $offset = self::member_offsets($units);
+        $x_of = function (string $key) use ($units, $unit_of, $offset): float {
+            return $units[$unit_of[$key]]['x'] + $offset[$key];
+        };
+
+        $groups = [];
+        foreach ($this->drawn['families'] ?? [] as $family) {
+            if (empty($family['parents']) || !empty($family['either'])) {
+                continue;
+            }
+            $parent_unit = $unit_of[$family['parents'][0]] ?? null;
+            if ($parent_unit === null) {
+                continue;
+            }
+            foreach ($family['parents'] as $parent_key) {
+                if (($unit_of[$parent_key] ?? null) !== $parent_unit) {
+                    continue 2;
+                }
+            }
+            $parents = $family['parents'];
+            sort($parents);
+            $group_key = implode('|', $parents);
+            $groups[$group_key]['parents'] = $family['parents'];
+            $groups[$group_key]['unit'] = $parent_unit;
+            foreach ($family['children'] as $child_key) {
+                $child_unit = $unit_of[$child_key] ?? null;
+                if ($child_unit !== null && $units[$child_unit]['generation'] === $units[$parent_unit]['generation'] + 1) {
+                    $groups[$group_key]['children'][$child_key] = $child_unit;
+                }
+            }
+        }
+
+        $jogs = [];
+        foreach ($groups as $group) {
+            if (count($group['children'] ?? []) !== 1) {
+                continue;
+            }
+            $xs = array_map($x_of, $group['parents']);
+            $stem = (min($xs) + max($xs)) / 2;
+            $child_key = (string)array_key_first($group['children']);
+            $dx = $x_of($child_key) - $stem;
+            if (abs($dx) > 0.001) {
+                $jogs[] = [$group['unit'], $group['children'][$child_key], $dx];
+            }
+        }
+        return $jogs;
+    }
+
+    /** Laesst sich $unit_id um $shift verschieben, ohne den Mindestabstand zu den Nachbarn zu unterschreiten? */
+    private static function can_shift(array $units, array $sequence, int $index, float $shift): bool
+    {
+        $x = $units[$sequence[$index]]['x'] + $shift;
+        if ($index > 0) {
+            $left = $units[$sequence[$index - 1]];
+            if ($x - $left['x'] < self::min_separation($left, $units[$sequence[$index]]) - 0.0001) {
+                return false;
+            }
+        }
+        if ($index < count($sequence) - 1) {
+            $right = $units[$sequence[$index + 1]];
+            if ($right['x'] - $x < self::min_separation($units[$sequence[$index]], $right) - 0.0001) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Reihenfolgen, in denen $unit_id an einer anderen Stelle seiner Generation steht --
+     * naechstgelegene Plaetze zuerst, mit $window hoechstens so viele Plaetze entfernt.
+     */
+    private function slot_variants(array $order, string $unit_id, int $generation, ?int $window = null): array
+    {
+        $sequence = $order[$generation] ?? [];
+        $current = array_search($unit_id, $sequence, true);
+        if ($current === false || count($sequence) < 2) {
+            return [];
+        }
+        $current = (int)$current;
+        $rest = $sequence;
+        array_splice($rest, $current, 1);
+        $slots = range(0, count($rest));
+        usort($slots, function ($a, $b) use ($current) {
+            return [abs($a - $current), $a] <=> [abs($b - $current), $b];
+        });
+        $variants = [];
+        foreach ($slots as $slot) {
+            if ($slot === $current) {
+                continue;
+            }
+            if ($window !== null && abs($slot - $current) > $window) {
+                break;
+            }
+            $trial = $rest;
+            array_splice($trial, $slot, 0, [$unit_id]);
+            $variant = $order;
+            $variant[$generation] = $trial;
+            $variants[] = $variant;
+        }
+        return $variants;
+    }
+
+    /**
+     * Reiht jede Generation in der gegebenen Reihenfolge auf, laesst die Zentrierung laufen
+     * und bewertet das Ergebnis.
+     *
+     * @return array ['units', 'order', 'crossings', 'length', 'involved' => [unit_id => true]]
+     */
+    private function evaluate_order(array $units, array $order, array $structure): array
+    {
+        foreach ($order as $sequence) {
+            $x = 0.0;
+            foreach ($sequence as $position => $unit_id) {
+                if ($position > 0) {
+                    $x += self::min_separation($units[$sequence[$position - 1]], $units[$unit_id]);
+                }
+                $units[$unit_id]['x'] = $x;
+            }
+        }
+        $this->relax_units($units, $order, $structure);
+        return ['units' => $units, 'order' => $order] + $this->count_crossings($units);
+    }
+
+    // Masse der Zeichnung in relatives-tree.js (Pixel). Nur fuer die Bewertung -- bei
+    // Aenderungen dort hier nachziehen, sonst zaehlt die Suche an der Zeichnung vorbei.
+    private const DRAW_H_SPACING = 188;
+    private const DRAW_V_SPACING = 140;
+    private const DRAW_HALF_W = 85;
+    private const DRAW_HALF_H = 29;
+    private const DRAW_BUS_OFFSET = 32;
+    private const DRAW_BUS_LANE_STEP = 12;
+    private const DRAW_BUS_LANE_GAP = 24;
+    private const DRAW_LOOSE_LANE = 26;
+    private const DRAW_SAME_ROW_LANE = 14;
+    private const DRAW_STRAIGHT_TOLERANCE = 32;
+
+    /** Groesste Balkengruppe, deren Stapelreihenfolge exakt optimiert wird (wie LANE_ORDER_LIMIT im JS). */
+    private const LANE_ORDER_LIMIT = 8;
+
+    /**
+     * Zaehlt Kreuzungen so, wie buildConnectorPaths() in relatives-tree.js zeichnet:
+     * Partnerlinien, Familienbalken (Zweitfamilie mit denselben Eltern haengt am Balken der
+     * Primaerfamilie, ueberlappende Balken einer Zeile bekommen eigene Hoehenstufen) und
+     * lose Verbindungen. Eine Kreuzung ist ein senkrechtes Stueck, das ein waagerechtes
+     * Stueck einer ANDEREN Linie im Inneren schneidet.
+     *
+     * @return array ['crossings' => int, 'length' => float (Balkenlaenge in Knotenbreiten),
+     *                'involved' => [unit_id => true]]
+     */
+    private function count_crossings(array $units): array
+    {
+        $unit_of = self::unit_lookup($units);
+        // Gezeichnet wird nach close_empty_columns() -- gleiche Positionen wie im Frontend.
+        $offset = self::member_offsets($units);
+        $xs = [];
+        foreach ($unit_of as $key => $unit_id) {
+            $xs[$key] = $units[$unit_id]['x'] + $offset[$key];
+        }
+        $xs = self::closed_columns($xs);
+        $point = function (string $key) use ($units, $unit_of, $xs): ?array {
+            $unit_id = $unit_of[$key] ?? null;
+            if ($unit_id === null) {
+                return null;
+            }
+            return [
+                $xs[$key] * self::DRAW_H_SPACING,
+                $units[$unit_id]['generation'] * self::DRAW_V_SPACING,
+            ];
+        };
+
+        $horizontal = []; // [left, right, y, owner]
+        $vertical = [];   // [x, y1, y2, owner]
+        $owners = [];     // owner => beteiligte Knoten
+
+        // Partnerlinien: eingetragene Paare und nebeneinanderstehende Eltern einer Familie.
+        $pairs = [];
+        foreach ($this->drawn['partners'] ?? [] as $pair) {
+            $pairs[self::pair_key($pair['a'], $pair['b'])] = [$pair['a'], $pair['b']];
+        }
+        foreach ($this->drawn['families'] ?? [] as $family) {
+            $parents = array_values(array_filter($family['parents'], function ($key) use ($point) {
+                return $point($key) !== null;
+            }));
+            usort($parents, function ($a, $b) use ($point) {
+                return $point($a)[0] <=> $point($b)[0];
+            });
+            for ($i = 1, $count = count($parents); $i < $count; $i++) {
+                $pairs[self::pair_key($parents[$i - 1], $parents[$i])] = [$parents[$i - 1], $parents[$i]];
+            }
+        }
+        $elbows = []; // Paare ueber zwei Generationen: rechtwinklig wie lose Verbindungen
+        foreach ($pairs as $owner => [$a, $b]) {
+            $pa = $point($a);
+            $pb = $point($b);
+            if ($pa === null || $pb === null) {
+                continue;
+            }
+            if ($pa[1] !== $pb[1]) {
+                $elbows['p' . $owner] = [$a, $b];
+                continue;
+            }
+            $left = min($pa[0], $pb[0]) + self::DRAW_HALF_W;
+            $right = max($pa[0], $pb[0]) - self::DRAW_HALF_W;
+            if ($right - $left > 1) {
+                $horizontal[] = [$left, $right, $pa[1], 'p' . $owner];
+                $owners['p' . $owner] = [$a, $b];
+            }
+        }
+
+        // Familienbalken: Primaerfamilien zuerst, damit Zweitfamilien sich anhaengen koennen.
+        $families = array_merge(
+            array_filter($this->drawn['families'] ?? [], static function ($family) {
+                return ($family['primary'] ?? true) !== false;
+            }),
+            array_filter($this->drawn['families'] ?? [], static function ($family) {
+                return ($family['primary'] ?? true) === false;
+            })
+        );
+        $buses = [];
+        $bus_by_parents = [];
+        foreach ($families as $family_index => $family) {
+            $parents = array_values(array_filter($family['parents'], function ($key) use ($point) {
+                return $point($key) !== null;
+            }));
+            $rows = [];
+            foreach ($family['children'] as $child_key) {
+                $p = $point($child_key);
+                if ($p !== null) {
+                    $rows[(string)$p[1]][] = ['x' => $p[0], 'bottom' => $p[1] - self::DRAW_HALF_H, 'key' => $child_key];
+                }
+            }
+            foreach ($family['either'] ?? [] as $group) {
+                $points = array_map($point, $group);
+                if (in_array(null, $points, true)) {
+                    continue;
+                }
+                $xs = array_column($points, 0);
+                $rows[(string)$points[0][1]][] = ['x' => (min($xs) + max($xs)) / 2, 'bottom' => $points[0][1], 'key' => $group[0]];
+            }
+            foreach ($rows as $row_key => $stubs) {
+                $child_y = (float)$row_key;
+                $child_top = $child_y - self::DRAW_HALF_H;
+                $origin_x = null;
+                $origin_y = null;
+                if ($parents) {
+                    $parent_points = array_map($point, $parents);
+                    $xs = array_column($parent_points, 0);
+                    $origin_x = (min($xs) + max($xs)) / 2;
+                    $origin_y = max(array_column($parent_points, 1)) + (count($parents) === 1 ? self::DRAW_HALF_H : 0);
+                }
+                if ($origin_y !== null && $origin_y >= $child_top - 4) {
+                    $origin_x = $origin_y = null;
+                }
+                if ($origin_x === null && count($stubs) < 2) {
+                    continue;
+                }
+                $keys = array_merge($parents, array_column($stubs, 'key'));
+                $parents_key = null;
+                if ($origin_x !== null) {
+                    $sorted = $parents;
+                    sort($sorted);
+                    $parents_key = implode('|', $sorted) . '@' . $row_key;
+                }
+                if ($parents_key !== null && isset($bus_by_parents[$parents_key]) && ($family['primary'] ?? true) === false) {
+                    $shared = $bus_by_parents[$parents_key];
+                    foreach ($stubs as $stub) {
+                        $buses[$shared]['stubs'][] = $stub;
+                        $buses[$shared]['left'] = min($buses[$shared]['left'], $stub['x']);
+                        $buses[$shared]['right'] = max($buses[$shared]['right'], $stub['x']);
+                    }
+                    $owners['b' . $shared] = array_merge($owners['b' . $shared], $keys);
+                    continue;
+                }
+                $xs = array_column($stubs, 'x');
+                $left = min($xs);
+                $right = max($xs);
+                if ($origin_x !== null) {
+                    $left = min($left, $origin_x);
+                    $right = max($right, $origin_x);
+                }
+                $index = count($buses);
+                $buses[] = [
+                    'row' => $child_y, 'top' => $child_top, 'stubs' => $stubs,
+                    'origin_x' => $origin_x, 'origin_y' => $origin_y,
+                    'left' => $left, 'right' => $right, 'lane' => 0,
+                ];
+                $owners['b' . $index] = $keys;
+                if ($parents_key !== null && !isset($bus_by_parents[$parents_key])) {
+                    $bus_by_parents[$parents_key] = $index;
+                }
+            }
+        }
+
+        $straight = static function (array $bus): bool {
+            return $bus['origin_x'] !== null && count($bus['stubs']) === 1
+                && abs($bus['stubs'][0]['x'] - $bus['origin_x']) <= self::DRAW_STRAIGHT_TOLERANCE;
+        };
+        $lane_rows = [];
+        foreach ($buses as $index => $bus) {
+            if (!$straight($bus)) {
+                $lane_rows[(string)$bus['row']][] = $index;
+            }
+        }
+        // Wie assignBusLanes(): Gruppen sich ueberschneidender Balken; in der Stapelreihenfolge
+        // (stack_order()) liegt jeder Balken ueber allen frueheren, die er beruehrt.
+        foreach ($lane_rows as $indexes) {
+            usort($indexes, function ($a, $b) use ($buses) {
+                return [$buses[$a]['right'] - $buses[$a]['left'], $buses[$a]['left']]
+                    <=> [$buses[$b]['right'] - $buses[$b]['left'], $buses[$b]['left']];
+            });
+            $groups = [];
+            foreach ($indexes as $index) {
+                $joined = null;
+                foreach ($groups as $group_index => $group) {
+                    $touches = false;
+                    foreach ($group as $other) {
+                        if (self::buses_overlap($buses[$other], $buses[$index])) {
+                            $touches = true;
+                            break;
+                        }
+                    }
+                    if (!$touches) {
+                        continue;
+                    }
+                    if ($joined === null) {
+                        $joined = $group_index;
+                    } else {
+                        $groups[$joined] = array_merge($groups[$joined], $group);
+                        unset($groups[$group_index]);
+                    }
+                }
+                if ($joined === null) {
+                    $groups[] = [$index];
+                } else {
+                    $groups[$joined][] = $index;
+                }
+            }
+            $rank = array_flip($indexes);
+            foreach ($groups as $group) {
+                usort($group, function ($a, $b) use ($rank) {
+                    return $rank[$a] <=> $rank[$b];
+                });
+                $placed = [];
+                foreach (self::stack_order($buses, $group) as $index) {
+                    $lane = 0;
+                    foreach ($placed as $other) {
+                        if (self::buses_overlap($buses[$other], $buses[$index])) {
+                            $lane = max($lane, $buses[$other]['lane'] + 1);
+                        }
+                    }
+                    $buses[$index]['lane'] = $lane;
+                    $placed[] = $index;
+                }
+            }
+        }
+
+        $length = 0.0;
+        foreach ($buses as $index => $bus) {
+            $owner = 'b' . $index;
+            if ($straight($bus)) {
+                $vertical[] = [$bus['origin_x'], $bus['origin_y'], $bus['stubs'][0]['bottom'], $owner];
+                continue;
+            }
+            $lane_y = $bus['top'] - self::DRAW_BUS_OFFSET - $bus['lane'] * self::DRAW_BUS_LANE_STEP;
+            $bus_y = $bus['origin_y'] === null ? $lane_y : max($bus['origin_y'] + 8, $lane_y);
+            if ($bus['origin_x'] !== null) {
+                $vertical[] = [$bus['origin_x'], $bus['origin_y'], $bus_y, $owner];
+            }
+            $left = $bus['left'];
+            $right = $bus['right'];
+            foreach ($bus['stubs'] as $stub) {
+                $left = min($left, $stub['x']);
+                $right = max($right, $stub['x']);
+                $vertical[] = [$stub['x'], $bus_y, $stub['bottom'], $owner];
+            }
+            if ($right - $left > 1) {
+                $horizontal[] = [$left, $right, $bus_y, $owner];
+            }
+            $length += ($right - $left) / self::DRAW_H_SPACING;
+        }
+
+        // Lose Verbindungen und Paare ueber zwei Generationen (rechtwinklig, siehe elbowPath()).
+        $loose = $elbows;
+        foreach ($this->drawn['links'] ?? [] as $index => $link) {
+            $loose['l' . $index] = [$link['from'], $link['to']];
+        }
+        foreach ($loose as $owner => [$from, $to]) {
+            $a = $point($from);
+            $b = $point($to);
+            if ($a === null || $b === null) {
+                continue;
+            }
+            $owners[$owner] = [$from, $to];
+            if ($a[1] === $b[1]) {
+                if (abs($a[0] - $b[0]) <= 1) {
+                    continue;
+                }
+                $lane_y = $a[1] - self::DRAW_HALF_H - self::DRAW_SAME_ROW_LANE;
+                $vertical[] = [$a[0], $a[1] - self::DRAW_HALF_H, $lane_y, $owner];
+                $horizontal[] = [min($a[0], $b[0]), max($a[0], $b[0]), $lane_y, $owner];
+                $vertical[] = [$b[0], $lane_y, $b[1] - self::DRAW_HALF_H, $owner];
+                continue;
+            }
+            [$top, $bottom] = $a[1] < $b[1] ? [$a, $b] : [$b, $a];
+            $mid_y = ($top[1] + self::DRAW_HALF_H + $bottom[1] - self::DRAW_HALF_H) / 2 + self::DRAW_LOOSE_LANE;
+            $vertical[] = [$top[0], $top[1] + self::DRAW_HALF_H, $mid_y, $owner];
+            $horizontal[] = [min($top[0], $bottom[0]), max($top[0], $bottom[0]), $mid_y, $owner];
+            $vertical[] = [$bottom[0], $mid_y, $bottom[1] - self::DRAW_HALF_H, $owner];
+        }
+
+        $crossings = 0;
+        $involved = [];
+        foreach ($vertical as [$x, $y1, $y2, $v_owner]) {
+            $low = min($y1, $y2);
+            $high = max($y1, $y2);
+            foreach ($horizontal as [$left, $right, $y, $h_owner]) {
+                if ($v_owner === $h_owner || $x <= $left + 1 || $x >= $right - 1 || $y <= $low + 1 || $y >= $high - 1) {
+                    continue;
+                }
+                $crossings++;
+                foreach (array_merge($owners[$v_owner] ?? [], $owners[$h_owner] ?? []) as $key) {
+                    if (isset($unit_of[$key])) {
+                        $involved[$unit_of[$key]] = true;
+                    }
+                }
+            }
+        }
+
+        return ['crossings' => $crossings, 'length' => $length, 'involved' => $involved];
+    }
+
+    /** Zwei Balken derselben Zeile liegen zu nah beieinander fuer dieselbe Hoehenstufe (wie busesOverlap()). */
+    private static function buses_overlap(array $a, array $b): bool
+    {
+        return $a['left'] <= $b['right'] + self::DRAW_BUS_LANE_GAP && $b['left'] <= $a['right'] + self::DRAW_BUS_LANE_GAP;
+    }
+
+    /** Wie stackCost(): Kreuzungen, wenn Balken $low unter Balken $high liegt. */
+    private static function stack_cost(array $low, array $high): int
+    {
+        $inside = static function (float $x, array $bus): bool {
+            return $x > $bus['left'] + 1 && $x < $bus['right'] - 1;
+        };
+        $cost = 0;
+        foreach ($high['stubs'] as $stub) {
+            if ($inside($stub['x'], $low)) {
+                $cost++;
+            }
+        }
+        if ($low['origin_x'] !== null && $inside($low['origin_x'], $high)) {
+            $cost++;
+        }
+        return $cost;
+    }
+
+    /**
+     * Wie stackOrder(): Stapelreihenfolge mit den wenigsten Kreuzungen (Teilmengen-DP,
+     * exakt bis LANE_ORDER_LIMIT Balken), bei Gleichstand der zuerst gefundene Weg.
+     * $group ist bereits schmal-zuerst sortiert.
+     */
+    private static function stack_order(array $buses, array $group): array
+    {
+        $n = count($group);
+        if ($n <= 1 || $n > self::LANE_ORDER_LIMIT) {
+            return $group;
+        }
+        $pair = [];
+        foreach ($group as $i => $low) {
+            foreach ($group as $j => $high) {
+                $pair[$i][$j] = $i === $j || !self::buses_overlap($buses[$low], $buses[$high])
+                    ? 0 : self::stack_cost($buses[$low], $buses[$high]);
+            }
+        }
+        $full = (1 << $n) - 1;
+        $cost = [0 => 0];
+        $prev = [];
+        $last = [];
+        for ($mask = 0; $mask < $full; $mask++) {
+            if (!isset($cost[$mask])) {
+                continue;
+            }
+            for ($j = 0; $j < $n; $j++) {
+                if ($mask & (1 << $j)) {
+                    continue;
+                }
+                $total = $cost[$mask];
+                for ($i = 0; $i < $n; $i++) {
+                    if ($mask & (1 << $i)) {
+                        $total += $pair[$i][$j];
+                    }
+                }
+                $next = $mask | (1 << $j);
+                if (!isset($cost[$next]) || $total < $cost[$next]) {
+                    $cost[$next] = $total;
+                    $prev[$next] = $mask;
+                    $last[$next] = $j;
+                }
+            }
+        }
+        $order = [];
+        for ($mask = $full; $mask; $mask = $prev[$mask]) {
+            array_unshift($order, $group[$last[$mask]]);
+        }
+        return $order;
     }
 
     /**
@@ -1414,6 +2133,9 @@ class Relatives_TreeBuilder
             }
             $units[$unit_id]['members'][] = $key;
         }
+        foreach ($units as $unit_id => $unit) {
+            $units[$unit_id]['members'] = $this->chain_order($unit['members']);
+        }
 
         // Herkunftsfamilie(n) je Einheit merken (steuert den Abstand: Geschwister ruecken
         // eng zusammen, verschiedene Familien bekommen mehr Luft). Ein Paar kann zu zwei
@@ -1455,7 +2177,7 @@ class Relatives_TreeBuilder
      * Liefert [generation => [unit_id, ...]] plus initiale x-Positionen; die
      * Mitglieder-Reihenfolge innerhalb der Einheiten wird dabei passend ausgerichtet.
      */
-    private function order_units(array &$units, array $structure): array
+    private function order_units(array &$units, array $structure, array $fixed = []): array
     {
         $unit_of = self::unit_lookup($units);
 
@@ -1485,7 +2207,10 @@ class Relatives_TreeBuilder
         $placed = [];
         $order = [];
         foreach ($by_generation as $generation => $unit_ids) {
-            $sequence = $this->sequence_generation($units, $unit_ids, $unit_of, $family_of_node, $parents_of_family, $insertion_index, $placed);
+            // $fixed: vorgegebene Reihenfolgen (Kreuzungssuche) -- nur die Generationen
+            // darunter werden neu abgeleitet.
+            $sequence = $fixed[$generation]
+                ?? $this->sequence_generation($units, $unit_ids, $unit_of, $family_of_node, $parents_of_family, $insertion_index, $placed);
 
             $x = 0.0;
             foreach ($sequence as $position => $unit_id) {
@@ -1649,7 +2374,75 @@ class Relatives_TreeBuilder
             }
         }
         $sequence = $this->place_beside_coparents($sequence, $unit_of, $ctx['families_of_unit']);
-        return $this->align_secondary_children($units, $sequence, $unit_of, $ctx['families_of_unit'], $ctx['family_of_node'], $placed);
+        $sequence = $this->align_secondary_children($units, $sequence, $unit_of, $ctx['families_of_unit'], $ctx['family_of_node'], $placed);
+        return $this->place_floating_beside_anchor($sequence, $unit_of, $ctx['families_of_unit']);
+    }
+
+    /**
+     * Lose verbundene Knoten derselben Zeile (Freund*innen, entfernte Verwandte ...) stehen
+     * direkt neben ihrem Anker, und der Anker am Rand seines Geschwisterblocks. Die lose
+     * Linie laeuft knapp ueber den Kastenoberkanten -- stand der Anker mitten im Block,
+     * schnitt sie jede Stichleitung seiner Geschwister (James Potter zu Mason Reed quer
+     * ueber Albus und Lily).
+     */
+    private function place_floating_beside_anchor(array $sequence, array $unit_of, array $families_of_unit): array
+    {
+        $floats_of = [];
+        foreach ($this->floating_anchor as $floating => $anchor) {
+            $float_unit = $unit_of[$floating] ?? null;
+            $anchor_unit = $unit_of[$anchor] ?? null;
+            if ($float_unit === null || $anchor_unit === null || $float_unit === $anchor_unit
+                || !in_array($float_unit, $sequence, true) || !in_array($anchor_unit, $sequence, true)) {
+                continue;
+            }
+            $floats_of[$anchor_unit][$float_unit] = true;
+        }
+
+        foreach ($floats_of as $anchor_unit => $float_units) {
+            $rest = array_values(array_filter($sequence, function ($unit_id) use ($float_units) {
+                return !isset($float_units[$unit_id]);
+            }));
+            $floats = array_values(array_filter($sequence, function ($unit_id) use ($float_units) {
+                return isset($float_units[$unit_id]);
+            }));
+
+            // Geschwisterblock des Ankers (ohne die losen Knoten, die selbst zur Familie zaehlen).
+            $family_ids = $families_of_unit[$anchor_unit] ?? [];
+            $in_block = function (int $position) use ($rest, $families_of_unit, $family_ids): bool {
+                return isset($rest[$position])
+                    && array_intersect_key($families_of_unit[$rest[$position]] ?? [], $family_ids);
+            };
+            $index = (int)array_search($anchor_unit, $rest, true);
+            $start = $index;
+            while ($in_block($start - 1)) {
+                $start--;
+            }
+            $end = $index;
+            while ($in_block($end + 1)) {
+                $end++;
+            }
+
+            // Ein Rand, an dem ein Paar zur Nachbarfamilie steht, bleibt fuer dieses Paar frei.
+            $is_seam = function (int $position) use ($rest, $families_of_unit): bool {
+                return count($families_of_unit[$rest[$position]] ?? []) > 1;
+            };
+            $right_free = $end === $index || !$is_seam($end);
+            $left_free = $start === $index || !$is_seam($start);
+            if (!$right_free && !$left_free) {
+                continue;
+            }
+            $to_right = $right_free && (!$left_free || $end - $index <= $index - $start);
+
+            array_splice($rest, $index, 1);
+            if ($to_right) {
+                $end--;
+                array_splice($rest, $end + 1, 0, array_merge([$anchor_unit], $floats));
+            } else {
+                array_splice($rest, $start, 0, array_merge(array_reverse($floats), [$anchor_unit]));
+            }
+            $sequence = $rest;
+        }
+        return $sequence;
     }
 
     /**
@@ -1927,7 +2720,67 @@ class Relatives_TreeBuilder
                 return $order[$a] <=> $order[$b];
             });
         }
-        $units[$unit_id]['members'] = $members;
+        $units[$unit_id]['members'] = $this->chain_order($members);
+    }
+
+    /**
+     * Bilden die Paare einer Einheit eine Kette (Cathalain - Caiomhe - Simon - Milena),
+     * stehen die Mitglieder in genau dieser Kette -- sonst lag die Partnerlinie ueber fremden
+     * Kaesten und die Abgaenge der beiden Paare kreuzten sich. Von den zwei Richtungen gilt
+     * die, die naeher an der uebergebenen Wunschreihenfolge liegt. Keine Kette (jemand mit
+     * drei Partner*innen, Kreis): Reihenfolge bleibt.
+     */
+    private function chain_order(array $members): array
+    {
+        if (count($members) < 3) {
+            return $members;
+        }
+        $in_unit = array_flip($members);
+        $neighbours = [];
+        foreach ($members as $member) {
+            $neighbours[$member] = array_values(array_filter(array_keys($this->unit_pairs[$member] ?? []), function ($other) use ($in_unit) {
+                return isset($in_unit[$other]);
+            }));
+            if (count($neighbours[$member]) > 2) {
+                return $members;
+            }
+        }
+
+        $ends = array_values(array_filter($members, function ($member) use ($neighbours) {
+            return count($neighbours[$member]) === 1;
+        }));
+        if (count($ends) !== 2) {
+            return $members;
+        }
+        $chain = [$ends[0]];
+        $previous = null;
+        $current = $ends[0];
+        while (count($chain) < count($members)) {
+            $next = null;
+            foreach ($neighbours[$current] as $candidate) {
+                if ($candidate !== $previous) {
+                    $next = $candidate;
+                    break;
+                }
+            }
+            if ($next === null || in_array($next, $chain, true)) {
+                return $members; // nicht zusammenhaengend
+            }
+            $chain[] = $next;
+            $previous = $current;
+            $current = $next;
+        }
+
+        $wish = array_flip($members);
+        $displacement = function (array $order) use ($wish): int {
+            $sum = 0;
+            foreach ($order as $index => $member) {
+                $sum += abs($index - $wish[$member]);
+            }
+            return $sum;
+        };
+        $reversed = array_reverse($chain);
+        return $displacement($reversed) < $displacement($chain) ? $reversed : $chain;
     }
 
     /** x-Position eines Knotens innerhalb seiner Einheit. */
@@ -1946,8 +2799,58 @@ class Relatives_TreeBuilder
     private function relax_units(array &$units, array $order, array $structure): void
     {
         $unit_of = self::unit_lookup($units);
+        $offset = self::member_offsets($units);
         $generations = array_keys($order);
         sort($generations);
+
+        // Familien einmal vorsortieren (die Kreuzungssuche ruft die Zentrierung sehr oft
+        // auf): je Generation der Eltern bzw. der Kinder, Knoten als [Einheit, Versatz].
+        $as_entries = function (array $keys, ?int $generation) use ($units, $unit_of, $offset): array {
+            $entries = [];
+            foreach ($keys as $key) {
+                $unit_id = $unit_of[$key] ?? null;
+                if ($unit_id !== null && ($generation === null || $units[$unit_id]['generation'] === $generation)) {
+                    $entries[] = [$unit_id, $offset[$key]];
+                }
+            }
+            return $entries;
+        };
+        $by_parent_generation = [];
+        $by_child_generation = [];
+        foreach ($structure['families'] as $family) {
+            if (empty($family['parents'])) {
+                continue;
+            }
+            $parent_unit = $unit_of[$family['parents'][0]] ?? null;
+            if ($parent_unit === null) {
+                continue;
+            }
+            $parent_generation = $units[$parent_unit]['generation'];
+            $parents = $as_entries($family['parents'], $parent_generation);
+            $children = $as_entries($family['children'], null);
+            $by_parent_generation[$parent_generation][] = [$parent_unit, $parents, $children];
+            $children_by_generation = [];
+            foreach ($children as $entry) {
+                $children_by_generation[$units[$entry[0]]['generation']][] = $entry;
+            }
+            foreach ($children_by_generation as $generation => $entries) {
+                $by_child_generation[$generation][] = [$parents, $entries];
+            }
+        }
+        // Mittelpunkt der von $entries belegten Spanne.
+        $center = static function (array $units, array $entries): ?float {
+            if (!$entries) {
+                return null;
+            }
+            $min = INF;
+            $max = -INF;
+            foreach ($entries as [$unit_id, $member_offset]) {
+                $x = $units[$unit_id]['x'] + $member_offset;
+                $min = min($min, $x);
+                $max = max($max, $x);
+            }
+            return ($min + $max) / 2;
+        };
 
         for ($iteration = 0; $iteration < 6; $iteration++) {
             // Eltern ueber ihre Kinder (von unten nach oben).
@@ -1958,16 +2861,9 @@ class Relatives_TreeBuilder
                 // aller ihrer Familien, gemessen an den tatsaechlichen Elternteilen statt an
                 // der Mitte der ganzen Einheit.
                 $offsets = [];
-                foreach ($structure['families'] as $family) {
-                    if (empty($family['parents'])) {
-                        continue;
-                    }
-                    $parent_unit = $unit_of[$family['parents'][0]] ?? null;
-                    if ($parent_unit === null || $units[$parent_unit]['generation'] !== $generation) {
-                        continue;
-                    }
-                    $span = $this->span_center($units, $unit_of, $family['children']);
-                    $parents_center = $this->span_center($units, $unit_of, $family['parents'], $generation);
+                foreach ($by_parent_generation[$generation] ?? [] as [$parent_unit, $parents, $children]) {
+                    $span = $center($units, $children);
+                    $parents_center = $center($units, $parents);
                     if ($span !== null && $parents_center !== null) {
                         $offsets[$parent_unit][] = $span - $parents_center;
                     }
@@ -1982,24 +2878,10 @@ class Relatives_TreeBuilder
             // Kinderbloecke unter ihre Eltern (von oben nach unten).
             foreach ($generations as $generation) {
                 $desired = [];
-                foreach ($structure['families'] as $family) {
-                    if (empty($family['parents'])) {
-                        continue;
-                    }
-                    $parent_unit = $unit_of[$family['parents'][0]] ?? null;
-                    if ($parent_unit === null) {
-                        continue;
-                    }
-                    $child_units = [];
-                    foreach ($family['children'] as $child_key) {
-                        $child_unit = $unit_of[$child_key] ?? null;
-                        if ($child_unit !== null && $units[$child_unit]['generation'] === $generation) {
-                            $child_units[$child_unit] = true;
-                        }
-                    }
-                    $span = $this->span_center($units, $unit_of, $family['children'], $generation);
-                    $parents_center = $this->span_center($units, $unit_of, $family['parents'], $units[$parent_unit]['generation']);
-                    if (empty($child_units) || $span === null || $parents_center === null) {
+                foreach ($by_child_generation[$generation] ?? [] as [$parents, $children]) {
+                    $span = $center($units, $children);
+                    $parents_center = $center($units, $parents);
+                    if ($span === null || $parents_center === null) {
                         continue;
                     }
                     // Ganzen Geschwisterblock verschieben statt jede Einheit einzeln auf
@@ -2007,7 +2889,7 @@ class Relatives_TreeBuilder
                     // Ziel ist die Mitte der EIGENEN Eltern, nicht die der ganzen Einheit --
                     // bei Delia/Duncan/Katherine/Morgan liegen die beiden weit auseinander.
                     $delta = $parents_center - $span;
-                    foreach (array_keys($child_units) as $child_unit) {
+                    foreach ($children as [$child_unit]) {
                         $desired[$child_unit] = $units[$child_unit]['x'] + $delta;
                     }
                 }
@@ -2037,6 +2919,19 @@ class Relatives_TreeBuilder
                 $this->settle_generation($units, $order[$generation], $desired, $soft);
             }
         }
+    }
+
+    /** Versatz jedes Knotens gegenueber der Mitte seiner Einheit (siehe member_x()). */
+    private static function member_offsets(array $units): array
+    {
+        $offsets = [];
+        foreach ($units as $unit) {
+            $half = (count($unit['members']) - 1) / 2;
+            foreach ($unit['members'] as $index => $key) {
+                $offsets[$key] = $index - $half;
+            }
+        }
+        return $offsets;
     }
 
     /** Zuordnung Knoten -> Einheit. */

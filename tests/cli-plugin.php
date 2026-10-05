@@ -4,14 +4,14 @@
  * ACP-Login und beweist den vollstaendigen Cleanup. Spiegelt exakt, was der
  * ACP-Plugin-Manager tut (Lifecycle-Funktionen + plugins-Datacache).
  *
- * Aufruf (auf dem Server, im httpdocs-Root): php tests/cli-plugin.php install|uninstall|status
+ * Aufruf (auf dem Server, im MyBB-Stammverzeichnis): php tests/cli-plugin.php install|uninstall|status
  */
 
 if (PHP_SAPI !== 'cli') {
     die('CLI only.');
 }
 define('IN_MYBB', 1);
-chdir(dirname(__DIR__)); // Skript liegt in httpdocs/tests/
+chdir(dirname(__DIR__)); // Skript liegt in <MyBB-Root>/tests/
 require_once './inc/init.php';
 
 if (!defined('MYBB_ADMIN_DIR')) {

@@ -56,20 +56,33 @@ class Relatives_TreePlaceholders
     /** Leibliche Familien (auch reine Geschwisterbalken): Kind => [Familien-id => true]. */
     private array $blood_families = [];
 
+    /** Kinder je leiblicher Familie: Familien-id => [Knoten, ...]. */
+    private array $family_children = [];
+
     /**
      * Arbeitsstand. Wird vor jeder Aussage gesichert und bei Fehlschlag zurueckgesetzt, damit
      * eine halb aufgeloeste Aussage keine verwaisten Platzhalter hinterlaesst.
      * parent_of: Knoten => ihm zugeordneter (Platzhalter-)Elternteil
      * either_of: Kind => sein mehrdeutiges Elternpaar
+     * attached_parents: Halb-/Stiefgeschwister => Eltern, an deren Balken es haengt
      */
     private array $state = [
-        'nodes'       => [],
-        'relations'   => [],
-        'edges'       => [],
-        'attachments' => [],
-        'parent_of'   => [],
-        'either_of'   => [],
+        'nodes'            => [],
+        'relations'        => [],
+        'edges'            => [],
+        'attachments'      => [],
+        'parent_of'        => [],
+        'either_of'        => [],
+        'attached_parents' => [],
     ];
+
+    /**
+     * Werden zuerst aufgeloest: Halb-/Stiefgeschwister legen fest, an welchem Elternpaar
+     * jemand haengt. Erst danach duerfen Tante/Cousin*e ... Platzhalter anlegen -- sonst
+     * bekam "Mischa ist Halbbruder von Jolina UND Cousin von Louisa" eine zweite, erfundene
+     * Herkunft, obwohl Jolinas Vater der Bruder von Louisas Mutter ist.
+     */
+    private const FIRST_PASS = ['half_sibling', 'step_sibling'];
 
     /** Geheimnis/Linienart der gerade aufgeloesten Aussage -- gilt fuer alle daraus entstehenden Kanten. */
     private bool $secret = false;
@@ -96,6 +109,7 @@ class Relatives_TreePlaceholders
                 }
                 if ($blood) {
                     $this->blood_families[$child][$family['id']] = true;
+                    $this->family_children[$family['id']][] = $child;
                 }
             }
             if (count($family['parents']) === 2) {
@@ -120,22 +134,10 @@ class Relatives_TreePlaceholders
     public function resolve(): array
     {
         $resolved = [];
-        foreach ($this->relations as $index => $relation) {
-            $node = (string)$relation['node'];
-            $anchor = (string)$relation['anchor'];
-            if (!empty($relation['synthetic']) || $node === $anchor || !$this->is_person($node) || !$this->is_person($anchor)) {
-                continue;
-            }
-
-            $backup = $this->state;
-            $this->secret = !empty($relation['secret']);
-            $this->style = (string)($relation['style'] ?? 'solid');
-            if ($this->resolve_statement((string)($relation['concept'] ?? ''), $node, $anchor)) {
-                $resolved[$index] = true;
-            } else {
-                $this->state = $backup;
-            }
-        }
+        $this->resolve_pass($resolved, true);
+        $this->resolve_mutual_aunts($resolved);
+        $this->resolve_combined_joins($resolved);
+        $this->resolve_pass($resolved, false);
 
         return [
             'resolved'    => $resolved,
@@ -144,6 +146,150 @@ class Relatives_TreePlaceholders
             'edges'       => array_values($this->state['edges']),
             'attachments' => array_values($this->state['attachments']),
         ];
+    }
+
+    /** Loest die Aussagen des ersten (Halb-/Stiefgeschwister) bzw. des uebrigen Durchgangs einzeln auf. */
+    private function resolve_pass(array &$resolved, bool $first_pass): void
+    {
+        foreach ($this->relations as $index => $relation) {
+            $node = (string)$relation['node'];
+            $anchor = (string)$relation['anchor'];
+            $concept = (string)($relation['concept'] ?? '');
+            if (isset($resolved[$index]) || in_array($concept, self::FIRST_PASS, true) !== $first_pass
+                || !empty($relation['synthetic']) || $node === $anchor || !$this->is_person($node) || !$this->is_person($anchor)) {
+                continue;
+            }
+
+            $backup = $this->state;
+            $this->secret = !empty($relation['secret']);
+            $this->style = (string)($relation['style'] ?? 'solid');
+            if ($this->resolve_statement($concept, $node, $anchor)) {
+                $resolved[$index] = true;
+            } else {
+                $this->state = $backup;
+            }
+        }
+    }
+
+    /**
+     * Gegenseitige Tanten: Smilla ist Tante von Marjatta (Eltern Aleksi, Vilma) und Vilma
+     * Tante von Thore (Eltern Arvi, Smilla). Einzeln ist jeweils offen, ueber welchen
+     * Elternteil es laeuft -- beide Aussagen gelten aber genau dann, wenn Smilla und Vilma
+     * Geschwister sind. Statt zweier neutraler Grosseltern-Platzhalter, deren Linien sich
+     * kreuzen, entsteht diese eine Geschwisterverbindung.
+     */
+    private function resolve_mutual_aunts(array &$resolved): void
+    {
+        $aunt_statements = [];
+        foreach ($this->relations as $index => $relation) {
+            if (isset($resolved[$index]) || !empty($relation['synthetic']) || ($relation['concept'] ?? '') !== 'aunt_uncle'
+                || !$this->is_person((string)$relation['node']) || !$this->is_person((string)$relation['anchor'])) {
+                continue;
+            }
+            $aunt_statements[$index] = [(string)$relation['node'], (string)$relation['anchor']];
+        }
+
+        foreach ($aunt_statements as $index => [$aunt, $anchor]) {
+            if (isset($resolved[$index])) {
+                continue;
+            }
+            foreach (array_keys($this->parents[$anchor] ?? []) as $parent) {
+                if ($parent === $aunt || !$this->is_person($parent) || $this->generation($parent) !== $this->generation($aunt)) {
+                    continue;
+                }
+                foreach ($aunt_statements as $other_index => [$other_aunt, $other_anchor]) {
+                    if ($other_index === $index || isset($resolved[$other_index]) || $other_aunt !== $parent
+                        || !isset($this->parents[$other_anchor][$aunt])) {
+                        continue;
+                    }
+                    $this->secret = !empty($this->relations[$index]['secret']) || !empty($this->relations[$other_index]['secret']);
+                    $this->style = 'solid';
+                    $this->add_relation($aunt, $parent, 'sibling');
+                    $resolved[$index] = true;
+                    $resolved[$other_index] = true;
+                    continue 3;
+                }
+            }
+        }
+    }
+
+    /**
+     * Mehrere Tante/Cousin*e-Aussagen derselben Person zusammen lesen: Einzeln ist offen,
+     * ueber welchen Elternteil die Verbindung laeuft, zusammen oft nicht mehr. Megan ist
+     * Cousine von Jolina (Eltern Jonathan, Irina) UND von Louisa (Eltern Delia, Morgan);
+     * Jonathan und Delia sind Geschwister -- also ist Megans Elternteil eines der
+     * Flemming-Geschwister. Bleibt ueber alle Aussagen genau eine Geschwistergruppe
+     * uebrig, kommt Megans (Platzhalter-)Elternteil bzw. die Tante selbst direkt dort
+     * hinein, statt ueber neutrale Grosseltern-Platzhalter quer ueber den Baum zu laufen.
+     */
+    private function resolve_combined_joins(array &$resolved): void
+    {
+        $groups = [];
+        foreach ($this->relations as $index => $relation) {
+            $concept = (string)($relation['concept'] ?? '');
+            $node = (string)$relation['node'];
+            $anchor = (string)$relation['anchor'];
+            if (isset($resolved[$index]) || !empty($relation['synthetic']) || !in_array($concept, ['aunt_uncle', 'cousin'], true)
+                || $node === $anchor || !$this->is_person($node) || !$this->is_person($anchor)) {
+                continue;
+            }
+            $groups[$node . '|' . self::SIBLING_JOINS[$concept][1]][] = $index;
+        }
+
+        foreach ($groups as $group_key => $indexes) {
+            if (count($indexes) < 2) {
+                continue;
+            }
+            $node = (string)$this->relations[$indexes[0]]['node'];
+            $up_node = (int)substr($group_key, strrpos($group_key, '|') + 1);
+            // Schon eingeordnet: dann greift die normale Pruefung in join_ancestors().
+            if (($up_node === 1 && !empty($this->parents[$node])) || ($up_node === 0 && !empty($this->blood_families[$node]))) {
+                continue;
+            }
+            $sibling_generation = $this->generation($node) - $up_node;
+
+            $common = null;
+            foreach ($indexes as $index) {
+                $anchor = (string)$this->relations[$index]['anchor'];
+                $parents = array_keys($this->parents[$anchor] ?? []);
+                if (!$parents) {
+                    continue 2;
+                }
+                $candidates = [];
+                foreach ($parents as $parent) {
+                    if (!$this->is_person($parent) || $this->generation($parent) !== $sibling_generation) {
+                        continue 3;
+                    }
+                    $families = $this->blood_families[$parent] ?? [];
+                    if (!$families) {
+                        $candidates['solo:' . $parent] = $parent;
+                    }
+                    foreach (array_keys($families) as $family_id) {
+                        $candidates[$family_id] = $parent;
+                    }
+                }
+                $common = $common === null ? $candidates : array_intersect_key($common, $candidates);
+            }
+            if ($common === null || count($common) !== 1) {
+                continue;
+            }
+            $sibling = (string)reset($common);
+
+            $backup = $this->state;
+            $this->secret = !empty($this->relations[$indexes[0]]['secret']);
+            $this->style = 'solid';
+            $member = $up_node === 1
+                ? ($this->state['parent_of'][$node] ?? $this->placeholder_parent($node, $node, 1))
+                : $node;
+            if ($this->generation($member) !== $this->generation($sibling)) {
+                $this->state = $backup;
+                continue;
+            }
+            $this->add_relation($member, $sibling, 'sibling');
+            foreach ($indexes as $index) {
+                $resolved[$index] = true;
+            }
+        }
     }
 
     /** "$node ist $concept von $anchor" -- true, wenn die Aussage keine lose Linie mehr braucht. */
@@ -192,14 +338,19 @@ class Relatives_TreePlaceholders
         return $side_x !== null && $this->join_siblings($side_a, $side_x);
     }
 
-    /** Echte leibliche Vorfahr*innen genau $levels Stufen ueber $key. */
+    /**
+     * Echte leibliche Vorfahr*innen genau $levels Stufen ueber $key. Bei angehaengten
+     * Halb-/Stiefgeschwistern zaehlt das Elternpaar, an dessen Balken sie haengen -- eine*r
+     * davon ist Elternteil.
+     */
     private function real_ancestors(string $key, int $levels): array
     {
         $current = [$key];
         for ($i = 0; $i < $levels; $i++) {
             $next = [];
             foreach ($current as $member) {
-                foreach (array_keys($this->parents[$member] ?? []) as $parent) {
+                $parents = $this->parents[$member] ?? $this->state['attached_parents'][$member] ?? [];
+                foreach (array_keys($parents) as $parent) {
                     $next[$parent] = true;
                 }
             }
@@ -472,6 +623,7 @@ class Relatives_TreePlaceholders
     private function attach_children(string $child, array $parents, string $group): void
     {
         foreach ($parents as $parent) {
+            $this->state['attached_parents'][$child][$parent] = true;
             $this->add_relation($child, $parent, 'child', [
                 'group'  => $group,
                 'attach' => true,

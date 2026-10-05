@@ -48,11 +48,12 @@
 <tr>
 	<td class="tfoot" align="center">
 		<input type="submit" class="button" value="{$lang->relatives_save}" />
-		<a class="button" href="relatives.php?action=families">{$lang->relatives_cancel}</a>
+		<input type="submit" class="button" form="relatives_cancel_form" value="{$lang->relatives_cancel}" />
 	</td>
 </tr>
 </table>
 </form>
+{$relatives_cancel_form}
 </td>
 </tr>
 </table>

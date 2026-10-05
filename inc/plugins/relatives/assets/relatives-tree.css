@@ -13,13 +13,13 @@
 .relatives_tree_page {
 	--relatives-node-width: 170px;
 	--relatives-node-height: 58px;
-	--relatives-surface: #ffffff;
-	--relatives-surface-muted: #f5f7fa;
-	--relatives-border: #c9d2dc;
-	--relatives-border-strong: #9aa7b5;
-	--relatives-text: #2c3540;
-	--relatives-text-muted: #6b7785;
-	--relatives-accent: #0f5c8e;
+	--relatives-surface: var(--h4w-surface-0, #ffffff);
+	--relatives-surface-muted: var(--h4w-surface-1, #f5f7fa);
+	--relatives-border: var(--h4w-relatives-border, #c9d2dc);
+	--relatives-border-strong: var(--h4w-relatives-border-strong, #9aa7b5);
+	--relatives-text: var(--h4w-relatives-text, #2c3540);
+	--relatives-text-muted: var(--h4w-relatives-text-muted, #6b7785);
+	--relatives-accent: var(--h4w-relatives-accent, #0f5c8e);
 	--relatives-shadow: 0 1px 2px rgba(20, 34, 51, 0.08), 0 2px 8px rgba(20, 34, 51, 0.06);
 }
 
@@ -89,13 +89,13 @@
 	flex: 0 0 auto;
 }
 
-.relatives_tree_legend_swatch_male { background: #dfe9f6; border-color: #7ea3cc; }
-.relatives_tree_legend_swatch_female { background: #f8dfe6; border-color: #d295a9; }
-.relatives_tree_legend_swatch_diverse { background: #ece8f6; border-color: #a396c9; }
-.relatives_tree_legend_swatch_self { background: var(--relatives-surface-muted); border: 2px solid #3f4a57; }
-.relatives_tree_legend_swatch_wanted { background: var(--relatives-surface); border: 1px dashed #d79a1f; }
-.relatives_tree_legend_swatch_family { background: var(--relatives-surface-muted); border-left: 5px solid #7d8894; }
-.relatives_tree_legend_swatch_deceased { background: var(--relatives-surface); border-color: #9aa1a9; filter: grayscale(.45); }
+.relatives_tree_legend_swatch_male { background: var(--h4w-relatives-tree-legend-swatch-male-bg, #dfe9f6); border-color: var(--h4w-relatives-tree-legend-swatch-male-border, #7ea3cc); }
+.relatives_tree_legend_swatch_female { background: var(--h4w-relatives-tree-legend-swatch-female-bg, #f8dfe6); border-color: var(--h4w-relatives-tree-legend-swatch-female-border, #d295a9); }
+.relatives_tree_legend_swatch_diverse { background: var(--h4w-relatives-tree-legend-swatch-diverse-bg, #ece8f6); border-color: var(--h4w-relatives-tree-legend-swatch-diverse-border, #a396c9); }
+.relatives_tree_legend_swatch_self { background: var(--relatives-surface-muted); border: 2px solid var(--h4w-relatives-tree-legend-swatch-self-border, #3f4a57); }
+.relatives_tree_legend_swatch_wanted { background: var(--relatives-surface); border: 1px dashed var(--h4w-relatives-tree-legend-swatch-wanted-border, #d79a1f); }
+.relatives_tree_legend_swatch_family { background: var(--relatives-surface-muted); border-left: 5px solid var(--h4w-relatives-tree-legend-swatch-family-border, #7d8894); }
+.relatives_tree_legend_swatch_deceased { background: var(--relatives-surface); border-color: var(--h4w-relatives-tree-legend-swatch-deceased-border, #9aa1a9); filter: grayscale(.45); }
 
 /* Linienarten-Legende: kurze Striche statt Farbflaechen. */
 .relatives_tree_legend_lines { margin-top: 4px; }
@@ -106,7 +106,7 @@
 	height: 0;
 	margin-right: 6px;
 	vertical-align: middle;
-	border-top: 2px solid #7d8894;
+	border-top: 2px solid var(--h4w-relatives-tree-legend-line-border, #7d8894);
 }
 
 .relatives_tree_legend_line_solid { border-top-style: solid; }
@@ -162,32 +162,32 @@
 
 .relatives_tree_connector {
 	fill: none;
-	stroke: #8b949f;
+	stroke: var(--h4w-relatives-tree-connector-color, #8b949f);
 	stroke-width: 1.5;
 }
 
 /* Partner- und Abstammungslinien sind die tragende Struktur: durchgezogen. */
 .relatives_tree_connector_partner,
 .relatives_tree_connector_family {
-	stroke: #7d8894;
+	stroke: var(--h4w-relatives-tree-connector-partner-color, #7d8894);
 }
 
 /* Beziehungen ohne Zwischenperson (Tante, Cousin, freie Bezeichnung) sind keine
  * Abstammung -- gestrichelt, damit sie nicht als Eltern-Kind-Linie missverstanden wird. */
 .relatives_tree_connector_loose {
-	stroke: #a8b1bb;
+	stroke: var(--h4w-relatives-tree-connector-loose-color, #a8b1bb);
 	stroke-dasharray: 5 4;
 }
 
 /* Bestaetigte Konto-Verknuepfung: dieselbe Person in zwei Stammbaeumen. */
 .relatives_tree_connector_account {
-	stroke: #3f8f52;
+	stroke: var(--h4w-relatives-tree-connector-account-color, #3f8f52);
 	stroke-dasharray: 3 3;
 }
 
 /* Zweit-/Adoptivfamilie: andere Farbe, damit die leibliche Linie fuehrend bleibt. */
 .relatives_tree_connector_family_secondary {
-	stroke: #9a7bb0;
+	stroke: var(--h4w-relatives-tree-connector-family-second-color, #9a7bb0);
 }
 
 /* Linienart je Verwandtschaftsgrad (ACP-Feld line_style): "Ehefrau" -> durchgezogen,
@@ -277,28 +277,28 @@
 
 /* Geschlechtsfarben, angelehnt an klassische Stammbaum-Darstellungen. */
 .relatives_tree_node.relatives-gender-male {
-	background: #dfe9f6;
-	border-color: #7ea3cc;
+	background: var(--h4w-relatives-gender-male-bg, #dfe9f6);
+	border-color: var(--h4w-relatives-gender-male-border, #7ea3cc);
 }
 
-.relatives_tree_node.relatives-gender-male .relatives_tree_node_name { color: #24425f; }
-.relatives_tree_node.relatives-gender-male .relatives_tree_node_relationship { color: #4c6b8c; }
+.relatives_tree_node.relatives-gender-male .relatives_tree_node_name { color: var(--h4w-relatives-tree-node-name-color, #24425f); }
+.relatives_tree_node.relatives-gender-male .relatives_tree_node_relationship { color: var(--h4w-relatives-tree-node-relationship-color, #4c6b8c); }
 
 .relatives_tree_node.relatives-gender-female {
-	background: #f8dfe6;
-	border-color: #d295a9;
+	background: var(--h4w-relatives-gender-female-bg, #f8dfe6);
+	border-color: var(--h4w-relatives-gender-female-border, #d295a9);
 }
 
-.relatives_tree_node.relatives-gender-female .relatives_tree_node_name { color: #6d2a41; }
-.relatives_tree_node.relatives-gender-female .relatives_tree_node_relationship { color: #93566b; }
+.relatives_tree_node.relatives-gender-female .relatives_tree_node_name { color: var(--h4w-relatives-tree-node-name-color-2, #6d2a41); }
+.relatives_tree_node.relatives-gender-female .relatives_tree_node_relationship { color: var(--h4w-relatives-tree-node-relationship-color-2, #93566b); }
 
 .relatives_tree_node.relatives-gender-diverse {
-	background: #ece8f6;
-	border-color: #a396c9;
+	background: var(--h4w-relatives-gender-diverse-bg, #ece8f6);
+	border-color: var(--h4w-relatives-gender-diverse-border, #a396c9);
 }
 
-.relatives_tree_node.relatives-gender-diverse .relatives_tree_node_name { color: #413465; }
-.relatives_tree_node.relatives-gender-diverse .relatives_tree_node_relationship { color: #665694; }
+.relatives_tree_node.relatives-gender-diverse .relatives_tree_node_name { color: var(--h4w-relatives-tree-node-name-color-3, #413465); }
+.relatives_tree_node.relatives-gender-diverse .relatives_tree_node_relationship { color: var(--h4w-relatives-tree-node-relationship-color-3, #665694); }
 
 /* Account-Knoten (eigener Wurzel-Account bzw. verknuepfte Fremd-Accounts). */
 .relatives_tree_node.relatives-node-account {
@@ -307,18 +307,18 @@
 }
 
 .relatives_tree_node.relatives-node-self {
-	border: 2px solid #3f4a57;
-	background: #eef1f5;
+	border: 2px solid var(--h4w-relatives-node-self-border, #3f4a57);
+	background: var(--h4w-relatives-node-self-bg, #eef1f5);
 	box-shadow: 0 0 0 3px rgba(63, 74, 87, 0.12), var(--relatives-shadow);
 }
 
 .relatives_tree_node.relatives-node-wanted {
 	border-style: dashed;
-	border-color: #d79a1f;
+	border-color: var(--h4w-relatives-node-wanted-border, #d79a1f);
 }
 
 .relatives_tree_node.relatives-node-linked-confirmed {
-	border-color: #3f8f52;
+	border-color: var(--h4w-relatives-node-linked-confirmed-border, #3f8f52);
 }
 
 .relatives_tree_node.relatives-node-linked-pending {
@@ -345,14 +345,14 @@
 	line-height: 1;
 	padding: 3px 5px;
 	border-radius: 8px;
-	color: #fff;
+	color: var(--h4w-text-on-accent, #fff);
 	letter-spacing: 0.02em;
 }
 
-.relatives_tree_node_badge_wanted { background: #d79a1f; }
-.relatives_tree_node_badge_linked { background: #3f8f52; }
-.relatives_tree_node_badge_pending { background: #8b949f; }
-.relatives_tree_node_badge_deceased { background: #4a5058; }
+.relatives_tree_node_badge_wanted { background: var(--h4w-relatives-tree-node-badge-wanted-bg, #d79a1f); }
+.relatives_tree_node_badge_linked { background: var(--h4w-relatives-tree-node-badge-linked-bg, #3f8f52); }
+.relatives_tree_node_badge_pending { background: var(--h4w-relatives-tree-node-badge-pending-bg, #8b949f); }
+.relatives_tree_node_badge_deceased { background: var(--h4w-relatives-tree-node-badge-deceased-bg, #4a5058); }
 
 /* --- Familien-Kasten, Verstorbene, eigene Knoten ------------------------------------ */
 
@@ -381,7 +381,7 @@
 .relatives_tree_node.relatives-node-deceased {
 	filter: grayscale(.45);
 	border-style: solid;
-	border-color: #9aa1a9;
+	border-color: var(--h4w-relatives-node-deceased-border, #9aa1a9);
 }
 
 /* Eigene Personen: dezent kraeftigerer Rahmen, damit erkennbar ist, was man
@@ -456,7 +456,7 @@
 .relatives_tree_node_more:hover,
 .relatives_tree_node_more:focus {
 	background: var(--relatives-accent);
-	color: #fff;
+	color: var(--h4w-text-on-accent, #fff);
 }
 
 .relatives_tree_node_toggle {
@@ -479,7 +479,7 @@
 .relatives_tree_node_toggle:hover {
 	background: var(--relatives-accent);
 	border-color: var(--relatives-accent);
-	color: #fff;
+	color: var(--h4w-text-on-accent, #fff);
 }
 
 /* --- Panel ------------------------------------------------------------------------ */
@@ -597,14 +597,14 @@
 	margin-top: 6px;
 	background: var(--relatives-accent);
 	border-color: var(--relatives-accent);
-	color: #fff;
+	color: var(--h4w-text-on-accent, #fff);
 	text-align: center;
 	font-weight: bold;
 }
 
 .relatives_tree_menu_button_primary:hover {
-	background: #0c4c77;
-	color: #fff;
+	background: var(--h4w-relatives-tree-menu-button-primary-bg, #0c4c77);
+	color: var(--h4w-text-on-accent, #fff);
 }
 
 .relatives_tree_menu_button_primary[disabled] {
@@ -704,7 +704,7 @@
 .relatives_tree_wheel_hint {
 	top: 12px;
 	background: rgba(20, 34, 51, 0.78);
-	color: #ffffff;
+	color: var(--h4w-text-on-accent, #ffffff);
 	font-size: 0.9em;
 	opacity: 0;
 	transition: opacity 0.2s ease;
@@ -756,15 +756,15 @@
 }
 
 .relatives_tree_menu_button_danger {
-	border-color: #b3261e;
-	color: #b3261e;
+	border-color: var(--h4w-relatives-tree-menu-button-danger-border, #b3261e);
+	color: var(--h4w-relatives-tree-menu-button-danger-color, #b3261e);
 }
 
 .relatives_tree_menu_button_danger:hover,
 .relatives_tree_menu_button_danger:focus-visible {
-	background: #b3261e;
-	border-color: #b3261e;
-	color: #ffffff;
+	background: var(--h4w-relatives-tree-menu-button-danger-bg, #b3261e);
+	border-color: var(--h4w-relatives-tree-menu-button-danger-border, #b3261e);
+	color: var(--h4w-text-on-accent, #ffffff);
 }
 
 /* Status message after tree actions (e.g. delete / deletion request) */

@@ -106,9 +106,10 @@
 
 		<div class="relatives_form_actions">
 			<input type="submit" class="button" value="{$lang->relatives_save}" />
-			<a class="button" href="{$relatives_form_cancel_link}">{$lang->relatives_cancel}</a>
+			<input type="submit" class="button" form="relatives_cancel_form" value="{$lang->relatives_cancel}" />
 		</div>
 	</form>
+	{$relatives_cancel_form}
 
 	{$relatives_form_link_section}
 	</td>
@@ -140,7 +141,7 @@
 		<div class="relatives_relation_flags">
 			<label><input type="radio" name="relations_primary" data-role="primary" /> {$lang->relatives_relation_primary}</label>
 			<label><input type="checkbox" value="1" data-role="secret" /> {$lang->relatives_relation_secret}</label>
-			<button type="button" class="relatives_link_button" data-role="remove">{$lang->relatives_relation_remove}</button>
+			<button type="button" class="button" data-role="remove">{$lang->relatives_relation_remove}</button>
 		</div>
 	</fieldset>
 </template>

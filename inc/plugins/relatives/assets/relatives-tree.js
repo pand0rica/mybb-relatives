@@ -52,6 +52,8 @@
 	var BUS_LANE_GAP = 24;  // Mindestabstand, ab dem zwei Balken dieselbe Hoehe teilen duerfen
 	var LOOSE_LANE = 26;   // Versatz loser Verbindungen, damit sie nicht auf einem Balken liegen
 	var SAME_ROW_LANE = 14; // Hoehe loser Verbindungen innerhalb einer Zeile ueber der Kastenoberkante
+	var LANE_ORDER_LIMIT = 8; // groesste Balkengruppe, deren Stapelreihenfolge exakt optimiert wird
+	var STRAIGHT_TOLERANCE = 32; // groesster Versatz, bei dem ein Einzelkind noch eine gerade Linie bekommt
 	var MIN_ZOOM = 0.3;
 	var MAX_ZOOM = 2;
 
@@ -372,15 +374,75 @@
 	}
 
 	/**
-	 * Vergibt je Zeile Hoehenstufen fuer die Geschwisterbalken (Intervall-Faerbung, von
-	 * links nach rechts): ein Balken bekommt die niedrigste Stufe, deren letzter Balken
-	 * links genug Abstand laesst. Bei einem sauberen Layout bleibt alles auf Stufe 0 --
-	 * das ist nur das Sicherheitsnetz fuer verschraenkte Familien.
+	 * Einzelkind (fast) unter dem Elternstiel: eine gerade Linie statt runter-quer-runter.
+	 * Bis STRAIGHT_TOLERANCE Pixel Versatz landet sie etwas ausserhalb der Kastenmitte --
+	 * ein kleiner Knick saehe wie ein Zeichenfehler aus. Gleiche Regel in
+	 * Relatives_TreeBuilder::count_crossings().
 	 */
 	function isStraightBus(bus) {
-		return bus.originX !== null && bus.stubs.length === 1 && Math.abs(bus.stubs[0].x - bus.originX) < 1;
+		return bus.originX !== null && bus.stubs.length === 1 && Math.abs(bus.stubs[0].x - bus.originX) <= STRAIGHT_TOLERANCE;
 	}
 
+	function busesOverlap(a, b) {
+		return a.left <= b.right + BUS_LANE_GAP && b.left <= a.right + BUS_LANE_GAP;
+	}
+
+	/**
+	 * Kreuzungen, wenn Balken low unter Balken high liegt: die Stichleitungen von high
+	 * laufen durch low, der Elternstiel von low durch high.
+	 */
+	function stackCost(low, high) {
+		var inside = function (x, bus) { return x > bus.left + 1 && x < bus.right - 1; };
+		var cost = 0;
+		high.stubs.forEach(function (stub) { if (inside(stub.x, low)) { cost++; } });
+		if (low.originX !== null && inside(low.originX, high)) { cost++; }
+		return cost;
+	}
+
+	/**
+	 * Stapelreihenfolge einer Gruppe sich ueberschneidender Balken mit den wenigsten
+	 * Kreuzungen (Teilmengen-DP, exakt bis LANE_ORDER_LIMIT Balken; groessere Gruppen bleiben
+	 * "schmal zuerst"). Bei Gleichstand gewinnt der zuerst gefundene Weg -- Reihenfolge der
+	 * Schleifen wie in Relatives_TreeBuilder::stack_order(), damit beide gleich entscheiden.
+	 * $group ist bereits schmal-zuerst sortiert.
+	 */
+	function stackOrder(group) {
+		var n = group.length;
+		if (n <= 1 || n > LANE_ORDER_LIMIT) { return group.slice(); }
+		var pair = group.map(function (low) {
+			return group.map(function (high) { return low === high || !busesOverlap(low, high) ? 0 : stackCost(low, high); });
+		});
+		var full = (1 << n) - 1;
+		var cost = [0];
+		var prev = [];
+		var last = [];
+		for (var mask = 0; mask < full; mask++) {
+			if (cost[mask] === undefined) { continue; }
+			for (var j = 0; j < n; j++) {
+				if (mask & (1 << j)) { continue; }
+				var total = cost[mask];
+				for (var i = 0; i < n; i++) { if (mask & (1 << i)) { total += pair[i][j]; } }
+				var next = mask | (1 << j);
+				if (cost[next] === undefined || total < cost[next]) {
+					cost[next] = total;
+					prev[next] = mask;
+					last[next] = j;
+				}
+			}
+		}
+		var order = [];
+		for (var m = full; m; m = prev[m]) { order.unshift(group[last[m]]); }
+		return order;
+	}
+
+	/**
+	 * Vergibt je Zeile Hoehenstufen fuer die Geschwisterbalken. Sich (auch ueber Dritte)
+	 * ueberschneidende Balken bilden eine Gruppe; in ihrer Stapelreihenfolge (siehe
+	 * stackOrder()) liegt jeder Balken ueber allen frueheren, die er beruehrt. Beispiel:
+	 * Louisas leiblicher und ihr Stief-Balken enden beide an ihr -- nur in einer der beiden
+	 * Reihenfolgen schneidet kein Stiel den anderen Balken. Bei einem sauberen Layout bleibt
+	 * alles auf Stufe 0. Gleiche Regel in Relatives_TreeBuilder::count_crossings().
+	 */
 	function assignBusLanes(buses) {
 		var rows = {};
 		buses.forEach(function (bus) {
@@ -389,15 +451,30 @@
 			(rows[bus.row] = rows[bus.row] || []).push(bus);
 		});
 		Object.keys(rows).forEach(function (rowKey) {
-			var laneEnds = [];
-			rows[rowKey]
-				.sort(function (a, b) { return a.left - b.left; })
-				.forEach(function (bus) {
-					var lane = 0;
-					while (lane < laneEnds.length && laneEnds[lane] >= bus.left - BUS_LANE_GAP) { lane++; }
-					bus.lane = lane;
-					laneEnds[lane] = bus.right;
+			var list = rows[rowKey].sort(function (a, b) { return (a.right - a.left) - (b.right - b.left) || a.left - b.left; });
+			var groups = [];
+			list.forEach(function (bus) {
+				var joined = null;
+				groups = groups.filter(function (group) {
+					if (!group.some(function (other) { return busesOverlap(other, bus); })) { return true; }
+					if (joined) { Array.prototype.push.apply(joined, group); return false; }
+					joined = group;
+					return true;
 				});
+				if (joined) { joined.push(bus); } else { groups.push([bus]); }
+			});
+			groups.forEach(function (group) {
+				group.sort(function (a, b) { return list.indexOf(a) - list.indexOf(b); });
+				var placed = [];
+				stackOrder(group).forEach(function (bus) {
+					var lane = 0;
+					placed.forEach(function (other) {
+						if (busesOverlap(other, bus)) { lane = Math.max(lane, other.lane + 1); }
+					});
+					bus.lane = lane;
+					placed.push(bus);
+				});
+			});
 		});
 	}
 

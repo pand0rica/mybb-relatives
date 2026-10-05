@@ -125,7 +125,8 @@ function relatives_self_anchor_label(int $account_person_id): string
 
 /**
  * Shared navigation bar of all relatives UserCP pages: my relatives, families, tree and
- * the "Stammbaum Popup" button (opens the shareable popup view of $popup_uid's tree).
+ * the "Stammbaum Popup" button (opens the shareable popup view of $popup_uid's tree; in
+ * the families section it opens the public family list instead).
  * $active ('list'|'families'|'tree'|'') marks the section the page belongs to.
  * $action_url/$action_label append one page-specific icon button ("add person"); the
  * label becomes its tooltip and accessible name, $action_icon names the icon template.
@@ -155,7 +156,13 @@ function relatives_nav(int $popup_uid, string $active = '', string $action_url =
 
     // Icon only; the link itself (incl. window.open) comes from relatives_tree_link.
     eval('$relatives_popup_icon = "' . $templates->get('relatives_tree_popup_button') . '";');
-    $relatives_tree_popup_button = relatives_tree_popup_link($popup_uid, $lang->relatives_tree_popup, $relatives_popup_icon, 'relatives_nav_icon relatives_nav_popup');
+    if ($active === 'families') {
+        // On the family pages the icon leads to the public family list instead of the tree.
+        $label = htmlspecialchars_uni($lang->relatives_family_list_open);
+        $relatives_tree_popup_button = '<a class="relatives_nav_icon relatives_nav_popup" href="relatives.php?action=family_list" target="_blank" rel="noopener" title="' . $label . '" aria-label="' . $label . '">' . $relatives_popup_icon . '</a>';
+    } else {
+        $relatives_tree_popup_button = relatives_tree_popup_link($popup_uid, $lang->relatives_tree_popup, $relatives_popup_icon, 'relatives_nav_icon relatives_nav_popup');
+    }
     $relatives_nav_actions = '';
     if ($action_url !== '') {
         eval('$relatives_action_icon = "' . $templates->get($action_icon) . '";');
@@ -192,6 +199,47 @@ function relatives_form_return_url(): string
         default:
             return 'relatives.php?action=list';
     }
+}
+
+/** Hidden inputs that reproduce the query string of a relatives.php?... URL in a GET form. */
+function relatives_get_hidden_inputs(string $url): string
+{
+    $params = [];
+    parse_str((string)parse_url($url, PHP_URL_QUERY), $params);
+    $html = '';
+    foreach ($params as $name => $value) {
+        if (is_string($value)) {
+            $html .= '<input type="hidden" name="' . htmlspecialchars_uni((string)$name) . '" value="' . htmlspecialchars_uni($value) . '" />';
+        }
+    }
+    return $html;
+}
+
+/**
+ * Navigation button (GET form + input.button). Navigation actions next to POST action
+ * buttons must be real buttons too -- an <a> never looks like input.button in the themes.
+ */
+function relatives_nav_button(string $url, string $label, string $extra_class = ''): string
+{
+    global $templates;
+
+    $button_hidden = relatives_get_hidden_inputs($url);
+    $button_label = htmlspecialchars_uni($label);
+    $button_class = $extra_class !== '' ? ' ' . htmlspecialchars_uni($extra_class) : '';
+    $button = '';
+    eval('$button = "' . $templates->get('relatives_nav_button') . '";');
+    return $button;
+}
+
+/**
+ * Detached GET form for a navigation button that sits inside another <form> (forms cannot
+ * be nested). The button references it via form="$form_id"; the form itself goes after
+ * the enclosing form's closing tag.
+ */
+function relatives_nav_form(string $url, string $form_id): string
+{
+    return '<form action="relatives.php" method="get" id="' . htmlspecialchars_uni($form_id) . '" class="relatives_inline_form">'
+        . relatives_get_hidden_inputs($url) . '</form>';
 }
 
 /** Is the relationship type a child-kind degree (Sohn, Tochter, Adoptivkind, ...)? */
@@ -731,7 +779,7 @@ if ($action === 'add' || $action === 'edit') {
     $relatives_form_self_name = relatives_person_name($my_account_person);
     $relatives_form_self_name = htmlspecialchars_uni($relatives_form_self_name !== '' ? $relatives_form_self_name : $lang->relatives_relation_sentence_self);
     $relatives_form_return = in_array($mybb->get_input('return'), ['tree', 'tree_popup'], true) ? $mybb->get_input('return') : '';
-    $relatives_form_cancel_link = relatives_form_return_url();
+    $relatives_cancel_form = relatives_nav_form(relatives_form_return_url(), 'relatives_cancel_form');
     $anchor_persons = [];
     $anchor_seen = [];
     foreach (Relatives_TreeBuilder::build($my_uid, $my_uid)['nodes'] as $tree_node) {
@@ -1064,6 +1112,7 @@ if ($action === 'family_add' || $action === 'family_edit') {
     }
 
     $relatives_nav = relatives_nav($my_uid, 'families');
+    $relatives_cancel_form = relatives_nav_form('relatives.php?action=families', 'relatives_cancel_form');
     eval('$page = "' . $templates->get('relatives_family_form') . '";');
     output_page($page);
     exit;
@@ -1160,8 +1209,9 @@ function relatives_render_family_overview(string $page_action, bool $read_only):
             . $filter_fields
             . '<div class="relatives_families_filter_actions">'
             . '<input type="submit" class="button" value="' . htmlspecialchars_uni($lang->relatives_families_filter_submit) . '" />'
-            . ($is_filtered ? ' <a href="' . $page_url . '">' . htmlspecialchars_uni($lang->relatives_families_filter_reset) . '</a>' : '')
-            . '</div></form>';
+            . ($is_filtered ? ' <input type="submit" class="button" form="relatives_filter_reset_form" value="' . htmlspecialchars_uni($lang->relatives_families_filter_reset) . '" />' : '')
+            . '</div></form>'
+            . ($is_filtered ? relatives_nav_form($page_url, 'relatives_filter_reset_form') : '');
     }
 
     // Volle Mitgliedschaft (auch Geschwister, Nachkommen, Partner*innen), wie im Baum.
@@ -1232,7 +1282,7 @@ function relatives_render_family_overview(string $page_action, bool $read_only):
         $relatives_family_actions = '';
         if (!$read_only && relatives_can_manage_family($family)) {
             $relatives_family_actions = '<div class="relatives_family_card_actions">'
-                . '<a href="relatives.php?action=family_edit&amp;id=' . $relatives_family_id . '">' . htmlspecialchars_uni($lang->relatives_edit) . '</a>'
+                . relatives_nav_button('relatives.php?action=family_edit&id=' . $relatives_family_id, $lang->relatives_edit)
                 . ' <form action="relatives.php?action=family_delete" method="post" class="relatives_inline_form"'
                 . ' data-relatives-confirm="' . htmlspecialchars_uni($lang->relatives_family_confirm_delete) . '"'
                 . ' data-relatives-confirm-title="' . htmlspecialchars_uni($lang->sprintf($lang->relatives_confirm_title_named, $family['name'])) . '"'
@@ -1240,7 +1290,7 @@ function relatives_render_family_overview(string $page_action, bool $read_only):
                 . ' data-relatives-confirm-cancel="' . htmlspecialchars_uni($lang->relatives_cancel) . '">'
                 . '<input type="hidden" name="my_post_key" value="' . $mybb->post_code . '" />'
                 . '<input type="hidden" name="id" value="' . $relatives_family_id . '" />'
-                . '<button type="submit" class="relatives_link_button">' . htmlspecialchars_uni($lang->relatives_delete) . '</button>'
+                . '<input type="submit" class="button" value="' . htmlspecialchars_uni($lang->relatives_delete) . '" />'
                 . '</form></div>';
         }
         eval('$rows .= "' . $templates->get('relatives_families_row') . '";');
@@ -1536,8 +1586,8 @@ if (empty($persons)) {
     $relatives_empty_notice = '<div class="relatives_empty_state">'
         . '<p>' . htmlspecialchars_uni($lang->relatives_no_persons_yet) . '</p>'
         . '<p class="relatives_empty_state_actions">'
-        . '<a class="button relatives_nav_primary" href="relatives.php?action=add">' . htmlspecialchars_uni($lang->relatives_no_persons_add) . '</a> '
-        . '<a class="button" href="relatives.php?action=tree">' . htmlspecialchars_uni($lang->relatives_no_persons_tree) . '</a>'
+        . relatives_nav_button('relatives.php?action=add', '+ ' . $lang->relatives_no_persons_add, 'relatives_nav_primary') . ' '
+        . relatives_nav_button('relatives.php?action=tree', $lang->relatives_no_persons_tree)
         . '</p></div>';
 }
 

@@ -153,6 +153,14 @@ auf die zum gewählten Geschlecht passenden `gender`-Zeilen gefiltert:
       wird nicht Elternteil der Kinder). Schwager*in nur, wenn genau eine Seite eine
       Partner*in hat. Halb-/Stiefgeschwister hängen als Zweitfamilie (`group` `half`/`step`,
       `positions` = positioniert, wird aber als `family_secondary` am Eltern-Balken gezeichnet).
+    - **Aussagen werden zusammen gelesen** (vor der Einzelauflösung): Halb-/Stiefgeschwister
+      zuerst (ihr Elternpaar zählt danach als bekannte Herkunft – Mischa, Halbbruder von
+      Jolina UND Cousin von Louisa, bekommt keine zweite, erfundene Herkunft); gegenseitige
+      Tanten („Smilla Tante von Marjatta", „Vilma Tante von Thore", jeweils Elternteil des
+      anderen Kindes) werden Geschwister; mehrere Tante/Cousin*e-Aussagen derselben Person,
+      deren mögliche Geschwistergruppen sich auf genau eine schneiden, setzen die Person bzw.
+      ihren Platzhalter-Elternteil direkt in diese Gruppe (`resolve_mutual_aunts()`,
+      `resolve_combined_joins()`).
     - Bleiben lose Linie: Groß-/Urgroßeltern und Enkel (bewusst nicht im Umfang), freie
       Bezeichnungen, `distant_*`, widersprüchliche Generationen, Familien-Kästen auf dem Weg,
       mehrere Partner*innen, Schwager*in ohne erkennbare Richtung.
@@ -165,8 +173,24 @@ auf die zum gewählten Geschlecht passenden `gender`-Zeilen gefiltert:
   Familien, die über ein Paar verbunden sind, stehen als Kette nebeneinander – „Mamas
   Geschwister | Mama, Papa | Papas Geschwister" –, angeheiratete Partner*innen stehen außen.
   So endet jeder Geschwisterbalken an der Paar-Nahtstelle; Balken zweier Familien laufen
-  nicht übereinander. Überschneiden sich Balken einer Zeile trotzdem (verschränkte
-  Familien), versetzt das Frontend sie in der Höhe (`assignBusLanes()`). Umgesetzt als
+  nicht übereinander. Partnerketten (Cathalain – Caiomhe – Simon – Milena) stehen immer als
+  Kette (`chain_order()`); lose Verbindungen derselben Zeile (Freund*innen …) stehen direkt
+  neben ihrem Anker, der Anker am Rand seines Geschwisterblocks
+  (`place_floating_beside_anchor()`).
+  **Kreuzungsminimierung** (`TreeBuilder::reduce_crossings()`): Einheiten ohne eigene Eltern
+  (Familien-Kästen, Stammeltern) probieren jeden Platz ihrer Zeile; danach werden nur an
+  Kreuzungen beteiligte Einheiten verschoben (±`CROSSING_WINDOW` Plätze, auch mit Neuordnung
+  aller Generationen darunter) oder gespiegelt – übernommen wird nur, was Kreuzungen spart,
+  höchstens `CROSSING_BUDGET` Proben (feste Anzahl statt Zeit: derselbe Baum sieht immer
+  gleich aus). Gezählt wird in `count_crossings()` genau wie `buildConnectorPaths()`
+  zeichnet – die `DRAW_*`-Konstanten und die Höhenstufen-Regel müssen zu
+  `relatives-tree.js` passen. Überschneiden sich Balken einer Zeile, versetzt das Frontend
+  sie in der Höhe (`assignBusLanes()`): je Gruppe sich überschneidender Balken die
+  Stapelreihenfolge mit den wenigsten Kreuzungen (Teilmengen-DP bis `LANE_ORDER_LIMIT`
+  Balken, sonst schmal zuerst). Danach rückt `straighten_single_children()` Einzelkinder genau
+  unter ihren Elternstiel (Eltern oder Kind verschieben, notfalls samt Nachbarn; nur ohne neue
+  Kreuzung); bleibt ein Versatz bis `STRAIGHT_TOLERANCE` (32 px), zeichnet das Frontend
+  trotzdem eine gerade Linie statt eines Knicks. Umgesetzt als
   iterative Relaxation (vereinfachtes Sugiyama-Verfahren, 6 Durchläufe) statt Rekursion –
   kann bei widersprüchlichen Nutzereingaben nicht entarten. `y` bleibt die Generation, `x`
   ist ein Float in Knotenbreiten; der Wurzel-Account liegt immer bei `x = 0`.
@@ -464,7 +488,7 @@ fehlende nach (`debugging.md` #21).
 
 | Hook | Handler | Zweck |
 |---|---|---|
-| `member_profile_end` | `relatives_handle_member_profile` | Rendert „Gesucht"-Karten (`is_wanted=1`) auf der Profilseite und setzt `$relatives_tree_link` (Setting `relatives_tree_link_profile`); **responsives CSS statt der alten hartcodierten Theme-tid-Breiten-Sonderfälle** |
+| `member_profile_end` | `relatives_handle_member_profile` | Rendert „Gesucht"-Mini-Karten (`is_wanted=1`) aller Personen im Stammbaum-Ausschnitt des Charakters (`Relatives_TreeBuilder::wanted_nodes()`, Fallback vor der Zusammenführung: eigene Liste) in `{$relatives_wanted_box}` (beim Aktivieren automatisch in `member_profile` vor `{$signature}` eingefügt) und setzt `$relatives_tree_link` (Setting `relatives_tree_link_profile`); **responsives CSS statt der alten hartcodierten Theme-tid-Breiten-Sonderfälle** |
 | `postbit`, `postbit_prev` | `relatives_handle_postbit` | Setzt `$post['relatives_tree_link']` (Setting `relatives_tree_link_postbit`) |
 | `memberlist_user` | `relatives_handle_memberlist_user` | Setzt `$user['relatives_tree_link']` (Setting `relatives_tree_link_memberlist`) |
 | `usercp_menu` | `relatives_handle_usercp_menu` | Eigener, sauberer UserCP-Menüpunkt „Verwandtschaften" (ersetzt die alte zusammengewürfelte 3-Link-Nav) |
@@ -506,7 +530,9 @@ relatives_get_relation(int $person_id, int $uid): array
 ```
 Liest den Cache aus `relatives_person_owners.computed_*` (rechnet einmalig nach, wenn er leer ist).
 `category` ∈ `exact`, `distant_ancestor`, `distant_descendant`, `distant_relative`, `custom`, `unknown`.
-Der Provider-Hook `relatives_provide_jobliste_entities()` liefert zusätzlich `relation_label`, die
+Der Provider-Hook `relatives_provide_jobliste_entities()` liefert zusätzlich `relation_label`,
+`relatives_resolve_jobliste_entity_label()` füllt – wenn Jobliste es anfragt – `relations[]` mit
+`['uid', 'relation_label']` je Besitzer*in (Info-Icon in der Jobliste-Gesamtübersicht), die
 Such-API in `owners[]` zusätzlich `computed_label`, `computed_concept_key`, `computed_category`.
 
 ## Abhängigkeiten

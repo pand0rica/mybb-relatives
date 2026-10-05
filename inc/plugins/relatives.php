@@ -79,6 +79,10 @@ function relatives_deactivate(): void
 if (defined('THIS_SCRIPT') && in_array(THIS_SCRIPT, ['member.php', 'memberlist.php', 'showthread.php', 'newreply.php', 'editpost.php'], true)) {
     global $templatelist;
     $templatelist = (isset($templatelist) && $templatelist !== '' ? $templatelist . ',' : '') . 'relatives_tree_link';
+    if (THIS_SCRIPT === 'member.php') {
+        $templatelist .= ',relatives_profile_wanted_box,relatives_profile_wanted_card,relatives_profile_wanted_avatar,'
+            . 'relatives_profile_wanted_initial,relatives_profile_wanted_details,relatives_profile_wanted_link';
+    }
 }
 
 // --- Hook-Registrierung ---------------------------------------------------------------
@@ -127,39 +131,106 @@ function relatives_handle_member_profile(): void
         $relatives_tree_link = relatives_tree_link_html((int)$memprofile['uid'], (string)$memprofile['username']);
     }
 
+    $relatives_wanted_box = '';
     $owner_uid = (int)$memprofile['uid'];
-    $persons = Relatives_Database::get_persons_by_owner($owner_uid);
-    $wanted = array_filter($persons, static function ($person) {
-        return (int)$person['is_wanted'] === 1;
-    });
+    if (!isset(relatives_uids_with_tree()[$owner_uid])) {
+        return;
+    }
 
+    $wanted = relatives_profile_wanted_persons($owner_uid);
     if (empty($wanted)) {
         return;
     }
 
     $lang->load('relatives');
-    $labels = relatives_get_relationship_labels($persons);
 
     $cards = '';
     foreach ($wanted as $person) {
         $name = htmlspecialchars_uni($person['name']);
-        $label = htmlspecialchars_uni($labels[(int)$person['id']]);
-        $link = '';
-        if (!empty($person['wanted_thread_link'])) {
-            $safe_url = relatives_sanitize_url((string)$person['wanted_thread_link']);
-            if ($safe_url !== '') {
-                $link = '<a href="' . htmlspecialchars_uni($safe_url) . '" rel="nofollow">'
-                    . htmlspecialchars_uni($lang->relatives_wanted_thread_link_text) . '</a>';
-            }
+
+        $avatar_url = relatives_sanitize_url((string)($person['avatar'] ?? ''));
+        if ($avatar_url !== '') {
+            $avatar_src = htmlspecialchars_uni($avatar_url);
+            eval('$avatar = "' . $templates->get('relatives_profile_wanted_avatar') . '";');
+        } else {
+            $initial = htmlspecialchars_uni(my_strtoupper(my_substr(trim((string)$person['name']), 0, 1)));
+            eval('$avatar = "' . $templates->get('relatives_profile_wanted_initial') . '";');
         }
-        $description = nl2br(htmlspecialchars_uni((string)$person['description']));
-        $relationship_description = nl2br(htmlspecialchars_uni((string)$person['relationship_description']));
+
+        $meta_parts = [];
+        if ($person['label'] !== '') {
+            $meta_parts[] = htmlspecialchars_uni($person['label']);
+        }
+        if ($person['age'] !== null && $person['age'] !== '') {
+            $meta_parts[] = htmlspecialchars_uni($lang->sprintf($lang->relatives_wanted_age, (int)$person['age']));
+        }
+        $meta = implode(' &middot; ', $meta_parts);
+
+        $details = '';
+        $description = nl2br(htmlspecialchars_uni(trim((string)$person['description'])));
+        $relationship_description = nl2br(htmlspecialchars_uni(trim((string)$person['relationship_description'])));
+        if ($description !== '' || $relationship_description !== '') {
+            eval('$details = "' . $templates->get('relatives_profile_wanted_details') . '";');
+        }
+
+        $link = '';
+        $safe_url = relatives_sanitize_url((string)($person['wanted_thread_link'] ?? ''));
+        if ($safe_url !== '') {
+            $link_url = htmlspecialchars_uni($safe_url);
+            eval('$link = "' . $templates->get('relatives_profile_wanted_link') . '";');
+        }
 
         eval('$relatives_wanted_card = "' . $templates->get('relatives_profile_wanted_card') . '";');
         $cards .= $relatives_wanted_card;
     }
 
+    $count = count($wanted);
     eval('$relatives_wanted_box = "' . $templates->get('relatives_profile_wanted_box') . '";');
+}
+
+/**
+ * Gesuchte Personen fuer die Profil-Box, einheitlich aufbereitet (name, label, age,
+ * avatar, description, relationship_description, wanted_thread_link).
+ *
+ * Mit gemeinsamem Geflecht: alle gesuchten Personen im Stammbaum-Ausschnitt des
+ * Charakters (auch fremd eingetragene). Sonst Rueckfall auf die eigene Liste.
+ */
+function relatives_profile_wanted_persons(int $uid): array
+{
+    $result = [];
+
+    if (Relatives_Graph::is_merged()) {
+        foreach (Relatives_TreeBuilder::wanted_nodes($uid) as $node) {
+            $result[] = [
+                'name'                     => (string)$node['name'],
+                'label'                    => (string)($node['computed_label'] ?? ''),
+                'age'                      => $node['age'],
+                'avatar'                   => (string)($node['avatar'] ?? ''),
+                'description'              => (string)($node['description'] ?? ''),
+                'relationship_description' => (string)($node['relationship_description'] ?? ''),
+                'wanted_thread_link'       => (string)($node['wanted_thread_link'] ?? ''),
+            ];
+        }
+        return $result;
+    }
+
+    $persons = Relatives_Database::get_persons_by_owner($uid);
+    $labels = relatives_get_relationship_labels($persons);
+    foreach ($persons as $person) {
+        if ((int)$person['is_wanted'] !== 1) {
+            continue;
+        }
+        $result[] = [
+            'name'                     => (string)$person['name'],
+            'label'                    => (string)($labels[(int)$person['id']] ?? ''),
+            'age'                      => $person['age'] !== null ? (int)$person['age'] : null,
+            'avatar'                   => (string)($person['avatar'] ?? ''),
+            'description'              => (string)($person['description'] ?? ''),
+            'relationship_description' => (string)($person['relationship_description'] ?? ''),
+            'wanted_thread_link'       => (string)($person['wanted_thread_link'] ?? ''),
+        ];
+    }
+    return $result;
 }
 
 // --- Hook-Handler: postbit / memberlist_user ------------------------------------------
@@ -452,8 +523,8 @@ function relatives_cleanup_deleted_user(int $uid): void
  */
 function relatives_register_alert_formatter(): void
 {
-    static $registered = false;
     global $mybb, $lang;
+    static $registered = false;
 
     if ($registered) {
         return;
@@ -582,8 +653,30 @@ function relatives_resolve_jobliste_entity_label(&$args): void
     }
 
     $person = Relatives_Database::get_person((int)$args['entity_id']);
-    if ($person !== null) {
-        $args['label'] = (string)$person['name'];
+    if ($person === null) {
+        return;
+    }
+    $args['label'] = (string)$person['name'];
+
+    // Optionales Extra (Jobliste >= 2.1): bestaetigt verknuepfter Charakter-Account, damit
+    // die Person dort als Account statt doppelt als Verwandte:r erscheint.
+    if (array_key_exists('linked_uid', $args)
+        && (int)$person['link_status'] === 2 && !empty($person['linked_uid'])) {
+        $args['linked_uid'] = (int)$person['linked_uid'];
+    }
+
+    // Optionales Extra (Jobliste >= 2.1): wer die Person eingetragen hat und in welchem
+    // Grad, aus dem Verwandtschafts-Cache. Nur fuellen, wenn der Konsument es anfragt.
+    if (isset($args['relations']) && is_array($args['relations'])) {
+        foreach (Relatives_Database::get_owner_uids((int)$person['id']) as $owner_uid) {
+            $relation = relatives_get_relation((int)$person['id'], (int)$owner_uid);
+            $args['relations'][] = [
+                'uid'            => (int)$owner_uid,
+                'relation_label' => !empty($relation['label'])
+                    ? (string)Relatives_Kinship::display_label((string)$relation['label'], $relation['via_person_id'] ?? null)
+                    : '',
+            ];
+        }
     }
 }
 

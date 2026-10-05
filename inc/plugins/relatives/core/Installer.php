@@ -168,6 +168,7 @@ class Relatives_Installer
         self::install_stylesheets();
         self::attach_usercp_stylesheet();
         self::install_usercp_nav_misc_link();
+        self::install_profile_variable();
         // Alert-Typen bleiben beim Deaktivieren bestehen (siehe Relatives_Alerts::unregister_types()).
         Relatives_Alerts::register_types();
 
@@ -514,6 +515,7 @@ class Relatives_Installer
         $db->delete_query("themestylesheets", "name = 'relatives-tree.css'");
         self::detach_usercp_stylesheet();
         self::uninstall_usercp_nav_misc_link();
+        self::uninstall_profile_variable();
         $themes = $db->simple_select("themes", "tid");
         while ($theme = $db->fetch_array($themes)) {
             update_theme_stylesheet_list((int)$theme["tid"]);
@@ -638,6 +640,9 @@ class Relatives_Installer
             ],
         ];
 
+        // Aufraeumen: Setting aus einem kurzlebigen Entwicklungsstand.
+        $db->delete_query('settings', "name = 'relatives_wanted_box_templates'");
+
         foreach ($settings as $setting) {
             if ($db->fetch_array($db->simple_select('settings', 'sid', "name = '" . $db->escape_string($setting['name']) . "'"))) {
                 continue; // idempotent: bereits vorhanden (Upgrade-Pfad)
@@ -690,7 +695,7 @@ class Relatives_Installer
      * .usercp_nav_item-Grundlayout enthaelt) nur auf Seiten, an die es per "attachedto"
      * gebunden ist -- default nur "usercp.php". Ohne diesen Eintrag fehlt auf relatives.php
      * das komplette Sidebar-Styling (nicht nur unser eigener Menuepunkt). Gleiches Muster wie
-     * im PHP5-Vorgaengerplugin (siehe Archiv/Verwandte_php5).
+     * im PHP5-Vorgaengerplugin.
      */
     private static function attach_usercp_stylesheet(): void
     {
@@ -777,7 +782,7 @@ class Relatives_Installer
 
     private static function usercp_nav_misc_row(): string
     {
-        return '<tr><td class="trow1 smalltext"><a href="relatives.php?action=list" class="usercp_nav_item usercp_nav_relatives" style="background-image: url(\'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2216%22 height=%2216%22 viewBox=%220 0 16 16%22%3E%3Ccircle cx=%224%22 cy=%224%22 r=%222.2%22 fill=%22%23555%22/%3E%3Ccircle cx=%2212%22 cy=%224%22 r=%222.2%22 fill=%22%23555%22/%3E%3Ccircle cx=%228%22 cy=%2211%22 r=%222.6%22 fill=%22%23555%22/%3E%3Cpath d=%22M4 6.5V8a2 2 0 0 0 2 2M12 6.5V8a2 2 0 0 1-2 2%22 stroke=%22%23555%22 stroke-width=%221%22 fill=%22none%22/%3E%3C/svg%3E\');">{$lang->relatives_usercp_menu_item}</a></td></tr>';
+        return '<tr><td class="trow1 smalltext"><a href="relatives.php?action=list" class="usercp_nav_item usercp_nav_relatives" style="background-repeat: no-repeat; background-position: 0 50%; padding-left: 23px; background-image: url(\'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2216%22 height=%2216%22 viewBox=%220 0 16 16%22%3E%3Ccircle cx=%224%22 cy=%224%22 r=%222.2%22 fill=%22%23555%22/%3E%3Ccircle cx=%2212%22 cy=%224%22 r=%222.2%22 fill=%22%23555%22/%3E%3Ccircle cx=%228%22 cy=%2211%22 r=%222.6%22 fill=%22%23555%22/%3E%3Cpath d=%22M4 6.5V8a2 2 0 0 0 2 2M12 6.5V8a2 2 0 0 1-2 2%22 stroke=%22%23555%22 stroke-width=%221%22 fill=%22none%22/%3E%3C/svg%3E\');">{$lang->relatives_usercp_menu_item}</a></td></tr>';
     }
 
     private static function install_usercp_nav_misc_link(): void
@@ -800,9 +805,11 @@ class Relatives_Installer
     {
         require_once MYBB_ROOT . "inc/adminfunctions_templates.php";
 
+        // Match by href + class instead of the exact row, so rows baked by older
+        // versions (e.g. different inline style) are removed as well.
         find_replace_templatesets(
             'usercp_nav_misc',
-            '#' . preg_quote(self::usercp_nav_misc_row(), '#') . '#i',
+            '#<tr><td[^>]*><a href="relatives\.php\?action=list" class="usercp_nav_item usercp_nav_relatives"[^>]*>.*?</a></td></tr>#i',
             '',
             0
         );
@@ -814,6 +821,40 @@ class Relatives_Installer
         find_replace_templatesets(
             'usercp_nav_misc',
             '#' . preg_quote('{$relatives_usercp_row}', '#') . '#i',
+            '',
+            0
+        );
+    }
+
+    /**
+     * Setzt {$relatives_wanted_box} (Gesucht-Karten) ins Template member_profile, je
+     * Template-Set einzeln: vor {$signature}, ohne Signatur vor {$footer}. Nur in Sets,
+     * deren member_profile die Variable noch nicht enthaelt -- eine von Hand verschobene
+     * Variable bleibt beim erneuten Aktivieren an ihrem Platz. Andere Templates
+     * (member_profile_*) fasst das Plugin bewusst nicht an.
+     */
+    private static function install_profile_variable(): void
+    {
+        require_once MYBB_ROOT . "inc/adminfunctions_templates.php";
+
+        // Lookahead ab Textanfang: greift nur, wenn die Variable im Template noch fehlt.
+        $missing = '^(?!.*' . preg_quote('{$relatives_wanted_box}', '#') . ')(.*?)';
+        foreach (['{$signature}', '{$footer}'] as $anchor) {
+            find_replace_templatesets(
+                'member_profile',
+                '#' . $missing . preg_quote($anchor, '#') . '#is',
+                '${1}{$relatives_wanted_box}' . $anchor
+            );
+        }
+    }
+
+    private static function uninstall_profile_variable(): void
+    {
+        require_once MYBB_ROOT . "inc/adminfunctions_templates.php";
+
+        find_replace_templatesets(
+            'member_profile',
+            '#' . preg_quote('{$relatives_wanted_box}', '#') . '#i',
             '',
             0
         );

@@ -38,7 +38,7 @@ const OFFSETS = [
     'parent' => -1, 'child' => 1, 'sibling' => 0, 'spouse' => 0,
     'aunt_uncle' => -1, 'niece_nephew' => 1, 'cousin' => 0, 'great_aunt_uncle' => -2,
     'grandparent' => -2, 'parent_in_law' => -1, 'child_in_law' => 1, 'sibling_in_law' => 0,
-    'half_sibling' => 0, 'step_sibling' => 0,
+    'half_sibling' => 0, 'step_sibling' => 0, 'friend' => 0,
 ];
 
 /**
@@ -241,6 +241,80 @@ check('aunt in the wrong generation stays a loose line', [1, []], [count($t['lin
 echo "\n=== Geheim ===\n";
 $t = tree([1 => 0, 2 => -1], [[2, 'aunt_uncle', 1, true]]);
 check('secret statement keeps its chain secret', true, find_family($t, ['placeholder:parent:person:1'], ['person:1'])['secret'] ?? null);
+
+echo "\n=== Elternloser Elternteil (z. B. Familien-Kasten) ===\n";
+// 20 hat keine Eltern im Baum und ist Mutter von 21, die mit 14 (Enkel von 10) verheiratet
+// ist. Frueher landete 20 am Zeilenende, und ihr Balken lief ueber die Abgaenge von 12/13.
+$t = tree([1 => 0, 10 => -3, 11 => -2, 12 => -2, 13 => -2, 20 => -2, 14 => -1, 15 => -1, 16 => -1, 21 => -1], [
+    [11, 'child', 10], [12, 'child', 10], [13, 'child', 10],
+    [14, 'child', 11], [15, 'child', 12], [16, 'child', 13],
+    [21, 'child', 20], [21, 'spouse', 14], [1, 'child', 14], [1, 'child', 21],
+]);
+$x = static function (int $id) use ($t): float {
+    return (float)$t['nodes']['person:' . $id]['x'];
+};
+check('rootless parent stands left of foreign siblings 12/13', true, $x(20) < $x(12) && $x(20) < $x(13));
+check('rootless parent stands close above its child', true, abs($x(20) - $x(21)) < 1.0);
+// Einzelkind genau unter dem Elternstiel -- sonst zeichnet das Frontend einen Knick.
+check('single child exactly below its parent (no jog)', true, abs($x(20) - $x(21)) < 0.001);
+
+echo "\n=== Aussagen zusammen lesen ===\n";
+// Mischa (6) ist Halbbruder von Jolina (1, Eltern 2+3) und Cousin von Louisa (5), deren
+// Mutter Delia (4) Schwester von Jonathan (2) ist: keine zweite, erfundene Herkunft.
+$t = tree([1 => 0, 2 => -1, 3 => -1, 4 => -1, 5 => 0, 6 => 0], [
+    [2, 'parent', 1], [3, 'parent', 1], [4, 'sibling', 2], [5, 'child', 4],
+    [6, 'half_sibling', 1], [6, 'cousin', 5],
+]);
+check('half-sibling + cousin: no invented parent', false, isset($t['nodes']['placeholder:parent:person:6']));
+check('half-sibling hangs at the parents of the half-sibling', true, find_family($t, ['person:2', 'person:3'], ['person:6']) !== null);
+
+// Megan (6) ist Cousine von Jolina (1, Eltern 2+3) UND von Louisa (5, Eltern 4+7); 2 und 4
+// sind Geschwister -- Megans Elternteil gehoert in genau diese Geschwistergruppe.
+$t = tree([1 => 0, 2 => -1, 3 => -1, 4 => -1, 7 => -1, 5 => 0, 6 => 0], [
+    [2, 'parent', 1], [3, 'parent', 1], [4, 'sibling', 2], [4, 'parent', 5], [7, 'parent', 5],
+    [6, 'cousin', 1], [6, 'cousin', 5],
+]);
+$megan_parent = 'placeholder:parent:person:6';
+check('combined cousins: parent placeholder in the sibling group', true, find_family($t, [], ['person:2', 'person:4', $megan_parent]) !== null);
+check('combined cousins: no neutral grandparent', [], array_values(array_filter(placeholders($t), static function ($key) {
+    return strpos($key, 'placeholder:neutral:') === 0;
+})));
+
+// Smilla (6) ist Tante von Marjatta (1, Eltern 2+3), Vilma (3) Tante von Thore (4, Eltern
+// 5+6): beide Aussagen gelten genau dann, wenn Smilla und Vilma Geschwister sind.
+$t = tree([1 => 0, 2 => -1, 3 => -1, 4 => 0, 5 => -1, 6 => -1], [
+    [2, 'parent', 1], [3, 'parent', 1], [5, 'parent', 4], [6, 'parent', 4],
+    [6, 'aunt_uncle', 1], [3, 'aunt_uncle', 4],
+]);
+check('mutual aunts become siblings', true, find_family($t, [], ['person:3', 'person:6']) !== null);
+check('mutual aunts: no placeholders', [], placeholders($t));
+
+echo "\n=== Anordnung ===\n";
+// Freund*in (6) der Wurzel steht direkt neben ihr, die Wurzel am Rand ihres
+// Geschwisterblocks -- sonst liefe die lose Linie ueber die Geschwister 4 und 5.
+$t = tree([4 => 0, 1 => 0, 5 => 0, 2 => -1, 3 => -1, 6 => 0], [
+    [2, 'parent', 1], [3, 'parent', 1], [4, 'sibling', 1], [5, 'sibling', 1], [6, 'friend', 1],
+]);
+$x = static function (int $id) use ($t): float {
+    return (float)$t['nodes']['person:' . $id]['x'];
+};
+$side = static function (int $id) use ($x): int {
+    return $x($id) <=> $x(1);
+};
+check('loose friend stands right beside the root', true, abs($x(6) - $x(1)) < 2.0);
+check('no sibling between root and friend', true, $side(4) === -$side(6) && $side(5) === -$side(6));
+
+// Partnerkette 2-3-4-5 (3 ist Elternteil der Wurzel mit 2 und Partner*in von 4, 4 von 5)
+// steht auch dann als Kette nebeneinander, wenn sie in anderer Reihenfolge angelegt wurde.
+$t = tree([1 => 0, 5 => -1, 2 => -1, 4 => -1, 3 => -1], [
+    [2, 'parent', 1], [3, 'parent', 1], [4, 'spouse', 3], [5, 'spouse', 4],
+]);
+$x = static function (int $id) use ($t): float {
+    return (float)$t['nodes']['person:' . $id]['x'];
+};
+check('partner chain stays adjacent', [1.0, 1.0, 1.0], [
+    round(abs($x(3) - $x(2)), 2), round(abs($x(4) - $x(3)), 2), round(abs($x(5) - $x(4)), 2),
+]);
 
 echo "\n{$pass} passed, {$fail} failed\n";
 exit($fail > 0 ? 1 : 0);

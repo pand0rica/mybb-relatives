@@ -72,7 +72,7 @@ $l['relatives_field_relationship_description'] = "Eure Beziehung";
 $l['relatives_field_related_to'] = "Bezugsperson";
 $l['relatives_field_related_to_hint'] = "Der Verwandtschaftsgrad gilt relativ zu dieser Person: „Bruder“ mit Bezugsperson „Mutter“ ergibt im Stammbaum „Onkel“. Ohne Bezugsperson gilt er relativ zu dir.";
 $l['relatives_related_to_self'] = '– zu deinem Charakter –';
-$l['relatives_related_to_self_named'] = '%s (dein Charakter)';
+$l['relatives_related_to_self_named'] = '{1} (dein Charakter)';
 $l['relatives_relation_sentence'] = 'Bedeutet: {1} ist {2} von {3}.';
 $l['relatives_relation_sentence_subject'] = 'Diese Person';
 $l['relatives_relation_sentence_self'] = 'deinem Charakter';
@@ -112,6 +112,8 @@ $l['relatives_error_generic'] = "Etwas ist schiefgelaufen. Bitte versuch es erne
 // Gesucht-Box (Profil)
 $l['relatives_wanted_box_title'] = "Gesucht";
 $l['relatives_wanted_thread_link_text'] = "Zum Gesuchs-Thread";
+$l['relatives_wanted_more'] = "Mehr";
+$l['relatives_wanted_age'] = "{1} Jahre";
 
 // Verknüpfungs-Workflow
 $l['relatives_pending_link_requests'] = "Offene Verknüpfungsanfragen";
@@ -174,6 +176,7 @@ $l['relatives_families_filter_submit'] = 'Filtern';
 $l['relatives_families_filter_reset'] = 'Filter zurücksetzen';
 $l['relatives_families_filter_no_match'] = 'Keine Familie passt zu diesem Filter.';
 $l['relatives_family_list_title'] = 'Familien';
+$l['relatives_family_list_open'] = 'Öffentliche Familienliste öffnen';
 $l['relatives_family_list_intro'] = 'Hier siehst du alle Familien des Forums mit ihren Mitgliedern. Über den Filter findest du zum Beispiel Familien, die sich über neue Mitglieder freuen.';
 $l['relatives_families_members'] = 'Personen';
 $l['relatives_families_show_members'] = 'Alle Mitglieder anzeigen';
@@ -184,7 +187,7 @@ $l['relatives_family_deleted'] = 'Die Familie wurde gelöscht.';
 $l['relatives_family_confirm_delete'] = 'Familie wirklich löschen? Sie verschwindet aus allen Stammbäumen, die Personen bleiben erhalten.';
 $l['relatives_family_edit_title'] = 'Familie bearbeiten';
 $l['relatives_family_form_hint'] = 'Gibt es bereits eine Familie mit diesem Namen, wird sie wiederverwendet statt doppelt angelegt. Bearbeiten und löschen können nur die Person, die sie angelegt hat, und das Team.';
-$l['relatives_field_family_name'] = 'Name (z. B. „Familie Flemming“)';
+$l['relatives_field_family_name'] = 'Name (z. B. „Potter“)';
 $l['relatives_field_family_color'] = 'Farbe';
 $l['relatives_field_family_description'] = 'Beschreibung';
 $l['relatives_field_family_welcomes'] = 'Die Familie freut sich über neue Mitglieder';

@@ -72,7 +72,7 @@ $l['relatives_field_relationship_description'] = "Your relationship";
 $l['relatives_field_related_to'] = "Related to";
 $l['relatives_field_related_to_hint'] = "The relationship applies to this person: 'brother' related to 'mother' becomes 'uncle' in the family tree. Without a related person it applies to you.";
 $l['relatives_related_to_self'] = '– to your character –';
-$l['relatives_related_to_self_named'] = '%s (your character)';
+$l['relatives_related_to_self_named'] = '{1} (your character)';
 $l['relatives_relation_sentence'] = 'Means: {1} is {2} of {3}.';
 $l['relatives_relation_sentence_subject'] = 'This person';
 $l['relatives_relation_sentence_self'] = 'your character';
@@ -112,6 +112,8 @@ $l['relatives_error_generic'] = "Something went wrong. Please try again.";
 // Wanted box (profile)
 $l['relatives_wanted_box_title'] = "Wanted";
 $l['relatives_wanted_thread_link_text'] = "To the wanted thread";
+$l['relatives_wanted_more'] = "More";
+$l['relatives_wanted_age'] = "{1} years";
 
 // Link workflow
 $l['relatives_pending_link_requests'] = "Pending link requests";
@@ -174,6 +176,7 @@ $l['relatives_families_filter_submit'] = 'Filter';
 $l['relatives_families_filter_reset'] = 'Reset filter';
 $l['relatives_families_filter_no_match'] = 'No family matches this filter.';
 $l['relatives_family_list_title'] = 'Families';
+$l['relatives_family_list_open'] = 'Open public family list';
 $l['relatives_family_list_intro'] = 'All families of the forum with their members. Use the filter to find, for example, families that welcome new members.';
 $l['relatives_families_members'] = 'persons';
 $l['relatives_families_show_members'] = 'Show all members';
@@ -184,7 +187,7 @@ $l['relatives_family_deleted'] = 'The family has been deleted.';
 $l['relatives_family_confirm_delete'] = 'Really delete this family? It is removed from every tree; the persons are kept.';
 $l['relatives_family_edit_title'] = 'Edit family';
 $l['relatives_family_form_hint'] = 'If a family with this name already exists, it is reused instead of created twice. Only the person who created it and the staff can edit or delete it.';
-$l['relatives_field_family_name'] = 'Name (e.g. "Flemming family")';
+$l['relatives_field_family_name'] = 'Name (e.g. "Potter")';
 $l['relatives_field_family_color'] = 'Colour';
 $l['relatives_field_family_description'] = 'Description';
 $l['relatives_field_family_welcomes'] = 'This family welcomes new members';
