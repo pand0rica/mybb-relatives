@@ -214,7 +214,8 @@ page** for the family's own page. **Add family** asks for a **Name**, a **Colour
 box appears in the tree one generation above its members.
 
 **Family page** (`relatives.php?action=family&id=…`): the full description, the attributes and
-all members grouped into *Played characters* (with profile and family tree link), *Wanted* and
+all members grouped into *Played characters* (profile link, *Family tree* opens their tree
+popup), *Wanted* and
 *Other family members*. Logged-in members find **Add to this family** there: pick your own
 character or a person from your list, optionally tick **Show family as parents**, and click
 **Add**.

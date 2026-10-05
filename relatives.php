@@ -1475,8 +1475,8 @@ function relatives_family_manage_actions(array $family): string
 
 /**
  * Mitglieder einer Familie, gruppiert in bespielt / gesucht / NPCs, als HTML-Bloecke.
- * Gespielte Charaktere als formatierter Profil-Link plus Link auf ihren Stammbaum
- * (Gaest*innen: die oeffentliche Popup-Ansicht).
+ * Gespielte Charaktere als formatierter Profil-Link plus Link, der ihren Stammbaum als
+ * Popup oeffnet.
  */
 function relatives_family_member_groups_html(array $member_ids, array $persons): string
 {
@@ -1489,7 +1489,6 @@ function relatives_family_member_groups_html(array $member_ids, array $persons):
         }
     }
     $users = relatives_get_users_bulk($uids);
-    $tree_suffix = (int)$mybb->user['uid'] > 0 ? '' : '&amp;popup=1';
 
     $groups = ['played' => [], 'wanted' => [], 'npc' => []];
     foreach ($member_ids as $member_id) {
@@ -1508,8 +1507,14 @@ function relatives_family_member_groups_html(array $member_ids, array $persons):
                     $linked_uid
                 );
             }
-            $name .= ' <a class="relatives_family_member_tree" href="relatives.php?action=tree&amp;uid=' . $linked_uid . $tree_suffix . '">'
-                . htmlspecialchars_uni($lang->relatives_family_member_tree) . '</a>';
+            // Stammbaum als Popup -- wie der Stammbaum-Link in Profil und Postbit, auch fuer Gaest*innen.
+            // relatives_tree_title_for nutzt %s (geteilt mit dem Seitentitel), nicht {1}.
+            $name .= ' ' . relatives_tree_popup_link(
+                $linked_uid,
+                sprintf($lang->relatives_tree_title_for, (string)$member['name']),
+                htmlspecialchars_uni($lang->relatives_family_member_tree),
+                'relatives_family_member_tree'
+            );
             $groups['played'][$sort_key] = '<li>' . $name . '</li>';
         } elseif ((int)$member['is_wanted'] === 1) {
             $thread = relatives_sanitize_url((string)($member['wanted_thread_link'] ?? ''));
