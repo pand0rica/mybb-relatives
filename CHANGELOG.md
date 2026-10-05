@@ -68,7 +68,7 @@ new code base; 2.0 and 2.1 were internal development stages and are summarised h
 
 ### Changed
 - The profile wanted box lists every wanted person in the character's family tree (not only the
-  character's own list), closest relatives first, as compact mini cards (face claim or initial,
+  character's own list), closest relatives first, as compact mini cards (initial,
   relation, age, collapsible description, wanted-thread link) with a counter. Responsive grid
   instead of hard-coded widths per theme; themable via `--relatives-wanted-color` and
   `--relatives-wanted-description-height`.

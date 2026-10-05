@@ -2036,7 +2036,6 @@ if ($action === 'tree') {
         'field_origin'               => $lang->relatives_field_origin,
         'field_description'         => $lang->relatives_field_description,
         'field_relationship_description' => $lang->relatives_field_relationship_description,
-        'field_avatar'               => $lang->relatives_field_avatar,
         'field_is_wanted'            => $lang->relatives_field_is_wanted,
         'field_wanted_thread_link'   => $lang->relatives_field_wanted_thread_link,
         'added_existing'             => $lang->relatives_added_existing,

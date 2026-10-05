@@ -1,7 +1,7 @@
 # Relatives & Family Tree
 
 A MyBB 1.8 plugin for character-based roleplay forums. Players record the relatives and other
-close persons of their character – with gender, age, origin, face claim, description and
+close persons of their character – with gender, year of birth, origin, description and
 custom attributes – mark open roles as *wanted* (with a link to the wanted thread) and explore
 everything in an interactive, clickable family tree. The tree is one shared network for the
 whole forum: every person and every statement ("Delia is the mother of Louisa") exists exactly
@@ -186,7 +186,7 @@ Every character's profile shows a compact **Wanted** box listing all **relatives
 *wanted* that appear in that character's family tree – including persons other members
 entered, closest relatives first. Wanted friends or other non-relatives are not shown (other
 plugins can add their own cards, see [For developers](#for-developers)). Each mini card shows
-the face claim (or the first letter of the name), the name, the relation to the character, the
+the first letter of the name, the name, the relation to the character, the
 age and – with the *jobliste* plugin – the occupation. **More** unfolds the
 description, **To the wanted thread** opens the linked thread. Characters without wanted
 persons in their tree get no box at all.

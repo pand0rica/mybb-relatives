@@ -1387,11 +1387,6 @@
 			origin.textContent = t("field_origin", "Herkunft") + ": " + node.origin;
 			panel.appendChild(origin);
 		}
-		if (node.avatar) {
-			var avatar = document.createElement("p");
-			avatar.textContent = t("field_avatar", "Avatarperson") + ": " + node.avatar;
-			panel.appendChild(avatar);
-		}
 		if (node.relationship_description) {
 			var relDesc = document.createElement("p");
 			relDesc.textContent = node.relationship_description;

@@ -474,7 +474,6 @@ class Relatives_TreeBuilder
                 'age_label'                 => Relatives_Database::age_label($person),
                 'origin'                    => $person['origin'],
                 'job'                       => $details[$person_id]['job'] ?? '',
-                'avatar'                    => $person['avatar'],
                 'description'               => $person['description'],
                 'relationship_description'  => isset($viewer_list[$person_id]) ? $viewer_list[$person_id]['relationship_description'] : null,
                 'attribute_option_ids'      => $attribute_ids[$person_id] ?? [],

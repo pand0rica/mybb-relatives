@@ -81,7 +81,7 @@ if (defined('THIS_SCRIPT') && in_array(THIS_SCRIPT, ['member.php', 'memberlist.p
     global $templatelist;
     $templatelist = (isset($templatelist) && $templatelist !== '' ? $templatelist . ',' : '') . 'relatives_tree_link';
     if (THIS_SCRIPT === 'member.php') {
-        $templatelist .= ',relatives_profile_wanted_box,relatives_profile_wanted_card,relatives_profile_wanted_avatar,'
+        $templatelist .= ',relatives_profile_wanted_box,relatives_profile_wanted_card,'
             . 'relatives_profile_wanted_initial,relatives_profile_wanted_details,relatives_profile_wanted_link';
     }
 }
@@ -147,14 +147,9 @@ function relatives_handle_member_profile(): void
     foreach ($wanted as $person) {
         $name = htmlspecialchars_uni($person['name']);
 
-        $avatar_url = relatives_sanitize_url((string)($person['avatar'] ?? ''));
-        if ($avatar_url !== '') {
-            $avatar_src = htmlspecialchars_uni($avatar_url);
-            eval('$avatar = "' . $templates->get('relatives_profile_wanted_avatar') . '";');
-        } else {
-            $initial = htmlspecialchars_uni(my_strtoupper(my_substr(trim((string)$person['name']), 0, 1)));
-            eval('$avatar = "' . $templates->get('relatives_profile_wanted_initial') . '";');
-        }
+        // Die Avatarperson wird nicht mehr angezeigt -- die Karte zeigt den Anfangsbuchstaben.
+        $initial = htmlspecialchars_uni(my_strtoupper(my_substr(trim((string)$person['name']), 0, 1)));
+        eval('$avatar = "' . $templates->get('relatives_profile_wanted_initial') . '";');
 
         $meta_parts = [];
         if ($person['label'] !== '') {
@@ -204,7 +199,7 @@ function relatives_handle_member_profile(): void
 
 /**
  * Gesuchte Personen fuer die Profil-Box, einheitlich aufbereitet (name, label, age,
- * avatar, description, relationship_description, wanted_thread_link).
+ * description, relationship_description, wanted_thread_link).
  *
  * Mit gemeinsamem Geflecht: alle gesuchten Personen im Stammbaum-Ausschnitt des
  * Charakters (auch fremd eingetragene). Sonst Rueckfall auf die eigene Liste.
@@ -221,7 +216,6 @@ function relatives_profile_wanted_persons(int $uid): array
                 'age'                      => $node['age'],
                 'birth_year'               => $node['birth_year'] ?? null,
                 'job'                      => (string)($node['job'] ?? ''),
-                'avatar'                   => (string)($node['avatar'] ?? ''),
                 'description'              => (string)($node['description'] ?? ''),
                 'relationship_description' => (string)($node['relationship_description'] ?? ''),
                 'wanted_thread_link'       => (string)($node['wanted_thread_link'] ?? ''),
@@ -240,7 +234,6 @@ function relatives_profile_wanted_persons(int $uid): array
             'name'                     => (string)$person['name'],
             'label'                    => (string)($labels[(int)$person['id']] ?? ''),
             'age'                      => Relatives_Database::computed_age($person),
-            'avatar'                   => (string)($person['avatar'] ?? ''),
             'description'              => (string)($person['description'] ?? ''),
             'relationship_description' => (string)($person['relationship_description'] ?? ''),
             'wanted_thread_link'       => (string)($person['wanted_thread_link'] ?? ''),
