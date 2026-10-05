@@ -346,8 +346,9 @@ Other plugins must not read the `relatives_*` tables directly. Public contract:
   (the latter also fills the optional `relations` list – who added the person and in which
   degree – shown in the info icon of the jobliste overview – and `linked_uid` for persons with a
   confirmed account link).
-- `relatives_collect_person_details` (provider hook, `$args = ['person_ids' => [...], 'details'
-  => []]`): set `$args['details'][$person_id]['job']` to a plain-text occupation; it is shown in
+- `relatives_collect_person_details` (provider hook, `$args = ['person_ids' => [...],
+  'linked_uids' => [person_id => uid], 'details' => []]`, `linked_uids` = confirmed accounts of
+  played characters): set `$args['details'][$person_id]['job']` to a plain-text occupation; it is shown in
   the tree panel, the list and the wanted cards.
 - `relatives_profile_wanted_cards` (provider hook, `$args = ['uid' => …, 'cards' => '', 'count'
   => 0]`): append your own, already escaped card HTML to `cards` and raise `count` – e.g. wanted

@@ -34,13 +34,14 @@ class Relatives_Database
      * Zusatzangaben anderer Plugins je Person (Provider-Hook relatives_collect_person_details),
      * derzeit der Beruf aus der Jobliste. Listener setzen $args['details'][person_id]['job']
      * als reinen Text; Relatives escapet beim Ausgeben. Unbekannte Personen und andere Keys
-     * werden verworfen.
+     * werden verworfen. $args['linked_uids'] (person_id => uid) nennt die bestaetigt
+     * verknuepften Accounts gespielter Charaktere -- deren Beruf haengt am Account.
      *
      * @return array person_id => ['job' => string]
      */
     public static function person_details(array $person_ids): array
     {
-        global $plugins;
+        global $plugins, $db;
 
         $person_ids = array_values(array_unique(array_filter(array_map('intval', $person_ids), static function ($id) {
             return $id > 0;
@@ -48,7 +49,16 @@ class Relatives_Database
         if (!$person_ids || !is_object($plugins)) {
             return [];
         }
-        $args = ['person_ids' => $person_ids, 'details' => []];
+        $linked_uids = [];
+        $query = $db->simple_select(
+            'relatives_persons',
+            'id, linked_uid',
+            'link_status = 2 AND linked_uid > 0 AND id IN (' . implode(',', $person_ids) . ')'
+        );
+        while ($row = $db->fetch_array($query)) {
+            $linked_uids[(int)$row['id']] = (int)$row['linked_uid'];
+        }
+        $args = ['person_ids' => $person_ids, 'linked_uids' => $linked_uids, 'details' => []];
         $plugins->run_hooks('relatives_collect_person_details', $args);
 
         $details = [];

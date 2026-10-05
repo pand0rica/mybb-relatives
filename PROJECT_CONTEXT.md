@@ -556,7 +556,8 @@ hängt an `$args['entities']` Zeilen `['entity_type' => 'relative', 'entity_id' 
 Kaputte/fremde Aufrufer werden ignoriert, Escaping bleibt bei Jobliste.
 
 **Eigene Provider-Hooks (seit Team-Feedback Oktober 2026):**
-- `relatives_collect_person_details` – `$args = ['person_ids' => int[], 'details' => []]`; ein
+- `relatives_collect_person_details` – `$args = ['person_ids' => int[], 'linked_uids' => [person_id => uid], 'details' => []]`
+  (`linked_uids` = bestätigt verknüpfte Accounts gespielter Charaktere); ein
   Listener setzt `$args['details'][person_id]['job']` (reiner Text). Relatives verwirft unbekannte
   Personen/Keys, kürzt auf 255 Zeichen und escapet beim Rendern (`Relatives_Database::person_details()`).
 - `relatives_profile_wanted_cards` – `$args = ['uid' => int, 'cards' => '', 'count' => 0]`; ein
