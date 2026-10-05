@@ -28,6 +28,7 @@ if (!function_exists('mb_strtolower')) {
 require_once './inc/plugins/relatives/core/Kinship.php';
 require_once './inc/plugins/relatives/core/RelationshipTypes.php';
 require_once './inc/plugins/relatives/core/StructureInference.php';
+require_once './inc/plugins/relatives/core/Graph.php';
 
 $pass = 0;
 $fail = 0;
@@ -51,6 +52,7 @@ foreach ([
     'parent' => -1, 'child' => 1, 'sibling' => 0, 'spouse' => 0, 'ex_spouse' => 0,
     'adoptive_parent' => -1, 'adoptive_child' => 1, 'step_parent' => -1,
     'aunt_uncle' => -1, 'niece_nephew' => 1, 'cousin' => 0,
+    'adoptive_sibling' => 0, 'step_sibling' => 0, 'half_sibling' => 0,
 ] as $concept => $offset) {
     $types[++$type_id] = ['concept' => $concept, 'offset' => $offset, 'label' => $concept, 'line_style' => 'solid'];
 }
@@ -236,6 +238,26 @@ $fgraph = Relatives_Kinship::structure_from(persons([$f['matthew'], $f['delia'],
 check('Familien-Kasten wird Elternknoten', true, isset($fgraph['parents']['p:' . $f['matthew']]['f:9']));
 check('Beide Kinder haengen am selben Kasten', 2, count($fgraph['children']['f:9'] ?? []));
 check('Geschwister ueber den Kasten: Matthew ist Onkel', 'aunt_uncle', concept_of(Relatives_Kinship::blood_degrees($fgraph, 'p:' . $megan), $f['matthew']));
+
+// --- Familien-Zugehoerigkeit: Adoptiv-/Stiefgeschwister ziehen keine Familie mit -------
+
+echo "=== Familien-Zugehoerigkeit ===
+";
+
+$m = ['lenja' => 1, 'nick' => 2, 'stepsis' => 3, 'halfbro' => 4, 'sister' => 5];
+$mgraph = Relatives_Kinship::structure_from(persons(array_values($m)), relations([
+    [$m['lenja'],   'child',            null,         7],
+    [$m['nick'],    'adoptive_sibling', $m['lenja']],
+    [$m['stepsis'], 'step_sibling',     $m['lenja']],
+    [$m['halfbro'], 'half_sibling',     $m['lenja']],
+    [$m['sister'],  'sibling',          $m['lenja']],
+], $type_of), $types);
+$members = Relatives_Graph::memberships_from($mgraph);
+check('Direkt am Kasten ist Mitglied', true, isset($members[$m['lenja']][7]));
+check('Adoptivbruder ist kein Mitglied', false, isset($members[$m['nick']][7]));
+check('Stiefschwester ist kein Mitglied', false, isset($members[$m['stepsis']][7]));
+check('Halbbruder bleibt Mitglied', true, isset($members[$m['halfbro']][7]));
+check('Vollgeschwister bleibt Mitglied', true, isset($members[$m['sister']][7]));
 
 // --- Struktur-Ableitung der Alt-Migration: keine Rateergebnisse bei offenen Graden -------
 // Befund Testforum: In Jolinas alter Liste stand nur Delia als Tante; alle "Cousins"

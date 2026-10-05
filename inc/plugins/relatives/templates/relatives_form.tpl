@@ -140,7 +140,7 @@
 		<p class="relatives_relation_sentence" data-role="sentence"></p>
 		<div class="relatives_relation_flags">
 			<label><input type="radio" name="relations_primary" data-role="primary" /> {$lang->relatives_relation_primary}</label>
-			<label><input type="checkbox" value="1" data-role="secret" /> {$lang->relatives_relation_secret}</label>
+			<label title="{$lang->relatives_relation_secret_desc}"><input type="checkbox" value="1" data-role="secret" /> {$lang->relatives_relation_secret}</label>
 			<button type="button" class="button" data-role="remove">{$lang->relatives_relation_remove}</button>
 		</div>
 	</fieldset>

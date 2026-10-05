@@ -24,6 +24,9 @@ if (!defined("IN_MYBB")) {
 
 class Relatives_Graph
 {
+    /** Geschwisterkonzepte, ueber die sich eine Familien-Zugehoerigkeit nicht ausbreitet. */
+    private const MEMBERSHIP_EXCLUDED_SIBLINGS = ['adoptive_sibling', 'step_sibling'];
+
     /** Hat das Team die Einzel-Listen bereits zusammengefuehrt? */
     public static function is_merged(): bool
     {
@@ -181,7 +184,12 @@ class Relatives_Graph
                 foreach (array_keys($graph['children'][$key] ?? []) as $next) {
                     $queue[] = $next;
                 }
-                foreach (array_keys($graph['siblings'][$key] ?? []) as $next) {
+                // Adoptiv- und Stiefgeschwister ziehen keine Familie mit: "Nick ist
+                // Adoptivbruder von Lenja" sagt nicht, wer in wessen Familie kam.
+                foreach ($graph['siblings'][$key] ?? [] as $next => $concept) {
+                    if (in_array($concept, self::MEMBERSHIP_EXCLUDED_SIBLINGS, true)) {
+                        continue;
+                    }
                     $queue[] = $next;
                 }
             }
