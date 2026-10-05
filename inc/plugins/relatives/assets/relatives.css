@@ -250,6 +250,156 @@
 	white-space: nowrap;
 }
 
+/* Lange Beschreibungen scrollen innerhalb der Karte; Hoehe per
+ * --relatives-wanted-description-height anpassbar. */
+.relatives_profile_wanted_description {
+	max-height: var(--relatives-wanted-description-height, 8em);
+	overflow-y: auto;
+	overflow-wrap: anywhere;
+	padding-right: 6px;
+	scrollbar-width: thin;
+	scrollbar-color: var(--relatives-wanted-color, #d79a1f) transparent;
+}
+
+.relatives_profile_wanted_description::-webkit-scrollbar {
+	width: 6px;
+}
+
+.relatives_profile_wanted_description::-webkit-scrollbar-thumb {
+	background: var(--relatives-wanted-color, #d79a1f);
+	border-radius: 3px;
+}
+
+.relatives_profile_wanted_relationship_description {
+	font-style: italic;
+}
+
+.relatives_profile_wanted_relationship_description:not(:empty) + div:not(:empty) {
+	margin-top: 4px;
+}
+
+@media (max-width: 600px) {
+	.relatives_field input[type="text"],
+	.relatives_field input[type="url"],
+	.relatives_field input[type="number"],
+	.relatives_field select,
+	.relatives_field textarea {
+		max-width: 100%;
+	}
+}
+
+/* --- v2.1: Verbindungen im Formular ------------------------------------------------- */
+
+.relatives_relation_row {
+	margin: 0 0 10px;
+	padding: 8px 10px;
+	border: 1px solid var(--h4w-relatives-relation-row-border, #d5dbe1);
+	border-radius: 4px;
+}
+
+.relatives_relation_row .relatives_field {
+	display: inline-block;
+	margin-right: 12px;
+	vertical-align: top;
+}
+
+/* "Bedeutet: Finian Hari ist Sohn von Rian MacCrea." -- direction of the connection */
+.relatives_relation_sentence {
+	margin: 2px 0 6px;
+	font-style: italic;
+}
+
+.relatives_relation_flags label {
+	margin-right: 12px;
+}
+
+.relatives_deceased_mark {
+	margin-left: 4px;
+	color: var(--h4w-relatives-deceased-mark-color, #6b7178);
+}
+
+.relatives_inline_form {
+	display: inline;
+	margin: 0;
+}
+
+/* --- v2.1: Familien-Uebersicht ------------------------------------------------------ */
+
+.relatives_families_filter {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-end;
+	gap: 8px 16px;
+	margin-bottom: 12px;
+}
+
+.relatives_families_filter_field label {
+	display: block;
+	font-weight: bold;
+	margin-bottom: 2px;
+}
+
+.relatives_families_filter_actions input + input {
+	margin-left: 4px;
+}
+
+.relatives_family_cards {
+	display: grid;
+	/* Zwei Familien je Reihe: genug Platz fuer Attribute und Anriss. */
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 12px;
+}
+
+@media (max-width: 700px) {
+	.relatives_family_cards {
+		grid-template-columns: 1fr;
+	}
+}
+
+.relatives_family_card {
+	padding: 10px 12px;
+	border: 1px solid var(--h4w-relatives-family-card-border, #d5dbe1);
+	border-left: 6px solid var(--relatives-family-color, #7d8894);
+	border-radius: 4px;
+}
+
+.relatives_family_card_name {
+	font-weight: bold;
+}
+
+.relatives_family_card_members {
+	font-size: 11px;
+	color: var(--h4w-relatives-family-card-members-color, #6b7178);
+	margin-bottom: 6px;
+}
+
+.relatives_family_card_closed {
+	display: inline-block;
+	margin-bottom: 6px;
+	padding: 1px 6px;
+	font-size: 11px;
+	color: var(--h4w-relatives-family-card-closed-color, #7a4b00);
+	background: var(--h4w-relatives-family-card-closed-bg, #fdf1dc);
+	border: 1px solid var(--h4w-relatives-family-card-closed-border, #ecd3a6);
+	border-radius: 3px;
+}
+
+.relatives_family_card_attributes {
+	display: grid;
+	grid-template-columns: auto 1fr;
+	gap: 2px 8px;
+	margin: 0 0 6px;
+	font-size: 0.9em;
+}
+
+.relatives_family_card_attributes dt {
+	font-weight: bold;
+}
+
+.relatives_family_card_attributes dd {
+	margin: 0;
+}
+
 .relatives_family_card_description {
 	overflow-wrap: anywhere;
 }
