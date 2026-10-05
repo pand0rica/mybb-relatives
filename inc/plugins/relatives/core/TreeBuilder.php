@@ -406,6 +406,7 @@ class Relatives_TreeBuilder
         $kinship = Relatives_Kinship::compute_from($described, $world['graph'], 'p:' . $root_person);
 
         $owner_counts = Relatives_Database::count_owners_bulk($person_ids);
+        $details = Relatives_Database::person_details($person_ids);
         $attribute_ids = Relatives_Attributes::get_option_ids_bulk($person_ids);
         $viewer_list = [];
         foreach (Relatives_Database::get_persons_by_owner($this->viewer_uid) as $row) {
@@ -472,6 +473,7 @@ class Relatives_TreeBuilder
                 'birth_year'                => isset($person['birth_year']) && $person['birth_year'] !== null ? (int)$person['birth_year'] : null,
                 'age_label'                 => Relatives_Database::age_label($person),
                 'origin'                    => $person['origin'],
+                'job'                       => $details[$person_id]['job'] ?? '',
                 'avatar'                    => $person['avatar'],
                 'description'               => $person['description'],
                 'relationship_description'  => isset($viewer_list[$person_id]) ? $viewer_list[$person_id]['relationship_description'] : null,

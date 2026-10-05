@@ -30,6 +30,42 @@ class Relatives_Database
     /**
      * Laedt die Stammdaten einer Person (ohne Besitzer-Felder).
      */
+    /**
+     * Zusatzangaben anderer Plugins je Person (Provider-Hook relatives_collect_person_details),
+     * derzeit der Beruf aus der Jobliste. Listener setzen $args['details'][person_id]['job']
+     * als reinen Text; Relatives escapet beim Ausgeben. Unbekannte Personen und andere Keys
+     * werden verworfen.
+     *
+     * @return array person_id => ['job' => string]
+     */
+    public static function person_details(array $person_ids): array
+    {
+        global $plugins;
+
+        $person_ids = array_values(array_unique(array_filter(array_map('intval', $person_ids), static function ($id) {
+            return $id > 0;
+        })));
+        if (!$person_ids || !is_object($plugins)) {
+            return [];
+        }
+        $args = ['person_ids' => $person_ids, 'details' => []];
+        $plugins->run_hooks('relatives_collect_person_details', $args);
+
+        $details = [];
+        $known = array_flip($person_ids);
+        foreach ((array)($args['details'] ?? []) as $person_id => $values) {
+            $person_id = (int)$person_id;
+            if (!isset($known[$person_id]) || !is_array($values)) {
+                continue;
+            }
+            $job = isset($values['job']) && is_scalar($values['job']) ? trim((string)$values['job']) : '';
+            if ($job !== '') {
+                $details[$person_id] = ['job' => mb_substr($job, 0, 255)];
+            }
+        }
+        return $details;
+    }
+
     /** Aktuelles Inplay-Jahr aus den Einstellungen, null = nicht gesetzt (Feld "Alter"). */
     public static function inplay_year(): ?int
     {

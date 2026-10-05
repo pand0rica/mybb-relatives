@@ -66,6 +66,7 @@ $l['relatives_field_relationship'] = "Relationship";
 $l['relatives_field_relationship_custom'] = "Custom relationship label";
 $l['relatives_field_age'] = "Age";
 $l['relatives_field_birth_year'] = "Year of birth";
+$l['relatives_field_job'] = "Occupation";
 $l['relatives_birth_year_age'] = "= {1} years (in-play year {2})";
 $l['relatives_age_born'] = "{1} (born {2})";
 $l['relatives_error_invalid_birth_year'] = "Please enter a valid year of birth (not after the current in-play year).";

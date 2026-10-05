@@ -163,6 +163,9 @@ function relatives_handle_member_profile(): void
         if ($person['age'] !== null && $person['age'] !== '') {
             $meta_parts[] = htmlspecialchars_uni($lang->sprintf($lang->relatives_wanted_age, (int)$person['age']));
         }
+        if (($person['job'] ?? '') !== '') {
+            $meta_parts[] = htmlspecialchars_uni((string)$person['job']);
+        }
         $meta = implode(' &middot; ', $meta_parts);
 
         $details = '';
@@ -217,6 +220,7 @@ function relatives_profile_wanted_persons(int $uid): array
                 'label'                    => (string)($node['computed_label'] ?? ''),
                 'age'                      => $node['age'],
                 'birth_year'               => $node['birth_year'] ?? null,
+                'job'                      => (string)($node['job'] ?? ''),
                 'avatar'                   => (string)($node['avatar'] ?? ''),
                 'description'              => (string)($node['description'] ?? ''),
                 'relationship_description' => (string)($node['relationship_description'] ?? ''),

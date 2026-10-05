@@ -300,6 +300,11 @@
 	padding-left: 18px;
 }
 
+.relatives_row_job {
+	font-size: 0.85em;
+	opacity: .75;
+}
+
 .relatives_incoming_edit {
 	display: flex;
 	flex-wrap: wrap;

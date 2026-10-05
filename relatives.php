@@ -2024,6 +2024,7 @@ if ($action === 'tree') {
         'field_relationship_custom' => $lang->relatives_field_relationship_custom,
         'field_age'                  => $lang->relatives_field_age,
         'field_birth_year'           => $lang->relatives_field_birth_year,
+        'field_job'                  => $lang->relatives_field_job,
         'field_origin'               => $lang->relatives_field_origin,
         'field_description'         => $lang->relatives_field_description,
         'field_relationship_description' => $lang->relatives_field_relationship_description,
@@ -2105,10 +2106,14 @@ $my_delete_requests = Relatives_DeleteRequests::get_pending_by_requester($my_uid
 $open_delete_requests = Relatives_DeleteRequests::get_open_for_voter($my_uid);
 $open_delete_person_ids = array_flip(array_map('intval', array_column($open_delete_requests, 'person_id')));
 $relatives_rows = '';
+$person_details = Relatives_Database::person_details(array_column($persons, 'id'));
 foreach ($persons as $person) {
     $relatives_row_id = (int)$person['id'];
     $relatives_row_name = htmlspecialchars_uni($person['name'])
         . ((int)($person['is_deceased'] ?? 0) === 1 ? ' <span class="relatives_deceased_mark" title="' . htmlspecialchars_uni($lang->relatives_deceased) . '">&dagger;</span>' : '');
+    if (isset($person_details[$relatives_row_id]['job'])) {
+        $relatives_row_name .= '<div class="relatives_row_job">' . htmlspecialchars_uni($person_details[$relatives_row_id]['job']) . '</div>';
+    }
     $relatives_row_relationship = htmlspecialchars_uni($relationship_labels[$relatives_row_id]);
     $relatives_row_age = Relatives_Database::age_label($person);
     $relatives_row_age = $relatives_row_age !== '' ? htmlspecialchars_uni($relatives_row_age) : '-';

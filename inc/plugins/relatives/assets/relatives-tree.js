@@ -1377,6 +1377,11 @@
 			age.textContent = t("field_age", "Alter") + ": " + node.age_label;
 			panel.appendChild(age);
 		}
+		if (node.job) {
+			var job = document.createElement("p");
+			job.textContent = t("field_job", "Beruf") + ": " + node.job;
+			panel.appendChild(job);
+		}
 		if (node.origin) {
 			var origin = document.createElement("p");
 			origin.textContent = t("field_origin", "Herkunft") + ": " + node.origin;
