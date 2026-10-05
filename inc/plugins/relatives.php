@@ -118,7 +118,7 @@ $plugins->add_hook("jobliste_resolve_entity_label", "relatives_resolve_jobliste_
  */
 function relatives_handle_member_profile(): void
 {
-    global $mybb, $db, $templates, $lang, $memprofile, $relatives_wanted_box, $relatives_tree_link;
+    global $mybb, $db, $templates, $lang, $plugins, $memprofile, $relatives_wanted_box, $relatives_tree_link;
 
     $relatives_tree_link = '';
     if (empty($mybb->settings['relatives_enabled'])) {
@@ -131,8 +131,6 @@ function relatives_handle_member_profile(): void
     if (!empty($mybb->settings['relatives_tree_link_profile'])) {
         $relatives_tree_link = relatives_tree_link_html((int)$memprofile['uid'], (string)$memprofile['username']);
     }
-
-    global $plugins;
 
     $relatives_wanted_box = '';
     $owner_uid = (int)$memprofile['uid'];

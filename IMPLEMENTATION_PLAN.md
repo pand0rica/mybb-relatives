@@ -269,3 +269,20 @@ Spezifikation: `PROJECT_CONTEXT.md`, Abschnitte „Interaktiver Stammbaum“, �
 **Hinweis für Schwester-Plugins:** Sobald dieses Plugin auf dem Testforum umgesetzt **und**
 migriert ist, kann die Umsetzung von `jobliste` (Migrations-Schritt 3 dort braucht bestehende
 `relatives_persons.legacy_id`-Daten) und danach `anschluss suchmaschine` gestartet werden.
+
+## Schritt 15 – Team-Feedback Oktober 2026
+- [x] **Ziel:** Rückmeldungen zweier Teamies vom Testforum umsetzen (Details und Entscheidungen:
+  `PROJECT_CONTEXT.md` → „Team-Feedback Oktober 2026").
+- [x] Adoptiv-/Stiefgeschwister ziehen keine Familien-Zugehörigkeit mit (`Graph::memberships_from()`,
+  Test in `tests/cli-kinship.php`); „Geheim" umbenannt.
+- [x] Freie Bezeichnungen nicht im Stammbaum (`TreeBuilder::is_non_kin()`), Profil-Gesuche nur Verwandte,
+  Provider-Hook `relatives_profile_wanted_cards`.
+- [x] Familienseite `action=family`, Übersicht zwei Familien je Reihe mit „X Personen, davon Y bespielt",
+  Formularabschnitt „Familie", `action=family_join`.
+- [x] Geburtsjahr + Setting `relatives_inplay_year` + ACP-Umrechnung; Avatarperson aus Formular und Anzeige.
+- [x] Verbindungsanfragen zu fremden gespielten Charakteren (`Relatives_RelationRequests`,
+  Tabelle `relatives_relation_requests`, MyAlerts), Trennen/Ändern von beiden Seiten.
+- [x] Provider-Hooks `relatives_collect_person_details`, `relatives_person_form_fields`,
+  `relatives_person_validate`, `relatives_person_saved` (Beruf aus der Jobliste).
+- [ ] Gegenstück im Jobliste-Repo (Listener für die vier Hooks) – separater Auftrag.
+- [ ] Manuelle Tests auf dem Testforum (siehe Review-Bericht).

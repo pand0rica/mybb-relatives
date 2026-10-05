@@ -4,6 +4,5 @@
 	{$relatives_family_closed}
 	{$relatives_family_attributes}
 	<div class="relatives_family_card_description">{$relatives_family_teaser}</div>
-	<div class="relatives_family_card_more"><a href="{$relatives_family_url}">{$lang->relatives_family_open_page}</a></div>
-	{$relatives_family_actions}
+	<div class="relatives_family_card_actions">{$relatives_family_more}{$relatives_family_actions}</div>
 </div>

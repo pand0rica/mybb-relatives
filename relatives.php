@@ -853,7 +853,6 @@ if ($action === 'add' || $action === 'edit') {
         $age_raw = trim($mybb->get_input('age'));
         $birth_year_raw = trim($mybb->get_input('birth_year'));
         $origin = trim($mybb->get_input('origin'));
-        $avatar = trim($mybb->get_input('avatar'));
         $description = $mybb->get_input('description');
         $relationship_description = $mybb->get_input('relationship_description');
         $is_wanted = $mybb->get_input('is_wanted', MyBB::INPUT_INT) ? 1 : 0;
@@ -919,8 +918,6 @@ if ($action === 'add' || $action === 'edit') {
             }
         }
 
-        // Avatar = Avatarperson (Freitext wie im Altplugin), keine Bild-URL.
-        $avatar_final = $avatar !== '' ? mb_substr($avatar, 0, 255) : null;
         $wanted_thread_link_final = $wanted_thread_link !== '' ? relatives_sanitize_url($wanted_thread_link) : '';
         if ($wanted_thread_link_final === '') {
             $wanted_thread_link_final = null;
@@ -940,11 +937,7 @@ if ($action === 'add' || $action === 'edit') {
             // "Winter 1987" oder ein reines Jahr.
             'death_note'         => ($is_deceased && $death_note !== '') ? mb_substr($death_note, 0, 64) : null,
         ];
-        // Die Formulare haben kein Feld "Avatarperson" mehr: einen gespeicherten Wert nur
-        // anfassen, wenn ein Aufrufer das Feld ausdruecklich mitschickt.
-        if (isset($mybb->input['avatar'])) {
-            $person_data['avatar'] = $avatar_final;
-        }
+        // Kein Feld "Avatarperson" mehr: gespeicherte Altwerte bleiben unangetastet.
         if ($inplay_year !== null) {
             // Das Geburtsjahr ersetzt ein altes, fest eingetragenes Alter.
             $person_data['birth_year'] = $birth_year;
@@ -1015,7 +1008,7 @@ if ($action === 'add' || $action === 'edit') {
             if ((int)$existing_by_name['gender'] === -1 && $gender !== -1) {
                 $fill['gender'] = $gender;
             }
-            foreach (['age', 'birth_year', 'origin', 'avatar', 'description', 'wanted_thread_link'] as $field) {
+            foreach (['age', 'birth_year', 'origin', 'description', 'wanted_thread_link'] as $field) {
                 if (!array_key_exists($field, $person_data)) {
                     continue;
                 }
@@ -1542,8 +1535,8 @@ function relatives_family_manage_actions(array $family): string
         return '';
     }
     $family_id = (int)$family['id'];
-    return '<div class="relatives_family_card_actions">'
-        . relatives_nav_button('relatives.php?action=family_edit&id=' . $family_id, $lang->relatives_edit)
+    // Ohne eigenen Container: Karte und Familienseite setzen die Buttons in ihre Aktionszeile.
+    return ' ' . relatives_nav_button('relatives.php?action=family_edit&id=' . $family_id, $lang->relatives_edit)
         . ' <form action="relatives.php?action=family_delete" method="post" class="relatives_inline_form"'
         . ' data-relatives-confirm="' . htmlspecialchars_uni($lang->relatives_family_confirm_delete) . '"'
         . ' data-relatives-confirm-title="' . htmlspecialchars_uni($lang->sprintf($lang->relatives_confirm_title_named, $family['name'])) . '"'
@@ -1552,7 +1545,7 @@ function relatives_family_manage_actions(array $family): string
         . '<input type="hidden" name="my_post_key" value="' . $mybb->post_code . '" />'
         . '<input type="hidden" name="id" value="' . $family_id . '" />'
         . '<input type="submit" class="button" value="' . htmlspecialchars_uni($lang->relatives_delete) . '" />'
-        . '</form></div>';
+        . '</form>';
 }
 
 /**
@@ -1786,7 +1779,10 @@ function relatives_render_family_overview(string $page_action, bool $read_only):
         $relatives_family_color = htmlspecialchars_uni(Relatives_Families::sanitize_color((string)$family['color']));
         // Die Uebersicht zeigt nur einen Anriss; die volle Vorstellung steht auf der
         // Familienseite (action=family).
-        $relatives_family_url = relatives_family_url($relatives_family_id, $read_only);
+        $family_url = relatives_family_url($relatives_family_id, $read_only);
+        $relatives_family_url = htmlspecialchars_uni($family_url);
+        // Echter Button wie Bearbeiten/Loeschen daneben (conventions.md §9).
+        $relatives_family_more = relatives_nav_button($family_url, $lang->relatives_family_open_page);
         $relatives_family_teaser = htmlspecialchars_uni(relatives_text_teaser((string)$family['description'], RELATIVES_FAMILY_TEASER_LENGTH));
         $relatives_family_closed = Relatives_Families::welcomes_new_members($family)
             ? ''

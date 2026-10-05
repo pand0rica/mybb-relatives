@@ -33,6 +33,9 @@ class Relatives_RelationRequests
     /** @var array|null uid => Haupt-uid (Account-Switcher), einmal je Request */
     private static $masters = null;
 
+    /** @var bool|null Gibt es users.as_uid (Account-Switcher installiert)? Einmal je Request. */
+    private static $has_as_uid = null;
+
     // ------------------------------------------------------------------
     // Wer muss bestaetigen?
     // ------------------------------------------------------------------
@@ -47,9 +50,12 @@ class Relatives_RelationRequests
         if (self::$masters === null) {
             self::$masters = [];
         }
+        if (self::$has_as_uid === null) {
+            self::$has_as_uid = (bool)$db->field_exists('as_uid', 'users');
+        }
         if (!isset(self::$masters[$uid])) {
             $master = $uid;
-            if ($db->field_exists('as_uid', 'users')) {
+            if (self::$has_as_uid) {
                 $row = $db->fetch_array($db->simple_select('users', 'as_uid', 'uid = ' . (int)$uid, ['limit' => 1]));
                 if ($row && (int)$row['as_uid'] > 0) {
                     $master = (int)$row['as_uid'];

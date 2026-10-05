@@ -15,5 +15,5 @@
 	</div>
 
 	{$relatives_family_join}
-	{$relatives_family_actions}
+	<div class="relatives_family_card_actions">{$relatives_family_actions}</div>
 </div>

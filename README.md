@@ -116,6 +116,8 @@ character"), it is not saved right away:
    player's *My relatives* list. Either way you get a notification.
 4. Your own open requests are listed in the same box; **Withdraw** cancels them.
 
+![Open connection requests](docs/screenshots/relation-requests.png)
+
 Accounts of the same player (Account Switcher) don't need to confirm each other.
 
 **Connections added by others:** at the bottom of a person's edit form, the section
@@ -224,6 +226,8 @@ popup), *Wanted* and
 *Other family members*. Logged-in members find **Add to this family** there: pick your own
 character or a person from your list, optionally tick **Show family as parents**, and click
 **Add**.
+
+![Family page](docs/screenshots/family-page.png)
 
 - Assign families in the person form under **Family** or on the family page. Without *Show
   family as parents* it is a plain membership; with it the box takes the place of the parents.

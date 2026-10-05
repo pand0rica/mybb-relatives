@@ -65,6 +65,9 @@ new code base; 2.0 and 2.1 were internal development stages and are summarised h
 - Provider hooks `relatives_collect_person_details` (occupation, e.g. from *jobliste*, shown in
   tree panel, list and wanted cards) and `relatives_profile_wanted_cards` (extra wanted cards
   from other plugins).
+- Person form hooks `relatives_person_form_fields`, `relatives_person_validate` and
+  `relatives_person_saved` so other plugins (jobliste) can show and edit fields such as the
+  occupation in the person form.
 
 ### Changed
 - The profile wanted box lists every wanted person in the character's family tree (not only the
@@ -82,6 +85,10 @@ new code base; 2.0 and 2.1 were internal development stages and are summarised h
   not make someone part of the other family); half siblings still do.
 - The *Secret* option is now called *Secret in-play (faded line)* with an explanation – it only
   fades the line and never hides anything.
+- Person form: optional details reordered (description, year of birth, deceased + date, origin,
+  wanted + thread link, attributes, your relationship); the date of death and the thread link
+  only appear when their checkbox is ticked – also in the tree quick-add form.
+- The face claim (*Avatarperson*) is no longer entered or shown; stored values are kept.
 - Family overview: two families per row, *X persons, Y of them played*, a short teaser instead
   of the full scrolling description and a link to the family page.
 - All frontend actions (edit, delete, cancel, accept/decline, reset filter, empty-state buttons)
