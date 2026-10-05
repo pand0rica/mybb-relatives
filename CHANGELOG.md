@@ -47,6 +47,24 @@ new code base; 2.0 and 2.1 were internal development stages and are summarised h
   *Keep* cancels the request and removes the requester from the NPC's list. NPCs nobody else
   lists are deleted right away. ACP tab *Deletion requests* to decide stuck requests.
 - Feedback after deleting in the family tree (status message instead of a silent reload).
+- Connection requests: adding or changing a connection to a character another member plays
+  creates a request instead of an edge. The player confirms or declines it (MyAlerts, box
+  *Open connection requests* under *My relatives*, counter in the navigation); after confirming,
+  the other person also appears in their list. Accounts of the same player (Account Switcher)
+  need no confirmation.
+- Connections can be removed from either side right away: **×** in the tree panel and the new
+  section *Connections added by others* in the person form, which also changes the degree of a
+  connection stored at the other person.
+- Family page (`action=family`) with full description, attributes and members grouped into
+  played characters, wanted and other members; **Add to this family** for your own character or
+  persons from your list.
+- Separate *Family* section in the person form (families are no longer hidden among the
+  connection anchors).
+- Setting *Current in-play year*: persons get a year of birth and the age is calculated from it
+  everywhere (tree, list, profile, search API); ACP button to convert stored ages once.
+- Provider hooks `relatives_collect_person_details` (occupation, e.g. from *jobliste*, shown in
+  tree panel, list and wanted cards) and `relatives_profile_wanted_cards` (extra wanted cards
+  from other plugins).
 
 ### Changed
 - The profile wanted box lists every wanted person in the character's family tree (not only the
@@ -58,6 +76,14 @@ new code base; 2.0 and 2.1 were internal development stages and are summarised h
   `{$signature}`, fallback `{$footer}`, only where it is still missing (manual placement is
   kept); removed on deactivation.
 - Relationship types and attribute values are no longer seeded with forum-specific example data.
+- Connections with a free label (friends, clique, rivals …) are no longer drawn in the family
+  tree; they stay in the list. The profile wanted box therefore only shows wanted relatives.
+- Adoptive and step siblings no longer carry family membership over (an adoptive brother does
+  not make someone part of the other family); half siblings still do.
+- The *Secret* option is now called *Secret in-play (faded line)* with an explanation – it only
+  fades the line and never hides anything.
+- Family overview: two families per row, *X persons, Y of them played*, a short teaser instead
+  of the full scrolling description and a link to the family page.
 - All frontend actions (edit, delete, cancel, accept/decline, reset filter, empty-state buttons)
   are real theme buttons (`input.button`); mixed links, `a.button` and link-styled buttons with
   `|` separators are gone.

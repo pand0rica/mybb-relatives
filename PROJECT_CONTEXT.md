@@ -70,6 +70,8 @@ Plugin `anschluss suchmaschine` gebaut (siehe „Abhängigkeiten" unten), nicht 
 | `relatives_family_attributes` | Attributwert je Familie und Gruppe | `id, family_id, group_id, option_id (bei Vorauswahl), value (bei Freitext, max. 255)`, UNIQUE (family_id, group_id) |
 | `relatives_delete_requests` | Löschantrag für einen NPC (`Relatives_DeleteRequests`) | `id, person_id, person_name (Snapshot für die Abschluss-Benachrichtigung), requested_by, status (0 offen, 1 gelöscht, 2 abgelehnt, 3 abgebrochen), created_at, resolved_at` |
 | `relatives_delete_votes` | Antwort je betroffener Besitzer*in | `id, request_id, uid, vote (0 offen, 1 zugestimmt, 2 abgelehnt), answered_at`; UNIQUE (request_id, uid) |
+| `relatives_relation_requests` | Verbindungsanfrage zu einem fremden gespielten Charakter (`Relatives_RelationRequests`) | `id, person_id, related_to_person_id, related_to_family_id, relationship_type_id, relationship_custom_label, is_secret` (0/'' statt NULL), `replaces_relation_id` (0 = neue Kante), `requested_by, target_uid, status (0 offen, 1 bestätigt, 2 abgelehnt, 3 abgebrochen), created_at, resolved_at` |
+| `relatives_persons.birth_year` | Geburtsjahr (int, nullable); Alter = `relatives_inplay_year` − Geburtsjahr (`Relatives_Database::computed_age()`), sonst Altspalte `age` | |
 
 **Neu in v2.1** (Migration über `Relatives_Installer::upgrade_schema()`, idempotent bei jedem Aktivieren):
 
@@ -275,8 +277,8 @@ sagen, gilt für Verbindungen jetzt dieser Abschnitt.
   ihrer Liste haben **oder deren Charakter derselben Familie angehört**; gespielter Charakter →
   nur sein Account; Team (`canmodcp`/`cancp`) → alles. Familienmitglieder
   (`Relatives_Graph::family_memberships()`): direkt am Familien-Kasten hängende Personen, deren
-  Geschwister, alle Nachkommen davon sowie die Partner*innen all dieser Personen (von
-  Partner*innen aus wird nicht weitergesucht).
+  Geschwister (nicht Adoptiv-/Stiefgeschwister), alle Nachkommen davon sowie die Partner*innen
+  all dieser Personen (von Partner*innen aus wird nicht weitergesucht).
 - **Familien ohne Grad:** Wählt man im Formular eine Familie als Bezug, entfällt der
   Verwandtschaftsgrad. Ohne Haken wird eine reine Mitgliedschaft gespeichert (Kante zum Kasten
   ohne `relationship_type_id` und ohne Bezeichnung; im Baum gestrichelt, Label „Mitglied“, für
@@ -352,6 +354,48 @@ sagen, gilt für Verbindungen jetzt dieser Abschnitt.
   sofort (nichts zusammenzuführen); Upgrades laufen nie durch `install()`.
   Testforum-Stand vor der Umstellung: 265 Personen, 382 Verbindungen, 32 Account-Verknüpfungen,
   16 neue Knoten, 4 doppelte Namen, 26 identische Aussagen, 0 Widersprüche.
+
+## Team-Feedback Oktober 2026 (bestätigte User-Entscheidungen)
+
+Zwei Teamies haben das Plugin auf dem Testforum ausprobiert; daraus folgten diese Regeln:
+
+- **Bestätigungspflicht für fremde gespielte Charaktere.** Eine Kante, die einen gespielten
+  Charakter einer anderen Spieler*in berührt (`Relatives_RelationRequests::confirming_uid()`), wird
+  beim Anlegen oder Ändern nicht gespeichert, sondern als Anfrage in `relatives_relation_requests`
+  abgelegt (`split()` im add/edit-Handler, `relation_edit`). Unveränderte Kanten bleiben, eine
+  geänderte alte Kante bleibt bis zur Bestätigung stehen (`replaces_relation_id`). Bestätigen
+  legt die Kante an und trägt die Gegenperson in die Liste der bestätigenden Person ein
+  (Fall Norah/Lenja: Lenja stand vorher nie in Norahs Liste). MyAlerts
+  `relatives_relation_request/_accepted/_declined`, Box „Offene Verbindungsanfragen" unter
+  „Meine Verwandten", Zähler im Nav-Badge. Accounts derselben Spieler*in (Account-Switcher,
+  `users.as_uid`) gelten als eine Person. Bestehende/migrierte Kanten bleiben aktiv; das Team
+  ist nicht ausgenommen.
+- **Trennen geht immer sofort, von beiden Seiten** (`action=relation_delete`, Recht
+  `Relatives_Graph::can_edit_relation()`): „×" im Baum-Panel (`relations[].relation_id/can_edit`)
+  und Abschnitt „Von anderen eingetragene Verbindungen" im Personenformular
+  (`relatives_render_incoming_relations()`), dort auch Grad ändern (Fall Nick/Sienna: Nicks
+  Kante zu Sienna ließ sich vorher nur von Nicks Account aus ändern).
+- **Freie Bezeichnungen nie im Stammbaum.** `TreeBuilder::is_non_kin()` (freie Bezeichnung ohne
+  Grad, Konzept `other`) wird in `collect()` übersprungen – Freund*innen/Clique aus der alten
+  `wanted`-Tabelle stehen nur noch in der Liste. Die Profil-Gesuche (`wanted_nodes()`) zeigen
+  dadurch nur Verwandte; nicht-verwandte Gesuche liefert später die Anschluss-Suchmaschine über
+  den Provider-Hook `relatives_profile_wanted_cards`.
+- **„Geheim" blendet nichts aus** und heißt deshalb „Inplay geheim (blasse Linie)" mit
+  Erklärtext. Eine Ausblenden-Option gibt es bewusst nicht.
+- **Adoptiv- und Stiefgeschwister ziehen keine Familie mit** (`Graph::memberships_from()`,
+  `MEMBERSHIP_EXCLUDED_SIBLINGS`); Halbgeschwister, (Adoptiv-)Kinder und Partner*innen schon.
+- **Familien:** eigener Formularabschnitt „Familie" (intern weiter `relations[i][anchor]=f:<id>`),
+  Familienseite `action=family` (Gast-Zugriff wie `family_list`) mit Mitgliedergruppen und
+  „Zu dieser Familie hinzufügen" (`action=family_join`, gleiche Prüfung geschlossener Familien).
+  Übersicht: zwei Familien pro Reihe, „X Personen, davon Y bespielt", Anriss statt voller
+  Beschreibung.
+- **Geburtsjahr statt Alter:** Setting `relatives_inplay_year` (leer = altes Feld „Alter");
+  ACP-Knopf „Alter in Geburtsjahre umrechnen" (Tab Verwandtschaftsgrade). `relatives_search_persons()`
+  liefert `age` berechnet weiter (Vertrag unverändert) plus `birth_year`.
+- **Beruf kommt aus der Jobliste**, nicht aus einem eigenen Feld: Provider-Hook
+  `relatives_collect_person_details` (Anzeige in Baum-Panel, Liste, Gesuchskarte). Der Listener
+  gehört ins Jobliste-Repo.
+- **Attribute** (Haar-/Augenfarbe unnötig, Blutstatus sinnvoll) sind reine ACP-Konfiguration.
 
 ## Verwandtschaftsgraph (v2.1)
 
@@ -475,6 +519,7 @@ sagen, gilt für Verbindungen jetzt dieser Abschnitt.
 | `relatives_tree_link_profile` | yesno (default 1) | Stammbaum-Link im Profil – Variable `{$relatives_tree_link}` in `member_profile` |
 | `relatives_tree_link_postbit` | yesno (default 0) | Stammbaum-Link im Postbit – Variable `{$post['relatives_tree_link']}` in `postbit`/`postbit_classic` |
 | `relatives_tree_link_memberlist` | yesno (default 0) | Stammbaum-Link in der Mitgliederliste – Variable `{$user['relatives_tree_link']}` in `memberlist_user` |
+| `relatives_inplay_year` | text (default leer) | Aktuelles Inplay-Jahr; gesetzt = Geburtsjahr statt Alter im Formular, Alter wird berechnet |
 | `relatives_family_list_guests` | yesno (default 1) | Öffentliche Familienliste (`action=family_list`) auch für Gäst*innen; „Forum ansehen" gilt zusätzlich |
 | `relatives_family_list_layout_template` | text (default leer) | Optionales Rahmen-Template für die Familienliste (z. B. `listen`) |
 | `relatives_family_list_nav_template` | text (default leer) | Optionales Navigations-Template (z. B. `listen_nav`), nur zusammen mit dem Rahmen-Template |
@@ -509,6 +554,13 @@ Vertrag (siehe `jobliste`-Repo `PROJECT_CONTEXT.md`): `relatives_provide_joblist
 hängt an `$args['entities']` Zeilen `['entity_type' => 'relative', 'entity_id' => person_id,
 'label' => sanitized name]` für alle Personen in der Liste von `$args['uid']` an (geteilte Personen erscheinen bei allen Besitzer*innen).
 Kaputte/fremde Aufrufer werden ignoriert, Escaping bleibt bei Jobliste.
+
+**Eigene Provider-Hooks (seit Team-Feedback Oktober 2026):**
+- `relatives_collect_person_details` – `$args = ['person_ids' => int[], 'details' => []]`; ein
+  Listener setzt `$args['details'][person_id]['job']` (reiner Text). Relatives verwirft unbekannte
+  Personen/Keys, kürzt auf 255 Zeichen und escapet beim Rendern (`Relatives_Database::person_details()`).
+- `relatives_profile_wanted_cards` – `$args = ['uid' => int, 'cards' => '', 'count' => 0]`; ein
+  Listener hängt fertig escaptes Karten-HTML an `cards` an und erhöht `count`.
 
 **Öffentliche Adapter-API** (für `anschluss suchmaschine`, statt direktem Tabellenzugriff –
 Muster aus `conventions.md` §7 „Fremde Tabellen nur über einen Adapter"):
@@ -560,6 +612,9 @@ Such-API in `owners[]` zusätzlich `computed_label`, `computed_concept_key`, `co
 - Stammbaum ansehen: alle eingeloggten Nutzer*innen, für jeden `uid` (öffentlich, siehe oben).
 - Verwandtschaftsgrade/Attribut-Gruppen/Migrations-Tool: nur über ACP (Admin-Rechte).
 - Link-Bestätigung: nur der per `linked_uid` referenzierte Account selbst darf annehmen/ablehnen.
+- Verbindungsanfragen: bestätigen/ablehnen nur die angefragte Spieler*in (`target_uid` bzw. ein
+  Account derselben Spieler*in), zurückziehen nur die anfragende. Einzelne Verbindung trennen oder
+  ändern: wer eine der beiden Personen bearbeiten darf (`Relatives_Graph::can_edit_relation()`).
 
 ## Migration (Legacy → Neu)
 Quellen (`table_exists()`-Guard vor Zugriff): `mybb_relatives`, `mybb_wanted` (Personen),
@@ -656,3 +711,8 @@ Befehle nur mit `$config['relatives_allow_migration_reset']` + `--yes`).
   jeder Anzeige aus dem Geflecht erkannt (bestätigte User-Entscheidung v2.2).
 - Gespielte Charaktere nicht als separaten `self`-Sonderfall neben dem Geflecht führen – sie sind
   Personen-Knoten mit bestätigtem `linked_uid`.
+- Offene Verbindungsanfragen nicht als Status-Spalte in `relatives_relations` führen – alle Leser
+  der Kantentabelle (Kinship, TreeBuilder, Graph) sollen nur gültige Kanten sehen (bestätigte
+  User-Entscheidung Oktober 2026).
+- Freie Bezeichnungen (Freund*innen …) nicht wieder in den Stammbaum zeichnen und „Geheim" nicht zu
+  einem Ausblenden umbauen (bestätigte User-Entscheidungen Oktober 2026).

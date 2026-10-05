@@ -51,11 +51,15 @@ adding persons.
 ### First steps after activation
 
 1. Create the default relationship types (Installation step 4) and adjust labels if needed.
-2. Optionally create attribute groups (hair colour, eye colour, blood status …) under
+2. Optionally create attribute groups (e.g. blood status) under
    **ACP → Tools & Maintenance → Relatives & Family Tree → Attribute groups**.
-3. Decide where the "origin" of a person comes from (free text or an existing profile field)
+3. Optionally set the **Current in-play year** under **ACP → Configuration → Settings →
+   Relatives & Family Tree**. Persons then get a year of birth instead of a fixed age, and the age
+   is always calculated from it. Convert existing ages once via **… → Relationship types →
+   Convert ages to years of birth**.
+4. Decide where the "origin" of a person comes from (free text or an existing profile field)
    under **… → Origin**.
-4. Tell your players where to find it: **User CP → Miscellaneous → Relatives & Family Tree**.
+5. Tell your players where to find it: **User CP → Miscellaneous → Relatives & Family Tree**.
 
 ### For players: managing relatives
 
@@ -70,14 +74,20 @@ the pop-out icon opens your tree in its own window.
 - **Gender** – choose it first: the relationship dropdown then only offers the fitting labels
   (e.g. *mother* for female, *parent* for diverse/unspecified).
 - **Connections** – one or more statements "this person is *&lt;relationship&gt;* of
-  *&lt;person or family&gt;*". The anchor is your own character by default, but can be any person
-  in your tree (e.g. *brother* of *your mother* = your uncle) or a family box. Each connection
-  can be marked **secret** (drawn faintly) and one of them is the **Main connection** that
-  positions the person in the tree. Choose *Other connection* and type a free label for friends,
-  rivals, lovers etc.
-- **Age, Origin, Face claim, Description of the person, Your relationship** – optional details;
-  *Your relationship* is personal to your character, the rest is shared with everyone who has
-  this person in their list.
+  *&lt;person&gt;*". The anchor is your own character by default, but can be any person in your
+  tree (e.g. *brother* of *your mother* = your uncle). Each connection can be marked **Secret
+  in-play (faded line)** and one of them is the **Main connection** that positions the person in
+  the tree. *Secret in-play* only draws the line faintly (e.g. a parentage the characters don't
+  know about) – it does **not** hide anything. Choose *Other connection* and type a free label
+  for friends, rivals, lovers etc. – such connections are listed under *My relatives* but are
+  **not** drawn in the family tree.
+- **Family** – assign the person to one or more families from the family overview, no
+  relationship degree needed. With **Show family as parents** the family box takes the place of
+  the parents in the tree; without it the person simply belongs to the family.
+- **Year of birth** (or **Age** if no in-play year is set), **Origin, Face claim, Description of
+  the person, Your relationship** – optional details; *Your relationship* is personal to your
+  character, the rest is shared with everyone who has this person in their list. With a year of
+  birth the form shows the resulting age next to the field.
 - **Deceased** / **Year or date of death** – shows a cross and a dimmed box in the tree.
 - **Mark as wanted** / **Link to the wanted thread** – the person appears as a wanted card in
   the profile of every character whose family tree contains them (see
@@ -87,6 +97,28 @@ the pop-out icon opens your tree in its own window.
 ![Add person form](docs/screenshots/person-form.png)
 
 **Edit:** use the *Edit* link in your list or the box menu in the tree.
+
+**Connections to other players' characters need their confirmation.** If you add or change a
+connection to a character that another member plays (e.g. "Norah is the second cousin of my
+character"), it is not saved right away:
+
+1. You see the notice *… waiting for confirmation by their player*. The connection does not
+   appear in any tree yet.
+2. The other player gets a MyAlert (if MyAlerts is installed) and sees the request under
+   **User CP → Relatives & Family Tree → My relatives → Open connection requests** (also counted
+   in the red badge next to *My relatives*). There they click **Confirm** or **Decline**.
+3. After confirming, the connection is added and the other person also appears in the confirming
+   player's *My relatives* list. Either way you get a notification.
+4. Your own open requests are listed in the same box; **Withdraw** cancels them.
+
+Accounts of the same player (Account Switcher) don't need to confirm each other.
+
+**Connections added by others:** at the bottom of a person's edit form, the section
+*Connections added by others* lists connections that were stored at the other person (e.g.
+"Nick is great-grandfather of Sienna", entered from Nick's side). You can **Change** the degree
+or **Remove** the connection there without being allowed to edit the other person. Removing
+always works immediately, from both sides – also with the **×** next to a connection in the
+tree panel.
 
 **Delete an NPC (deletion request):** NPCs belong to the shared network, so *Delete* (in your
 list or in the tree's box menu) asks everyone else who has the person in their list:
@@ -130,8 +162,12 @@ profile/postbit/member list).
 - Uncertain intermediate persons are shown as grey **placeholders** ("Parent of Jolina") instead
   of a misleading direct line, e.g. for aunts, cousins or in-laws whose parents nobody has
   entered yet. Placeholders are display only and vanish once the real person is added.
-- Line styles come from the relationship type (e.g. dashed for ex-spouses); secret connections
-  are faint, adoptive/second families get their own colour.
+- Line styles come from the relationship type (e.g. dashed for ex-spouses); secret in-play
+  connections are faint, adoptive/second families get their own colour.
+- Only relatives are drawn: connections with a free label (friends, clique, rivals …) stay in
+  the list.
+- The **×** next to a connection in the panel removes it (if you may edit one of the two
+  persons).
 
 ![Family tree](docs/screenshots/tree.png)
 
@@ -142,10 +178,12 @@ secret connections as well.
 
 ### Wanted box in the profile
 
-Every character's profile shows a compact **Wanted** box listing all persons marked as
+Every character's profile shows a compact **Wanted** box listing all **relatives** marked as
 *wanted* that appear in that character's family tree – including persons other members
-entered, closest relatives first. Each mini card shows the face claim (or the first letter of
-the name), the name, the relation to the character and the age. **More** unfolds the
+entered, closest relatives first. Wanted friends or other non-relatives are not shown (other
+plugins can add their own cards, see [For developers](#for-developers)). Each mini card shows
+the face claim (or the first letter of the name), the name, the relation to the character, the
+age and – with the *jobliste* plugin – the occupation. **More** unfolds the
 description, **To the wanted thread** opens the linked thread. Characters without wanted
 persons in their tree get no box at all.
 
@@ -168,15 +206,25 @@ plugins are notified as usual.
 
 ### Families
 
-**User CP → Miscellaneous → Relatives & Family Tree → Families** lists all family boxes of the forum. **Add
-family** asks for a **Name**, a **Colour**, a **Description**, **This family welcomes new
-members** and any family attributes (ACP). A family box appears in the tree one generation above
-its members.
+**User CP → Miscellaneous → Relatives & Family Tree → Families** lists all family boxes of the
+forum, two per row: name, *X persons, Y of them played*, family attributes (e.g. blood status),
+the *No new members* badge and the beginning of the description. Click the name or **Open family
+page** for the family's own page. **Add family** asks for a **Name**, a **Colour**, a
+**Description**, **This family welcomes new members** and any family attributes (ACP). A family
+box appears in the tree one generation above its members.
 
-- In a person's connections, pick the family as anchor: without a relationship it is a plain
-  membership; with **Show family as parents** the box takes the place of the parents.
-- Membership covers everyone attached to the box, their siblings, all descendants and their
-  partners.
+**Family page** (`relatives.php?action=family&id=…`): the full description, the attributes and
+all members grouped into *Played characters* (with profile and family tree link), *Wanted* and
+*Other family members*. Logged-in members find **Add to this family** there: pick your own
+character or a person from your list, optionally tick **Show family as parents**, and click
+**Add**.
+
+- Assign families in the person form under **Family** or on the family page. Without *Show
+  family as parents* it is a plain membership; with it the box takes the place of the parents.
+- Membership covers everyone attached to the box, their (half-)siblings, all descendants
+  (including adopted children) and their partners. Adoptive and step siblings do **not** carry
+  the membership over – enter an adopted person as *adoptive child* of the family or of its
+  parents instead.
 - If **This family welcomes new members** is off, no further *played* characters can join the
   family – new players can only take over NPCs already in the tree. The overview shows a
   *No new members* badge.
@@ -186,8 +234,8 @@ its members.
 
 ![Families overview](docs/screenshots/families.png)
 
-**Public family list:** `relatives.php?action=family_list` shows the same cards read-only, with
-played characters as formatted profile links. On the *Families* tab the pop-out icon in the
+**Public family list:** `relatives.php?action=family_list` shows the same cards read-only; the
+family pages are public as well (same guest setting). On the *Families* tab the pop-out icon in the
 navigation opens this list in a new tab. It can be embedded into an existing list layout
 (see settings *Family list: frame template* / *navigation template*).
 
@@ -203,7 +251,9 @@ have access right away; other administrators need **ACP → Users & Groups → A
   the tree**, **Sort order**, **Active**. If a concept has no diverse variant, users who pick
   *diverse/unspecified* get a hint instead of that option. **Create default relationship types**
   adds all missing standard types; **Recalculate relations** rebuilds the cached "how is this
-  person related to the character" for every tree.
+  person related to the character" for every tree; **Convert ages to years of birth** turns
+  fixed ages into years of birth once (in-play year − age, requires the *Current in-play year*
+  setting).
 - **Attribute groups** – groups and their options. **Applies to** persons, families or both;
   **Field type** *Preset* (dropdown) or *Free text* (families only); **Multiple values for
   persons** switches between one value and checkboxes.
@@ -247,6 +297,10 @@ A fresh installation **without** legacy tables is unlocked immediately.
 - Siblings are derived: a new "brother of Oliver" is automatically a sibling of Oliver's
   siblings. Don't add these connections by hand.
 - Separation: switch *Spouse* to *Ex-spouse* – the line becomes dashed.
+- Not every attribute group is useful for every forum: deactivate groups you don't need (e.g.
+  hair or eye colour) under **ACP → … → Attribute groups**; existing values are kept.
+- Keep the *Current in-play year* up to date – all ages in trees, lists and profiles follow it
+  automatically.
 - Relations beyond great-grandparents / second cousins are shown as *distant ancestor /
   descendant / relative*; the tree still draws the exact structure.
 - Template variables: `{$relatives_tree_link}` and `{$relatives_wanted_box}` (template
@@ -272,6 +326,8 @@ A fresh installation **without** legacy tables is unlocked immediately.
   `listen_nav`), only used together with the frame template.
 - **Family tree link in profile** / **in postbit** / **in member list** – show a *Family tree*
   link (opens the popup) in the respective place; requires the template variables above.
+- **Current in-play year** – the year the in-play takes place in. If set, persons get a year of
+  birth and their age is calculated from it; empty = the old fixed *Age* field.
 - **Last legacy migration** and **Shared network merged** – set automatically, don't edit.
 
 ## For developers
@@ -280,8 +336,9 @@ Other plugins must not read the `relatives_*` tables directly. Public contract:
 
 - `relatives_search_persons(array $filters): array` – search persons. Filters (all optional):
   `gender`, `relationship_type_id`, `attribute_option_ids` (array), `is_wanted` (default
-  `true`), `age_min`, `age_max`, `query` (name/description). Values are sanitized but **not**
-  HTML-escaped – escape when rendering.
+  `true`), `age_min`, `age_max` (calculated age), `query` (name/description). Each row contains
+  `age` (calculated from the year of birth when an in-play year is set) and `birth_year`. Values
+  are sanitized but **not** HTML-escaped – escape when rendering.
 - `relatives_get_relation(int $person_id, int $uid): array` – how a person relates to a
   character: `concept_key`, `label`, `category`, `up`, `down`, `owner_name`, `text`
   (e.g. "Uncle of Megan").
@@ -289,6 +346,12 @@ Other plugins must not read the `relatives_*` tables directly. Public contract:
   (the latter also fills the optional `relations` list – who added the person and in which
   degree – shown in the info icon of the jobliste overview – and `linked_uid` for persons with a
   confirmed account link).
+- `relatives_collect_person_details` (provider hook, `$args = ['person_ids' => [...], 'details'
+  => []]`): set `$args['details'][$person_id]['job']` to a plain-text occupation; it is shown in
+  the tree panel, the list and the wanted cards.
+- `relatives_profile_wanted_cards` (provider hook, `$args = ['uid' => …, 'cards' => '', 'count'
+  => 0]`): append your own, already escaped card HTML to `cards` and raise `count` – e.g. wanted
+  non-relatives from a search plugin.
 
 ## Uninstallation
 
@@ -296,7 +359,7 @@ Other plugins must not read the `relatives_*` tables directly. Public contract:
    the templates, the stylesheets from all themes and the User CP menu item; your data and
    settings are kept.
 2. **Uninstall** – drops all `relatives_*` tables and removes the settings. This deletes all
-   persons, connections, families and deletion requests irrevocably, and removes the plugin's
+   persons, connections, families, deletion and connection requests irrevocably, and removes the plugin's
    MyAlerts alert types together with their alerts. Legacy tables of the old plugin are not
    touched.
 3. Delete the uploaded files (`relatives.php`, `inc/plugins/relatives.php`,
