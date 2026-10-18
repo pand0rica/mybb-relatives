@@ -1292,7 +1292,8 @@ class Relatives_TreeBuilder
      * dort gezeichnet, wo sie als einzige zeigen, wohin ein Knoten gehoert -- und dann nur
      * eine je Knoten, bevorzugt die zur Wurzel. Steht ein Knoten bereits in einer Familie
      * oder einem Paar, ist die Verbindung ueber Hervorhebung und Panel sichtbar; als Linie
-     * liefe sie nur quer ueber den ganzen Baum.
+     * liefe sie nur quer ueber den ganzen Baum. Ausnahme: verbindet die lose Aussage als
+     * einzige zwei sonst getrennte Teile des Baums, wird sie trotzdem gezeichnet.
      */
     private function needed_links(array $links, array $families, array $partners): array
     {
@@ -1320,6 +1321,35 @@ class Relatives_TreeBuilder
                     continue;
                 }
                 $linked[$floating] = true;
+                $kept[] = $link;
+            }
+        }
+
+        // A loose statement between two nodes that both stand in families can still be the
+        // only thing tying one part of the tree to the rest (a distant ancestor with their
+        // own family box above them). Keep one line per such island, root links first --
+        // otherwise the island floats in the tree without any visible connection.
+        $component = [];
+        foreach ($families as $family) {
+            $members = array_merge($family['parents'], $family['children']);
+            foreach ($members as $key) {
+                self::uf_union($component, $members[0], $key);
+            }
+        }
+        foreach ($partners as $pair) {
+            self::uf_union($component, $pair['a'], $pair['b']);
+        }
+        foreach ($kept as $link) {
+            self::uf_union($component, $link['from'], $link['to']);
+        }
+        foreach ([true, false] as $root_links_first) {
+            foreach ($links as $link) {
+                $touches_root = $link['from'] === $this->root_key || $link['to'] === $this->root_key;
+                if ($touches_root !== $root_links_first
+                    || self::uf_find($component, $link['from']) === self::uf_find($component, $link['to'])) {
+                    continue;
+                }
+                self::uf_union($component, $link['from'], $link['to']);
                 $kept[] = $link;
             }
         }

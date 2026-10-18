@@ -38,7 +38,7 @@ const OFFSETS = [
     'parent' => -1, 'child' => 1, 'sibling' => 0, 'spouse' => 0,
     'aunt_uncle' => -1, 'niece_nephew' => 1, 'cousin' => 0, 'great_aunt_uncle' => -2,
     'grandparent' => -2, 'parent_in_law' => -1, 'child_in_law' => 1, 'sibling_in_law' => 0,
-    'half_sibling' => 0, 'step_sibling' => 0, 'friend' => 0,
+    'half_sibling' => 0, 'step_sibling' => 0, 'friend' => 0, 'distant_ancestor' => -4,
 ];
 
 /**
@@ -315,6 +315,23 @@ $x = static function (int $id) use ($t): float {
 check('partner chain stays adjacent', [1.0, 1.0, 1.0], [
     round(abs($x(3) - $x(2)), 2), round(abs($x(4) - $x(3)), 2), round(abs($x(5) - $x(4)), 2),
 ]);
+
+// Entfernte*r Vorfahr*in mit eigener Familie: 6 ist Kind von 7 (eigene Insel) und
+// "entfernter Vorfahr von 4" (Grosselternteil der Wurzel, Partner*in von 5). Beide stehen
+// in Familien -- trotzdem ist die lose Linie die einzige Verbindung der Insel zum Baum.
+$t = tree([1 => 0, 2 => -1, 4 => -2, 5 => -2, 6 => -6, 7 => -7], [
+    [2, 'parent', 1], [4, 'parent', 2], [5, 'spouse', 4], [6, 'distant_ancestor', 4], [6, 'child', 7],
+]);
+check('distant ancestor island keeps its line', true, (bool)array_filter($t['links'], static function ($link) {
+    return in_array('person:6', [$link['from'], $link['to']], true) && in_array('person:4', [$link['from'], $link['to']], true);
+}));
+
+// Gegenprobe: liegt die lose Angabe innerhalb derselben Familie (Cousine 3 hat Eltern im
+// Baum, die mit der Wurzel verbunden sind), bleibt es bei Hervorhebung ohne Linie.
+$t = tree([1 => 0, 2 => -1, 4 => -2, 8 => -1, 3 => 0], [
+    [2, 'parent', 1], [4, 'parent', 2], [8, 'child', 4], [3, 'child', 8], [3, 'cousin', 1],
+]);
+check('connected cousin gets no extra line', [], $t['links']);
 
 echo "\n{$pass} passed, {$fail} failed\n";
 exit($fail > 0 ? 1 : 0);
