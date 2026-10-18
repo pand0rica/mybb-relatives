@@ -192,6 +192,14 @@
 			if (!a || !b) { return; }
 			var meta = { style: pair.style, secret: pair.secret, keys: [pair.a, pair.b] };
 			if (a.y !== b.y) { add(elbowPath(a, b, LOOSE_LANE), "loose", meta); return; }
+			// Steht ein anderer Kasten dazwischen (Person mit drei Partner*innen), fuehrt die
+			// Linie darueber -- sonst saehe es aus, als waere der mittlere Kasten das Paar.
+			var between = Object.keys(visible).some(function (key) {
+				if (key === pair.a || key === pair.b) { return false; }
+				var p = pixelOf(key);
+				return p && p.y === a.y && p.x > Math.min(a.x, b.x) && p.x < Math.max(a.x, b.x);
+			});
+			if (between) { add(elbowPath(a, b), "partner", meta); return; }
 			var left = Math.min(a.x, b.x) + HALF_W;
 			var right = Math.max(a.x, b.x) - HALF_W;
 			if (right - left > 1) {

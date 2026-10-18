@@ -39,11 +39,12 @@ const OFFSETS = [
     'aunt_uncle' => -1, 'niece_nephew' => 1, 'cousin' => 0, 'great_aunt_uncle' => -2,
     'grandparent' => -2, 'parent_in_law' => -1, 'child_in_law' => 1, 'sibling_in_law' => 0,
     'half_sibling' => 0, 'step_sibling' => 0, 'friend' => 0, 'distant_ancestor' => -4,
+    'adoptive_parent' => -1,
 ];
 
 /**
  * @param array $generations person-id (oder 'family:<id>') => Generation
- * @param array $statements  [[person-id, Konzept, Anker-id, geheim?], ...] -- "Person ist Konzept von Anker";
+ * @param array $statements  [[person-id, Konzept, Anker-id, geheim?, primaer?], ...] -- "Person ist Konzept von Anker";
  *                           Anker darf 'family:<id>' sein, Konzept 'member' = reine Mitgliedschaft
  */
 function tree(array $generations, array $statements): array
@@ -65,7 +66,7 @@ function tree(array $generations, array $statements): array
             'node' => 'person:' . $statement[0],
             'anchor' => is_string($statement[2]) ? $statement[2] : 'person:' . $statement[2],
             'concept' => $membership ? null : $statement[1], 'offset' => $membership ? 0 : OFFSETS[$statement[1]],
-            'label' => $statement[1], 'style' => 'solid', 'secret' => !empty($statement[3]), 'primary' => false,
+            'label' => $statement[1], 'style' => 'solid', 'secret' => !empty($statement[3]), 'primary' => !empty($statement[4]),
             'membership' => $membership,
         ];
     }
@@ -389,6 +390,27 @@ $generations = $settle->invoke(null,
 check('statement deep in a box branch moves the whole branch', [-7, -6, -5], [
     $generations['person:7'], $generations['person:8'], $generations['person:9'],
 ]);
+
+echo "\n=== Leibliche Eltern eines Adoptivkinds, Vater mit drei Partner*innen ===\n";
+// 5 waechst bei 3+4 auf (primaer adoptiv, neben deren Kind 1). Leiblich (geheim): 2 + 8.
+// 2 hat ausserdem 6 (Ehe, keine Kinder) und 7 (gemeinsames Kind 9).
+$t = tree([1 => 0, 2 => -1, 3 => -1, 4 => -1, 5 => 0, 6 => -1, 7 => -1, 8 => -1, 9 => 0], [
+    [3, 'parent', 1], [4, 'parent', 1],
+    [3, 'adoptive_parent', 5, false, true], [4, 'adoptive_parent', 5, false, true],
+    [2, 'parent', 5, true], [8, 'parent', 5, true],
+    [6, 'spouse', 2], [2, 'parent', 9], [7, 'parent', 9], [2, 'sibling', 3],
+]);
+$row = [];
+foreach (['person:2', 'person:6', 'person:7', 'person:8'] as $key) {
+    $row[$key] = $t['nodes'][$key]['x'];
+}
+asort($row);
+$order = array_keys($row);
+$at = array_flip($order);
+check('blood parents of the adoptee stand side by side', 1, abs($at['person:2'] - $at['person:8']));
+check('co-parent of the other child stands beside the father', 1, abs($at['person:2'] - $at['person:7']));
+check('partner without children stands outside', true, in_array('person:6', [$order[0], $order[3]], true));
+check('blood parents get a partner line', true, has_pair($t['partner_pairs'], 'person:2', 'person:8'));
 
 echo "\n{$pass} passed, {$fail} failed\n";
 exit($fail > 0 ? 1 : 0);

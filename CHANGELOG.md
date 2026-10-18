@@ -99,6 +99,9 @@ new code base; 2.0 and 2.1 were internal development stages and are summarised h
   the family tree.
 
 ### Fixed
+- Birth parents of an adopted child now stand side by side with a partner line in the tree; a
+  person with three or more partners keeps the partners they share children with directly
+  beside them, and a partner line that has to pass another box is drawn above it.
 - Any logged-in user could edit or delete other users' entries by changing the ID in the URL
   (legacy IDOR). Every write action now checks ownership/edit rights.
 - Tree data silently broke because the JSON inside `<script>` blocks was HTML-escaped.

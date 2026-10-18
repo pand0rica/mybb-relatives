@@ -76,6 +76,9 @@ class Relatives_TreeBuilder
     /** Paare innerhalb einer Layout-Einheit (Partner*innen, gemeinsame Eltern): key => [key => true]. */
     private array $unit_pairs = [];
 
+    /** Paare mit gemeinsamen Kindern (Eltern derselben Familie): key => [key => true]. */
+    private array $coparent_pairs = [];
+
     /** Neutrale Platzhalter-Abgaenge auf ein Elternpaar (siehe Relatives_TreePlaceholders). */
     private array $placeholder_attachments = [];
 
@@ -895,8 +898,9 @@ class Relatives_TreeBuilder
             $seen[self::pair_key($pair['a'], $pair['b'])] = true;
         }
 
+        // Zweitfamilien zaehlen mit: leibliche Eltern eines Adoptivkinds sind sonst kein Paar.
         $nodes = $this->nodes;
-        foreach ($structure['families'] as $family) {
+        foreach (array_merge($structure['families'], $this->secondary_families) as $family) {
             $parents = array_values(array_filter($family['parents'], static function ($key) use ($nodes) {
                 return isset($nodes[$key]);
             }));
@@ -914,7 +918,7 @@ class Relatives_TreeBuilder
                     continue;
                 }
                 $seen[$key] = true;
-                $partners[] = ['a' => $a, 'b' => $b];
+                $partners[] = ['a' => $a, 'b' => $b, 'secret' => !empty($family['secret'])];
             }
         }
 
@@ -2259,6 +2263,7 @@ class Relatives_TreeBuilder
             $unit_uf[$key] = $key;
         }
         $this->unit_pairs = [];
+        $this->coparent_pairs = [];
         foreach ($structure['partners'] as $pair) {
             if ($this->nodes[$pair['a']]['generation'] === $this->nodes[$pair['b']]['generation']) {
                 self::uf_union($unit_uf, $pair['a'], $pair['b']);
@@ -2266,7 +2271,9 @@ class Relatives_TreeBuilder
                 $this->unit_pairs[$pair['b']][$pair['a']] = true;
             }
         }
-        foreach ($structure['families'] as $family) {
+        // Auch die Eltern einer Zweitfamilie stehen als Paar zusammen: Louisas leibliche
+        // Eltern bleiben erkennbar, auch wenn sie bei Adoptiveltern aufwaechst.
+        foreach (array_merge($structure['families'], $this->secondary_families) as $family) {
             $previous = null;
             foreach ($family['parents'] as $parent_key) {
                 if ($previous !== null
@@ -2274,6 +2281,8 @@ class Relatives_TreeBuilder
                     self::uf_union($unit_uf, $previous, $parent_key);
                     $this->unit_pairs[$previous][$parent_key] = true;
                     $this->unit_pairs[$parent_key][$previous] = true;
+                    $this->coparent_pairs[$previous][$parent_key] = true;
+                    $this->coparent_pairs[$parent_key][$previous] = true;
                 }
                 $previous = $parent_key;
             }
@@ -2888,8 +2897,8 @@ class Relatives_TreeBuilder
      * Bilden die Paare einer Einheit eine Kette (Cathalain - Caiomhe - Simon - Milena),
      * stehen die Mitglieder in genau dieser Kette -- sonst lag die Partnerlinie ueber fremden
      * Kaesten und die Abgaenge der beiden Paare kreuzten sich. Von den zwei Richtungen gilt
-     * die, die naeher an der uebergebenen Wunschreihenfolge liegt. Keine Kette (jemand mit
-     * drei Partner*innen, Kreis): Reihenfolge bleibt.
+     * die, die naeher an der uebergebenen Wunschreihenfolge liegt. Jemand mit drei oder
+     * mehr Partner*innen: siehe star_order(). Kreis: Reihenfolge bleibt.
      */
     private function chain_order(array $members): array
     {
@@ -2902,8 +2911,10 @@ class Relatives_TreeBuilder
             $neighbours[$member] = array_values(array_filter(array_keys($this->unit_pairs[$member] ?? []), function ($other) use ($in_unit) {
                 return isset($in_unit[$other]);
             }));
-            if (count($neighbours[$member]) > 2) {
-                return $members;
+        }
+        foreach ($neighbours as $list) {
+            if (count($list) > 2) {
+                return $this->star_order($members, $neighbours);
             }
         }
 
@@ -2942,6 +2953,54 @@ class Relatives_TreeBuilder
         };
         $reversed = array_reverse($chain);
         return $displacement($reversed) < $displacement($chain) ? $reversed : $chain;
+    }
+
+    /**
+     * Eine Person mit drei oder mehr Partner*innen (Nathaniel: Drusilla, Beatrix, Mama
+     * Griffin) steht in der Mitte. Wer mit ihr Kinder hat, steht direkt daneben -- sonst
+     * laeuft der Abgang zu den Kindern aus einer Paarmitte ueber einem fremden Kasten.
+     * Die uebrigen rutschen nach aussen. Andere Formen als dieser Stern: Reihenfolge bleibt.
+     */
+    private function star_order(array $members, array $neighbours): array
+    {
+        $hubs = array_values(array_filter($members, static function ($member) use ($neighbours) {
+            return count($neighbours[$member]) > 2;
+        }));
+        if (count($hubs) !== 1) {
+            return $members;
+        }
+        $hub = $hubs[0];
+        $partners = [];
+        foreach ($members as $member) {
+            if ($member === $hub) {
+                continue;
+            }
+            if ($neighbours[$member] !== [$hub]) {
+                return $members;
+            }
+            $partners[] = $member;
+        }
+
+        // Wunschreihenfolge bleibt Tie-Break; wer links vom Hub gewuenscht war, bleibt links.
+        $wish = array_flip($members);
+        usort($partners, function ($a, $b) use ($hub, $wish) {
+            return [isset($this->coparent_pairs[$hub][$a]) ? 0 : 1, $wish[$a]]
+                <=> [isset($this->coparent_pairs[$hub][$b]) ? 0 : 1, $wish[$b]];
+        });
+        $inner = array_slice($partners, 0, 2);
+        usort($inner, static function ($a, $b) use ($wish) {
+            return $wish[$a] <=> $wish[$b];
+        });
+        $left = [$inner[0]];
+        $right = isset($inner[1]) ? [$inner[1]] : [];
+        foreach (array_slice($partners, 2) as $index => $partner) {
+            if ($index % 2 === 0) {
+                array_unshift($left, $partner);
+            } else {
+                $right[] = $partner;
+            }
+        }
+        return array_merge($left, [$hub], $right);
     }
 
     /** x-Position eines Knotens innerhalb seiner Einheit. */
