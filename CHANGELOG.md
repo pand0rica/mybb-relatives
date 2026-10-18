@@ -151,6 +151,12 @@ new code base; 2.0 and 2.1 were internal development stages and are summarised h
   `$userhandler->delete_uids` (also covers bulk deletions in the ACP), removes each deleted user as
   owner of their persons, cancels their open deletion requests/votes and resets every
   `linked_uid` reference to them.
+- Accepting a request that changes an existing connection (e.g. *mother* → *father*) marked the
+  request as accepted but left the old degree in place: every form save deleted and re-inserted
+  all connections of a person, so the remembered connection id was gone, and the fallback treated
+  *mother* and *father* as the same statement. Saving now keeps the rows (and ids) of unchanged
+  connections, and accepting updates the current connection to the same anchor – also when only
+  the gender-specific degree, free label or secret flag differs.
 
 ### Security
 - All data-changing frontend actions (delete, adopt, link request/accept/decline, family delete)

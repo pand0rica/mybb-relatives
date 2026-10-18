@@ -308,8 +308,13 @@ class Relatives_RelationRequests
 
         $replaces = (int)$request['replaces_relation_id'];
         $old = $replaces > 0 ? Relatives_Database::get_relation($replaces) : null;
-        if ($old !== null && (int)$old['person_id'] === $person_id) {
-            Relatives_Database::update_relation($replaces, $relation);
+        if ($old === null || (int)$old['person_id'] !== $person_id || self::anchor_key($old) !== self::anchor_key($request)) {
+            // Die gemerkte id kann veraltet sein (Kante inzwischen geloescht/neu angelegt):
+            // dann die aktuelle Kante derselben Person zum selben Anker nehmen.
+            $old = $replaces > 0 ? self::find_direct_relation($person_id, $request) : null;
+        }
+        if ($old !== null) {
+            Relatives_Database::update_relation((int)$old['id'], $relation);
         } else {
             $type = $relation['relationship_type_id'] !== null ? Relatives_RelationshipTypes::get_by_id($relation['relationship_type_id']) : null;
             $existing = Relatives_Graph::find_existing_statement(
@@ -322,6 +327,13 @@ class Relatives_RelationRequests
             if ($existing !== null && empty($existing['same'])) {
                 self::set_status($id, self::STATUS_CANCELLED);
                 return self::RESULT_CONFLICT;
+            }
+            // Gleiches Konzept heisst nicht gleiche Angabe ("Mutter" vs. "Vater" sind beide
+            // Elternteil): steht die Kante in derselben Richtung, wird sie angeglichen.
+            if ($existing !== null && (int)$existing['person_id'] === $person_id
+                && self::anchor_key($existing) === self::anchor_key($request)
+                && self::differs($existing, $request)) {
+                Relatives_Database::update_relation((int)$existing['id'], $relation);
             }
             if ($existing === null) {
                 $relation['person_id'] = $person_id;
@@ -445,6 +457,39 @@ class Relatives_RelationRequests
     {
         return self::anchor_key($relation) . '|' . (int)($relation['relationship_type_id'] ?? 0) . '|'
             . mb_strtolower(trim((string)($relation['relationship_custom_label'] ?? '')));
+    }
+
+    /** Weicht die Kante in Grad, freier Bezeichnung oder Geheim-Status von der Anfrage ab? */
+    private static function differs(array $row, array $request): bool
+    {
+        return self::signature($row) !== self::signature($request)
+            || (int)$row['is_secret'] !== (int)$request['is_secret'];
+    }
+
+    /**
+     * Kante, die $person_id selbst zum Anker der Anfrage zieht. Gibt es mehrere, gewinnt
+     * die mit demselben Konzept wie die Anfrage, sonst die erste.
+     */
+    private static function find_direct_relation(int $person_id, array $request): ?array
+    {
+        $anchor = self::anchor_key($request);
+        $types = Relatives_Kinship::type_map();
+        $wanted = (int)$request['relationship_type_id'] > 0 ? ($types[(int)$request['relationship_type_id']]['concept'] ?? null) : null;
+
+        $first = null;
+        foreach (Relatives_Database::get_relations_for_person($person_id) as $row) {
+            if (self::anchor_key($row) !== $anchor) {
+                continue;
+            }
+            $concept = !empty($row['relationship_type_id']) ? ($types[(int)$row['relationship_type_id']]['concept'] ?? null) : null;
+            if ($wanted !== null && $concept === $wanted) {
+                return $row;
+            }
+            if ($first === null) {
+                $first = $row;
+            }
+        }
+        return $first;
     }
 
     /** Gespeicherte Kante in das Format von replace_relations(). */
