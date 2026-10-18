@@ -286,9 +286,6 @@ function relatives_render_incoming_relations(int $person_id): string
         }
         $options = '<option value="0">' . htmlspecialchars_uni($lang->relatives_relationship_other) . '</option>';
         foreach ($type_options_cache[$gender] as $type) {
-            if (strpos((string)$type['concept_key'], 'distant_') === 0) {
-                continue;
-            }
             $selected = (int)$type['id'] === (int)$relation['relationship_type_id'] ? ' selected="selected"' : '';
             $options .= '<option value="' . (int)$type['id'] . '"' . $selected . '>' . htmlspecialchars_uni((string)$type['label']) . '</option>';
         }

@@ -28,10 +28,11 @@ class Relatives_RelationshipTypes
      * Format je Zeile: concept_key, generation_offset, [maennlich, weiblich, neutral],
      * line_style (Linienart im Stammbaum, siehe LINE_STYLES).
      *
-     * Die "distant_*"-Konzepte sind keine Auswahl fuers Formular, sondern die
-     * Sammelbegriffe, auf die Relatives_Kinship alles abbildet, was weiter weg ist als
-     * Urgrosseltern bzw. Grossonkel/Grosscousin*e. Sie brauchen trotzdem Zeilen hier,
-     * weil ihre Bezeichnungen -- wie alle anderen -- im ACP editierbar sein sollen.
+     * Die "distant_*"-Konzepte sind die Sammelbegriffe, auf die Relatives_Kinship alles
+     * abbildet, was weiter weg ist als Urgrosseltern bzw. Grossonkel/Grosscousin*e. Sie
+     * sind zugleich direkt waehlbar (Formular, Baum-Panel) -- die Migration speichert
+     * "(entfernt)"-Grade als distant_relative, und ein ausgeblendeter Grad ginge beim
+     * Bearbeiten verloren.
      */
     private const COMMON_DEFAULTS = [
         ['parent',            -1, ['Vater', 'Mutter', 'Elternteil'], 'solid'],

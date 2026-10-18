@@ -239,9 +239,9 @@
 		while (typeSelect.options.length > 1) { typeSelect.remove(1); }
 
 		allTypes
+			// Includes the distant_* degrees: a saved "entfernte*r Vorfahr*in" missing from
+			// this list would leave the row empty and be dropped on save.
 			.filter(function (type) { return type.gender === labelGender; })
-			// Sammelbegriffe ("entfernte*r Verwandte*r") vergibt die Berechnung selbst.
-			.filter(function (type) { return type.concept_key.indexOf("distant_") !== 0; })
 			.sort(function (a, b) { return a.label.localeCompare(b.label, "de"); })
 			.forEach(function (type) {
 				var opt = document.createElement("option");
