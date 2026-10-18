@@ -88,14 +88,40 @@ class Relatives_Database
     }
 
     /**
+     * Todesjahr aus dem Freitext-Feld death_note ("1999", "12.03.1999", "März 1999"):
+     * die laengste Ziffernfolge, bei Gleichstand die letzte. null = nicht verstorben
+     * oder kein Jahr erkennbar.
+     */
+    public static function death_year(array $person): ?int
+    {
+        if (empty($person['is_deceased']) || !isset($person['death_note'])) {
+            return null;
+        }
+        if (!preg_match_all('/\d{1,5}/', (string)$person['death_note'], $matches)) {
+            return null;
+        }
+        $year = null;
+        foreach ($matches[0] as $digits) {
+            if ($year === null || strlen($digits) >= strlen($year)) {
+                $year = $digits;
+            }
+        }
+        return (int)$year;
+    }
+
+    /**
      * Alter einer Person: aus dem Geburtsjahr, wenn es und das Inplay-Jahr bekannt sind,
-     * sonst das alte, fest eingetragene Alter.
+     * sonst das alte, fest eingetragene Alter. Bei Verstorbenen mit erkennbarem Todesjahr
+     * zaehlt das Todesjahr statt des Inplay-Jahres (Alter beim Tod).
      */
     public static function computed_age(array $person): ?int
     {
         $inplay_year = self::inplay_year();
         if ($inplay_year !== null && isset($person['birth_year']) && $person['birth_year'] !== null && $person['birth_year'] !== '') {
-            return max(0, $inplay_year - (int)$person['birth_year']);
+            $birth_year = (int)$person['birth_year'];
+            $death_year = self::death_year($person);
+            $reference_year = ($death_year !== null && $death_year >= $birth_year) ? $death_year : $inplay_year;
+            return max(0, $reference_year - $birth_year);
         }
         if (isset($person['age']) && $person['age'] !== null && $person['age'] !== '') {
             return (int)$person['age'];

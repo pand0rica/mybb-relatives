@@ -89,7 +89,8 @@ the pop-out icon opens your tree in its own window.
   - **Year of birth** (or **Age** if no in-play year is set) – with a year of birth the form
     shows the resulting age next to the field.
   - **Deceased** – only when ticked, **Year or date of death** appears; shows a cross and a
-    dimmed box in the tree.
+    dimmed box in the tree. If it contains a year and the person has a year of birth, the age is
+    shown as the age at death instead of the age in the current in-play year.
   - **Origin**
   - **Occupation** – only with the *jobliste* plugin, which adds its own fields here.
   - **Mark as wanted** – only when ticked, **Link to the wanted thread** appears; the person then

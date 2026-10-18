@@ -61,7 +61,8 @@ new code base; 2.0 and 2.1 were internal development stages and are summarised h
 - Separate *Family* section in the person form (families are no longer hidden among the
   connection anchors).
 - Setting *Current in-play year*: persons get a year of birth and the age is calculated from it
-  everywhere (tree, list, profile, search API); ACP button to convert stored ages once.
+  everywhere (tree, list, profile, search API); ACP button to convert stored ages once. For
+  deceased persons with a year of death the age at death is shown.
 - Provider hooks `relatives_collect_person_details` (occupation, e.g. from *jobliste*, shown in
   tree panel, list and wanted cards) and `relatives_profile_wanted_cards` (extra wanted cards
   from other plugins).
