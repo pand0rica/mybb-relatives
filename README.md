@@ -253,7 +253,7 @@ character or a person from your list, optionally tick **Show family as parents**
 - If **This family welcomes new members** is off, no further *played* characters can join the
   family – new players can only take over NPCs already in the tree. The overview shows a
   *No new members* badge.
-- Only the creator of a family and the team can edit or delete it.
+- The creator of a family, the team and every played character belonging to the family can edit it; only the creator and the team can delete it.
 - The overview can be filtered by "welcomes new members" and by family attributes; filter URLs
   can be shared.
 

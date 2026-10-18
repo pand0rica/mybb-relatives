@@ -101,6 +101,8 @@ new code base; 2.0 and 2.1 were internal development stages and are summarised h
   tree; they stay in the list. The profile wanted box therefore only shows wanted relatives.
 - Adoptive and step siblings no longer carry family membership over (an adoptive brother does
   not make someone part of the other family); half siblings still do.
+- Every played character belonging to a family can now edit it (and add members to it while it
+  is closed); deleting a family stays reserved for its creator and the team.
 - The *Secret* option is now called *Secret in-play (faded line)* with an explanation – it only
   fades the line and never hides anything.
 - Person form: optional details reordered (description, year of birth, deceased + date, origin,

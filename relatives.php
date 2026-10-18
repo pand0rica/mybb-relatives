@@ -972,8 +972,8 @@ if ($action === 'add' || $action === 'edit') {
         );
 
         // Familien, die sich nicht ueber neue Mitglieder freuen, nehmen keine weiteren
-        // gespielten Charaktere auf. Wer die Familie verwalten darf (anlegende Person,
-        // Team), ist davon ausgenommen.
+        // gespielten Charaktere auf. Wer die Familie bearbeiten darf (anlegende Person,
+        // Team, bespielte Mitglieder), ist davon ausgenommen.
         if ($relations) {
             $violations = Relatives_Graph::closed_family_violations(
                 $own_person_id,
@@ -981,7 +981,7 @@ if ($action === 'add' || $action === 'edit') {
                 $is_edit || $existing_by_name === null
             );
             foreach ($violations as $violation) {
-                if (!relatives_can_manage_family($violation['family'])) {
+                if (!relatives_can_edit_family($violation['family'])) {
                     relatives_error_response($lang->sprintf(
                         $lang->relatives_error_family_closed,
                         htmlspecialchars_uni((string)$violation['family']['name']),
@@ -1368,7 +1368,7 @@ if ($action === 'link_accept' || $action === 'link_decline') {
 
 /**
  * Familien-Kaesten sind forumsweit geteilt und haengen in fremden Stammbaeumen --
- * aendern/loeschen duerfen sie deshalb nur die Person, die sie angelegt hat, und das
+ * loeschen duerfen sie deshalb nur die Person, die sie angelegt hat, und das
  * Moderationsteam. Anlegen und Zuordnen darf jede*r.
  */
 function relatives_can_manage_family(array $family): bool
@@ -1380,6 +1380,25 @@ function relatives_can_manage_family(array $family): bool
     return (int)$family['created_by'] === (int)$mybb->user['uid']
         || !empty($mybb->usergroup['canmodcp'])
         || !empty($mybb->usergroup['cancp']);
+}
+
+/**
+ * Bearbeiten (und neue Mitglieder trotz geschlossener Familie aufnehmen) darf zusaetzlich
+ * jeder bespielte Charakter, der selbst zur Familie gehoert (Definition siehe
+ * Relatives_Graph::family_memberships()).
+ */
+function relatives_can_edit_family(array $family): bool
+{
+    global $mybb;
+    if (relatives_can_manage_family($family)) {
+        return true;
+    }
+    $account_person_id = Relatives_Graph::find_account_person_id((int)$mybb->user['uid']);
+    if ($account_person_id <= 0) {
+        return false;
+    }
+    $memberships = Relatives_Graph::family_memberships();
+    return isset($memberships[$account_person_id][(int)$family['id']]);
 }
 
 if ($action === 'family_delete') {
@@ -1407,7 +1426,7 @@ if ($action === 'family_add' || $action === 'family_edit') {
         if ($family === null) {
             error($lang->relatives_error_invalid_family);
         }
-        if (!relatives_can_manage_family($family)) {
+        if (!relatives_can_edit_family($family)) {
             error_no_permission();
         }
     }
@@ -1604,17 +1623,24 @@ function relatives_family_member_counts(array $member_ids, array $persons): arra
     return ['total' => $total, 'played' => $played];
 }
 
-/** Bearbeiten/Loeschen einer Familie (nur anlegende Person und Team), sonst ''. */
+/**
+ * Bearbeiten (anlegende Person, Team, bespielte Mitglieder) und Loeschen (nur anlegende
+ * Person und Team) einer Familie, sonst ''.
+ */
 function relatives_family_manage_actions(array $family): string
 {
     global $mybb, $lang;
 
-    if (!relatives_can_manage_family($family)) {
+    if (!relatives_can_edit_family($family)) {
         return '';
     }
     $family_id = (int)$family['id'];
     // Ohne eigenen Container: Karte und Familienseite setzen die Buttons in ihre Aktionszeile.
-    return ' ' . relatives_nav_button('relatives.php?action=family_edit&id=' . $family_id, $lang->relatives_edit)
+    $actions = ' ' . relatives_nav_button('relatives.php?action=family_edit&id=' . $family_id, $lang->relatives_edit);
+    if (!relatives_can_manage_family($family)) {
+        return $actions;
+    }
+    return $actions
         . ' <form action="relatives.php?action=family_delete" method="post" class="relatives_inline_form"'
         . ' data-relatives-confirm="' . htmlspecialchars_uni($lang->relatives_family_confirm_delete) . '"'
         . ' data-relatives-confirm-title="' . htmlspecialchars_uni($lang->sprintf($lang->relatives_confirm_title_named, $family['name'])) . '"'
@@ -1742,7 +1768,7 @@ function relatives_family_join_form(array $family, array $member_ids, bool $in_u
     $relatives_family_join_id = (int)$family['id'];
     $relatives_family_join_options = $options;
     $relatives_family_join_from = $in_usercp ? 'families' : '';
-    $relatives_family_join_closed_hint = Relatives_Families::welcomes_new_members($family) || relatives_can_manage_family($family)
+    $relatives_family_join_closed_hint = Relatives_Families::welcomes_new_members($family) || relatives_can_edit_family($family)
         ? ''
         : '<p class="relatives_hint">' . htmlspecialchars_uni($lang->relatives_family_join_closed_hint) . '</p>';
     $form = '';
@@ -2020,7 +2046,7 @@ if ($action === 'family_join') {
         'is_primary'                => 0,
     ];
     foreach (Relatives_Graph::closed_family_violations($person_id, [$relation], false) as $violation) {
-        if (!relatives_can_manage_family($violation['family'])) {
+        if (!relatives_can_edit_family($violation['family'])) {
             error($lang->sprintf(
                 $lang->relatives_error_family_closed,
                 htmlspecialchars_uni((string)$violation['family']['name']),
