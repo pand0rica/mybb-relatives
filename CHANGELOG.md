@@ -28,7 +28,7 @@ new code base; 2.0 and 2.1 were internal development stages and are summarised h
   connections, main connection, free-text connections.
 - Computed relation to the character (`Relatives_Kinship`), limited to named degrees up to
   great-grandparents/second cousins, otherwise *distant relative*.
-- Family boxes with colour, description, attributes, "welcomes new members" switch, overview
+- Family boxes with colour, description (MyCode and HTML allowed), attributes, "welcomes new members" switch, overview
   with filters and a public read-only family list (embeddable into existing list templates).
 - Account links with confirmation by the linked member (sent as a regular PM, so MyAlerts /
   Account Switcher react).

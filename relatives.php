@@ -1498,6 +1498,41 @@ function relatives_family_url(int $family_id, bool $read_only): string
     return 'relatives.php?action=family&id=' . $family_id . ($read_only ? '' : '&from=families');
 }
 
+/**
+ * Familienbeschreibung als HTML: MyCode (BBCode) und HTML erlaubt. Der MyBB-Parser
+ * entschaerft dabei wie in Foren mit erlaubtem HTML script/style/meta/base-Tags,
+ * javascript:-Links und on*-Event-Attribute.
+ */
+function relatives_family_description_html(string $description): string
+{
+    global $parser;
+    $description = trim($description);
+    if ($description === '') {
+        return '';
+    }
+    if (!is_object($parser)) {
+        require_once MYBB_ROOT . 'inc/class_parser.php';
+        $parser = new postParser();
+    }
+    return $parser->parse_message($description, [
+        'allow_html'      => 1,
+        'allow_mycode'    => 1,
+        'allow_smilies'   => 1,
+        'allow_imgcode'   => 1,
+        'allow_videocode' => 1,
+        'filter_badwords' => 1,
+        'nl2br'           => 1,
+    ]);
+}
+
+/** Familienbeschreibung als reiner Text (Markup entfernt), z. B. fuer Anrisse. Roh. */
+function relatives_family_description_plain(string $description): string
+{
+    $html = relatives_family_description_html($description);
+    $text = html_entity_decode(strip_tags(str_replace(['<br />', '<br>'], ' ', $html)), ENT_QUOTES, 'UTF-8');
+    return trim($text);
+}
+
 /** Anriss eines Textes ohne Zeilenumbrueche, gekuerzt an einer Wortgrenze. Roh. */
 function relatives_text_teaser(string $text, int $length): string
 {
@@ -1808,7 +1843,7 @@ function relatives_render_family_overview(string $page_action, bool $read_only):
         $relatives_family_url = htmlspecialchars_uni($family_url);
         // Echter Button wie Bearbeiten/Loeschen daneben (conventions.md §9).
         $relatives_family_more = relatives_nav_button($family_url, $lang->relatives_family_open_page);
-        $relatives_family_teaser = htmlspecialchars_uni(relatives_text_teaser((string)$family['description'], RELATIVES_FAMILY_TEASER_LENGTH));
+        $relatives_family_teaser = htmlspecialchars_uni(relatives_text_teaser(relatives_family_description_plain((string)$family['description']),RELATIVES_FAMILY_TEASER_LENGTH));
         $relatives_family_closed = Relatives_Families::welcomes_new_members($family)
             ? ''
             : '<div class="relatives_family_card_closed">' . htmlspecialchars_uni($lang->relatives_family_closed_badge) . '</div>';
@@ -1999,7 +2034,7 @@ if ($action === 'family') {
     $relatives_family_id = (int)$family['id'];
     $relatives_family_name = htmlspecialchars_uni((string)$family['name']);
     $relatives_family_color = htmlspecialchars_uni(Relatives_Families::sanitize_color((string)$family['color']));
-    $relatives_family_description = nl2br(htmlspecialchars_uni(trim((string)$family['description'])));
+    $relatives_family_description = relatives_family_description_html((string)$family['description']);
     $relatives_family_closed = Relatives_Families::welcomes_new_members($family)
         ? ''
         : '<div class="relatives_family_card_closed">' . htmlspecialchars_uni($lang->relatives_family_closed_badge) . '</div>';

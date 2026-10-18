@@ -218,7 +218,8 @@ plugins are notified as usual.
 forum, two per row: name, *X persons, Y of them played*, family attributes (e.g. blood status),
 the *No new members* badge and the beginning of the description. Click the name or **Open family
 page** for the family's own page. **Add family** asks for a **Name**, a **Colour**, a
-**Description**, **This family welcomes new members** and any family attributes (ACP). A family
+**Description** (MyCode/BBCode and HTML allowed; script tags and JavaScript are filtered out),
+**This family welcomes new members** and any family attributes (ACP). A family
 box appears in the tree one generation above its members.
 
 **Family page** (`relatives.php?action=family&id=…`): the full description, the attributes and
