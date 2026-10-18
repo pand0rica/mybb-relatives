@@ -23,6 +23,7 @@ require_once MYBB_ROOT . "inc/plugins/relatives/core/Families.php";
 require_once MYBB_ROOT . "inc/plugins/relatives/core/Kinship.php";
 require_once MYBB_ROOT . "inc/plugins/relatives/core/Graph.php";
 require_once MYBB_ROOT . "inc/plugins/relatives/core/TreeBuilder.php";
+require_once MYBB_ROOT . "inc/plugins/relatives/core/TreeLayout.php";
 require_once MYBB_ROOT . "inc/plugins/relatives/core/TreePlaceholders.php";
 require_once MYBB_ROOT . "inc/plugins/relatives/core/LinkManager.php";
 require_once MYBB_ROOT . "inc/plugins/relatives/core/Alerts.php";

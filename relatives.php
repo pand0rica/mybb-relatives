@@ -18,6 +18,7 @@ require_once MYBB_ROOT . 'inc/plugins/relatives/core/Families.php';
 require_once MYBB_ROOT . 'inc/plugins/relatives/core/Kinship.php';
 require_once MYBB_ROOT . 'inc/plugins/relatives/core/Graph.php';
 require_once MYBB_ROOT . 'inc/plugins/relatives/core/TreeBuilder.php';
+require_once MYBB_ROOT . 'inc/plugins/relatives/core/TreeLayout.php';
 require_once MYBB_ROOT . 'inc/plugins/relatives/core/TreePlaceholders.php';
 require_once MYBB_ROOT . 'inc/plugins/relatives/core/LinkManager.php';
 require_once MYBB_ROOT . 'inc/plugins/relatives/core/Alerts.php';
@@ -2123,9 +2124,11 @@ if ($action === 'tree') {
     $expand = array_slice(array_values(array_filter(array_map('intval', explode(',', $mybb->get_input('expand'))), static function ($value) {
         return $value > 0;
     })), 0, 50);
+    // "Alle ausklappen": everything connected, up to the tree builder's node limit.
+    $expand_all = $mybb->get_input('expand') === 'all';
 
     if ($mybb->get_input('ajax')) {
-        relatives_json_response(Relatives_TreeBuilder::build($uid, $my_uid, $expand));
+        relatives_json_response(Relatives_TreeBuilder::build($uid, $my_uid, $expand, $expand_all));
     }
 
     $target_user = ($uid === $my_uid) ? $mybb->user : get_user($uid);
@@ -2159,7 +2162,7 @@ if ($action === 'tree') {
     $relatives_tree_js_version = (int)(@filemtime(MYBB_ROOT . 'inc/plugins/relatives/assets/relatives-tree.js') ?: TIME_NOW);
 
     $relatives_tree_title = sprintf($lang->relatives_tree_title_for, htmlspecialchars_uni($target_user['username']));
-    $relatives_tree_json = relatives_json_for_script(Relatives_TreeBuilder::build($uid, $my_uid, $expand));
+    $relatives_tree_json = relatives_json_for_script(Relatives_TreeBuilder::build($uid, $my_uid, $expand, $expand_all));
     $relatives_relationship_types_json = relatives_json_for_script(Relatives_RelationshipTypes::get_active_json_payload());
     $relatives_attribute_groups_json = relatives_json_for_script(Relatives_Attributes::get_options_grouped(true));
     $relatives_tree_config_json = relatives_json_for_script([
@@ -2168,6 +2171,7 @@ if ($action === 'tree') {
         // Knoten des eigenen Charakters: "zu meinem Charakter" im Panel meint ihn.
         'viewerPersonId' => Relatives_Graph::find_account_person_id($my_uid),
         'expand'    => $expand,
+        'expandAll' => $expand_all,
         'postCode'  => $mybb->post_code,
         'popup'     => $is_popup,
         'readOnly'  => $is_read_only,
@@ -2229,6 +2233,9 @@ if ($action === 'tree') {
         'field_death_note' => $lang->relatives_field_death_note,
         'families_link' => $lang->relatives_families_title,
         'show_more' => $lang->relatives_tree_show_more,
+        'expand_all' => $lang->relatives_tree_expand_all,
+        'collapse_all' => $lang->relatives_tree_collapse_all,
+        'truncated' => $lang->relatives_tree_truncated,
         'derived' => $lang->relatives_tree_derived,
         'node_character' => $lang->relatives_tree_node_character,
         'placeholder_parent' => $lang->relatives_tree_placeholder_parent,

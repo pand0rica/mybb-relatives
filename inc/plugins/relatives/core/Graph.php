@@ -154,6 +154,53 @@ class Relatives_Graph
     }
 
     /**
+     * Herkunftsfamilie einer Person: die naechsten Familien-Kaesten ueber ihre Abstammung --
+     * ein Kasten, an dem sie selbst oder ein*e Vorfahr*in direkt haengt (als Kind oder
+     * Mitglied). Anders als memberships_from() zaehlen Partnerschaften nicht: Rebecca
+     * stammt von den Travers, auch wenn sie in die Fawleys eingeheiratet hat.
+     *
+     * @param string $person Graph-Schluessel 'p:<id>'
+     * @return int[] family ids der naechstgelegenen Ebene, leer = keine bekannt
+     */
+    public static function origin_families_from(array $graph, string $person): array
+    {
+        $boxes_of = [];
+        foreach ($graph['edges'] as [$subject, $anchor]) {
+            if (strpos((string)$anchor, 'f:') === 0) {
+                $boxes_of[(string)$subject][(int)substr((string)$anchor, 2)] = true;
+            }
+        }
+
+        $level = [$person => true];
+        $seen = [];
+        for ($depth = 0; $level && $depth < 12; $depth++) {
+            $found = [];
+            $next = [];
+            foreach (array_keys($level) as $key) {
+                $seen[$key] = true;
+                foreach (array_keys($boxes_of[$key] ?? []) as $family_id) {
+                    $found[$family_id] = true;
+                }
+                foreach ($graph['parents'][$key] ?? [] as $parent => $edge) {
+                    if (empty($edge['blood']) || !empty($edge['inferred']) || isset($seen[(string)$parent])) {
+                        continue;
+                    }
+                    if (strpos((string)$parent, 'f:') === 0) {
+                        $found[(int)substr((string)$parent, 2)] = true;
+                    } else {
+                        $next[(string)$parent] = true;
+                    }
+                }
+            }
+            if ($found) {
+                return array_keys($found);
+            }
+            $level = $next;
+        }
+        return [];
+    }
+
+    /**
      * Familien-Zugehoerigkeit fuer einen beliebigen Graphen (Relatives_Kinship::structure_from()).
      * Reine Funktion -- closed_family_violations() rechnet damit einen noch nicht
      * gespeicherten Stand durch.

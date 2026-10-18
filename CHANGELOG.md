@@ -69,8 +69,25 @@ new code base; 2.0 and 2.1 were internal development stages and are summarised h
 - Person form hooks `relatives_person_form_fields`, `relatives_person_validate` and
   `relatives_person_saved` so other plugins (jobliste) can show and edit fields such as the
   occupation in the person form.
+- **Expand all** / **Default view** button in the tree toolbar (`expand=all`, capped at 400
+  persons with a notice).
+- `tests/cli-tree-layout.php`: visibility and layout checks on a real 100-person tree.
 
 ### Changed
+- Family tree layout rebuilt (`Relatives_TreeLayout`): blocks laid out from the youngest rows
+  upwards – couples always side by side, siblings by year of birth (estimated from the age when
+  only that is kept), parents centred above their children, a married couple as the seam between
+  both partners' sibling groups. Rows close to the character take priority; older side lines move
+  outwards instead of tearing the young rows apart. Replaces the crossing search and relaxation.
+- The tree shows every blood relative of the character without unfolding (plus the character's
+  own adoptive/step/foster family, partners and co-parents) instead of a fixed number of steps.
+  In-laws' families stay folded and appear as a small origin label on the in-law's box; unfolding
+  an edge node now brings partners along (no half couples).
+- Family boxes that stand for a single person are drawn as such an origin label.
+- A family box that only holds in-laws (e.g. the brother and sister who married into two
+  different branches) becomes one origin label per person instead of a box with lines across the
+  tree. Partners always share a row: if the data puts them a generation apart, the in-law moves
+  to the row of the blood-related partner.
 - The profile wanted box lists every wanted person in the character's family tree (not only the
   character's own list), closest relatives first, as compact mini cards (initial,
   relation, age, collapsible description, wanted-thread link) with a counter. Responsive grid

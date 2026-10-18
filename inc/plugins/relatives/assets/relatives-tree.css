@@ -366,6 +366,39 @@
 	font-style: italic;
 }
 
+/* Herkunfts-Etikett: Familien-Kasten, der nur fuer eine Person steht (Herkunft einer
+ * angeheirateten Person, "Travers" ueber Rebecca). Sitzt wie ein Reiter links auf der
+ * Oberkante ihres Kastens (TreeBuilder::TAG_RISE) -- gegenueber den Badges und unterhalb
+ * der Linien, die ueber die Kaesten laufen. */
+.relatives_tree_node.relatives_tree_node_family.relatives-node-family--tag {
+	transform: translate(calc(10px - var(--relatives-node-width) / 2), -50%);
+	width: auto;
+	min-width: 64px;
+	max-width: calc(var(--relatives-node-width) - 20px);
+	height: 20px;
+	padding: 0 8px;
+	border-width: 1px;
+	border-left-width: 4px;
+	border-radius: 10px;
+	box-shadow: none;
+	font-size: 0.72em;
+	z-index: 4;
+}
+
+.relatives_tree_node.relatives-node-family--tag:hover,
+.relatives_tree_node.relatives-node-family--tag:focus-visible {
+	transform: translate(calc(10px - var(--relatives-node-width) / 2), -50%) translateY(-2px);
+	z-index: 5;
+}
+
+.relatives_tree_node.relatives-node-family--tag .relatives_tree_node_name {
+	font-size: 1em;
+	line-height: 18px;
+	-webkit-line-clamp: 1;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+}
+
 /* Platzhalter: nicht eingetragene Zwischenperson (nur Anzeige), ueber die z. B. die
  * Verbindung zu Tante oder Cousin*e laeuft. Bewusst blass und gestrichelt. */
 .relatives_tree_node.relatives_tree_node_placeholder {

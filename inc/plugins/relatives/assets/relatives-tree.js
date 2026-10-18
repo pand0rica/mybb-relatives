@@ -77,6 +77,8 @@
 		collapsed: {},
 		// Personen-ids aufgeklappter Randknoten -- der Server liefert deren Umgebung mit.
 		expand: (config.expand || []).slice(),
+		// "Alle ausklappen": der Server liefert alles Verbundene (bis zu seiner Obergrenze).
+		expandAll: !!config.expandAll,
 		pan: { x: 0, y: 0 },
 		zoom: 1,
 	};
@@ -218,6 +220,7 @@
 		var orderedFamilies = (treeData.families || []).filter(function (family) { return family.primary !== false; })
 			.concat((treeData.families || []).filter(function (family) { return family.primary === false; }));
 		orderedFamilies.forEach(function (family) {
+			if ((family.parents || []).some(isTag)) { return; }
 			var parents = (family.parents || []).filter(function (key) { return visible[key] && pixelOf(key); });
 			// Adoptiv-/Zweitfamilien werden andersfarbig gezeichnet, damit die
 			// leibliche Linie erkennbar bleibt.
@@ -369,7 +372,7 @@
 
 		// Sonstige/Account-Verbindungen: gleiche rechtwinklige Fuehrung, gestrichelt.
 		(treeData.links || []).forEach(function (link) {
-			if (!visible[link.from] || !visible[link.to]) { return; }
+			if (!visible[link.from] || !visible[link.to] || isTag(link.from) || isTag(link.to)) { return; }
 			var from = pixelOf(link.from);
 			var to = pixelOf(link.to);
 			if (!from || !to) { return; }
@@ -379,6 +382,12 @@
 		});
 
 		return paths;
+	}
+
+	/** Herkunfts-Etikett: Familien-Kasten, der klein direkt ueber seiner Person steht. */
+	function isTag(key) {
+		var node = state.nodesByKey[key];
+		return !!(node && node.tag);
 	}
 
 	/**
@@ -650,10 +659,16 @@
 			if (node.color) { el.style.setProperty("--relatives-family-color", node.color); }
 			nameEl.textContent = node.name;
 
-			var familyRole = document.createElement("span");
-			familyRole.className = "relatives_tree_node_relationship";
-			familyRole.textContent = t("node_family", "Familie");
-			body.appendChild(familyRole);
+			if (node.tag) {
+				// Herkunfts-Etikett: nur der Name, klein ueber der Person.
+				el.classList.add("relatives-node-family--tag");
+				el.title = node.name + " · " + t("node_family", "Familie");
+			} else {
+				var familyRole = document.createElement("span");
+				familyRole.className = "relatives_tree_node_relationship";
+				familyRole.textContent = t("node_family", "Familie");
+				body.appendChild(familyRole);
+			}
 
 			action = function () { openFamilyPanel(node); };
 		} else if (node.type === "placeholder") {
@@ -730,7 +745,7 @@
 		}
 
 		// Randknoten: hinter ihm geht das gemeinsame Geflecht weiter.
-		if (node.has_more && node.person_id && state.expand.indexOf(node.person_id) === -1) {
+		if (node.has_more && node.person_id && !state.expandAll && state.expand.indexOf(node.person_id) === -1) {
 			var more = document.createElement("button");
 			more.type = "button";
 			more.className = "relatives_tree_node_more";
@@ -746,7 +761,7 @@
 		}
 
 		// Ein-/Ausklappen nur dort, wo unterhalb ueberhaupt etwas haengt.
-		if (childrenOf(node.key).length) {
+		if (!node.tag && childrenOf(node.key).length) {
 			var toggle = document.createElement("button");
 			toggle.type = "button";
 			toggle.className = "relatives_tree_node_toggle";
@@ -956,6 +971,37 @@
 		if (zoomIn) { zoomIn.addEventListener("click", function () { zoomTo(state.zoom + 0.15); }); }
 		if (zoomOut) { zoomOut.addEventListener("click", function () { zoomTo(state.zoom - 0.15); }); }
 		if (zoomReset) { zoomReset.addEventListener("click", fitToView); }
+
+		// "Alle ausklappen" <-> Standardansicht. Gebaut wie die Panels hier im Skript: die
+		// Werkzeugleiste ist ein Template, ein neues Template braeuchte eine Neuaktivierung.
+		var group = zoomReset ? zoomReset.parentNode : null;
+		if (group) {
+			var expandAll = document.createElement("button");
+			expandAll.type = "button";
+			expandAll.id = "relatives-tree-expand-all";
+			var label = function () {
+				expandAll.textContent = state.expandAll ? t("collapse_all", "Standardansicht") : t("expand_all", "Alle ausklappen");
+				expandAll.setAttribute("aria-pressed", state.expandAll ? "true" : "false");
+			};
+			label();
+			expandAll.addEventListener("click", function () {
+				state.expandAll = !state.expandAll;
+				state.expand = [];
+				state.collapsed = {};
+				expandAll.disabled = true;
+				label();
+				reloadTree(function () {
+					expandAll.disabled = false;
+					fitToView();
+				}).catch(function () {
+					state.expandAll = !state.expandAll;
+					expandAll.disabled = false;
+					label();
+					showToast(t("save_failed", "Das hat nicht geklappt."));
+				});
+			});
+			group.appendChild(expandAll);
+		}
 
 		// Popup: teilbaren Link in die Zwischenablage (im Popup-Fenster fehlt oft die Adresszeile).
 		var copyLink = document.getElementById("relatives-tree-copy-link");
@@ -1849,16 +1895,18 @@
 	}
 
 	function reloadTree(onDone) {
+		var expand = state.expandAll ? "all" : state.expand.join(",");
 		var url = "relatives.php?action=tree&ajax=1&uid=" + encodeURIComponent(config.rootUid)
 			+ (config.popup ? "&popup=1" : "")
-			+ (state.expand.length ? "&expand=" + encodeURIComponent(state.expand.join(",")) : "");
-		fetch(url, { credentials: "same-origin" })
+			+ (expand ? "&expand=" + encodeURIComponent(expand) : "");
+		return fetch(url, { credentials: "same-origin" })
 			.then(function (resp) { return resp.json(); })
 			.then(function (data) {
 				if (!data) { return; }
 				treeData = data;
 				indexNodes();
 				render();
+				if (data.truncated) { showToast(t("truncated", "Der Stammbaum ist sehr groß – es werden nur die nächsten Verwandten gezeigt.")); }
 				if (onDone) { onDone(); }
 			});
 	}

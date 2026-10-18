@@ -17,6 +17,7 @@ chdir(dirname(__DIR__));
 
 require_once './inc/plugins/relatives/core/Kinship.php';
 require_once './inc/plugins/relatives/core/TreeBuilder.php';
+require_once './inc/plugins/relatives/core/TreeLayout.php';
 require_once './inc/plugins/relatives/core/TreePlaceholders.php';
 
 $pass = 0;
@@ -262,10 +263,14 @@ $t = tree([1 => 0, 10 => -3, 11 => -2, 12 => -2, 13 => -2, 20 => -2, 14 => -1, 1
 $x = static function (int $id) use ($t): float {
     return (float)$t['nodes']['person:' . $id]['x'];
 };
-check('rootless parent stands left of foreign siblings 12/13', true, $x(20) < $x(12) && $x(20) < $x(13));
+$between = static function (float $value, array $xs): bool {
+    return $value > min($xs) && $value < max($xs);
+};
+check('rootless parent does not stand among foreign siblings 11/12/13', false, $between($x(20), [$x(11), $x(12), $x(13)]));
 check('rootless parent stands close above its child', true, abs($x(20) - $x(21)) < 1.0);
-// Einzelkind genau unter dem Elternstiel -- sonst zeichnet das Frontend einen Knick.
-check('single child exactly below its parent (no jog)', true, abs($x(20) - $x(21)) < 0.001);
+// Zwei Einzel-Eltern ueber einem Paar passen nicht beide genau darueber: mindestens
+// einer steht ohne Knick ueber seinem Kind, der andere knapp daneben.
+check('a single child exactly below its parent (no jog)', true, abs($x(20) - $x(21)) < 0.001 || abs($x(11) - $x(14)) < 0.001);
 
 echo "\n=== Aussagen zusammen lesen ===\n";
 // Mischa (6) ist Halbbruder von Jolina (1, Eltern 2+3) und Cousin von Louisa (5), deren

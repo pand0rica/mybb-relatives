@@ -165,7 +165,20 @@ profile/postbit/member list).
 - Click a box to see all its connections in plain words ("Brother of Delia · Husband of Ava");
   entries jump to the respective box. Hovering a box highlights exactly its lines.
 - The box menu adds a relative *of this person*, edits the person or takes them into your list.
-- Boxes with **…** have more relatives behind them – click to unfold that branch.
+- **What is shown right away:** every blood relative of the character (ancestors and all their
+  descendants, however distant), the character's own adoptive/step/foster family, and the
+  partners and co-parents of all of them. The families in-laws come from stay folded: an in-law
+  carries a small **origin label** on the top edge of their box (e.g. *Travers* on a
+  married-in Rebecca) – click it to open that family's panel.
+- Boxes with **…** have more relatives behind them (an in-law's parents, a cousin's adoptive
+  family …) – click to unfold that branch.
+- **Expand all** in the toolbar shows everything connected to the character at once (very large
+  networks are capped; a notice tells you so). **Default view** switches back.
+- **Layout:** one row per generation; couples always stand side by side, siblings by year of
+  birth (estimated from the age if only that is kept), parents centred above their children. A
+  married couple is the seam between two families – the wife's siblings on one side, the
+  husband's on the other. The rows closest to the character get priority; older side lines move
+  further out when space runs short.
 - Played characters (confirmed account links) are clickable and open their own tree.
 - Uncertain intermediate persons are shown as grey **placeholders** ("Parent of Jolina") instead
   of a misleading direct line, e.g. for aunts, cousins or in-laws whose parents nobody has
