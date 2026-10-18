@@ -99,6 +99,9 @@ new code base; 2.0 and 2.1 were internal development stages and are summarised h
   the family tree.
 
 ### Fixed
+- Editing a played character (e.g. by staff) now works from that character's point of view:
+  related persons come from its own tree, there is no "to your character" option, and a hint
+  points to the connections stored with the other person.
 - Birth parents of an adopted child now stand side by side with a partner line in the tree; a
   person with three or more partners keeps the partners they share children with directly
   beside them, and a partner line that has to pass another box is drawn above it.

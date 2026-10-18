@@ -397,6 +397,10 @@ function relatives_person_saved_extra(int $person_id, bool $is_new): void
  * relationship_type_id / relationship_custom_label / related_to_person_id nutzen --
  * daraus wird dann genau eine Zeile.
  *
+ * $allow_self = false: eine Zeile ohne Bezugsperson ist ein Fehler statt "zu meinem
+ * Charakter" -- beim Bearbeiten eines gespielten Charakters waere das sonst der Charakter
+ * der bearbeitenden Person (Team) oder er selbst.
+ *
  * @return array|null Liste von Kanten fuer Relatives_Database::replace_relations(),
  *                    oder null, wenn das Formular gar keine Verbindungen mitschickt
  *                    (dann bleiben die bestehenden unangetastet).
@@ -406,7 +410,8 @@ function relatives_collect_relations(
     int $person_id,
     int $effective_gender,
     bool $is_edit,
-    bool $gender_from_existing = false
+    bool $gender_from_existing = false,
+    bool $allow_self = true
 ): ?array {
     global $mybb, $lang;
 
@@ -514,6 +519,9 @@ function relatives_collect_relations(
             $related_person = 0;
         } else {
             if ($related_person <= 0) {
+                if (!$allow_self) {
+                    relatives_error_response($lang->relatives_error_anchor_required);
+                }
                 $related_person = Relatives_Graph::account_person_id($owner_uid);
             }
             if (!Relatives_Database::is_valid_related_to($related_person, $person_id)) {
@@ -836,6 +844,10 @@ if ($action === 'add' || $action === 'edit') {
         }
     }
     $in_my_list = $is_edit && Relatives_Database::is_owner($id, $my_uid);
+    // Gespielter Charakter: das Formular arbeitet aus Sicht seiner Spieler*in, auch wenn
+    // das Team bearbeitet. "Zu meinem Charakter" gibt es dort nicht.
+    $is_played_edit = $is_edit && (int)$existing['link_status'] === 2 && !empty($existing['linked_uid']);
+    $form_uid = $is_played_edit ? (int)$existing['linked_uid'] : $my_uid;
 
     if ($mybb->request_method === 'post') {
         verify_post_check($mybb->get_input('my_post_key'));
@@ -954,7 +966,8 @@ if ($action === 'add' || $action === 'edit') {
             $own_person_id,
             $effective_gender,
             $is_edit,
-            $effective_gender !== $gender
+            $effective_gender !== $gender,
+            !$is_played_edit
         );
 
         // Familien, die sich nicht ueber neue Mitglieder freuen, nehmen keine weiteren
@@ -1112,7 +1125,8 @@ if ($action === 'add' || $action === 'edit') {
     // Moegliche Bezugspersonen: alle Personen im eigenen Baum-Ausschnitt (auch solche,
     // die nicht in der eigenen Liste stehen -- "Bruder von Oliver" soll gehen, auch wenn
     // Oliver jemand anderem "gehoert"), plus die bereits eingetragenen Anker.
-    $my_account_person = Relatives_Graph::account_person_id($my_uid);
+    $my_account_person = $is_played_edit ? 0 : Relatives_Graph::account_person_id($my_uid);
+    $relatives_form_allow_self = $is_played_edit ? '0' : '1';
     $relatives_form_self_label = htmlspecialchars_uni(relatives_self_anchor_label($my_account_person));
     $relatives_form_self_name = relatives_person_name($my_account_person);
     $relatives_form_self_name = htmlspecialchars_uni($relatives_form_self_name !== '' ? $relatives_form_self_name : $lang->relatives_relation_sentence_self);
@@ -1120,7 +1134,7 @@ if ($action === 'add' || $action === 'edit') {
     $relatives_cancel_form = relatives_nav_form(relatives_form_return_url(), 'relatives_cancel_form');
     $anchor_persons = [];
     $anchor_seen = [];
-    foreach (Relatives_TreeBuilder::build($my_uid, $my_uid)['nodes'] as $tree_node) {
+    foreach (Relatives_TreeBuilder::build($form_uid, $my_uid)['nodes'] as $tree_node) {
         $node_person = (int)($tree_node['person_id'] ?? 0);
         if ($node_person <= 0 || $node_person === $my_account_person || ($is_edit && $node_person === $relatives_form_id)) {
             continue;
@@ -1135,7 +1149,7 @@ if ($action === 'add' || $action === 'edit') {
     // The tree only shows a few steps around the character; persons further out (e.g.
     // the husband of a distant ancestor) are still in the own list and must stay
     // selectable, otherwise they can never be linked to anyone.
-    foreach (Relatives_Database::get_persons_by_owner($my_uid) as $owned) {
+    foreach (Relatives_Database::get_persons_by_owner($form_uid) as $owned) {
         $owned_id = (int)$owned['id'];
         if (isset($anchor_seen[$owned_id]) || $owned_id === $my_account_person || ($is_edit && $owned_id === $relatives_form_id)) {
             continue;
@@ -1164,7 +1178,7 @@ if ($action === 'add' || $action === 'edit') {
             $anchor = '0';
             if (!empty($relation['related_to_family_id'])) {
                 $anchor = 'f:' . (int)$relation['related_to_family_id'];
-            } elseif (!empty($relation['related_to_person_id']) && (int)$relation['related_to_person_id'] !== $my_account_person) {
+            } elseif (!empty($relation['related_to_person_id']) && ($my_account_person === 0 || (int)$relation['related_to_person_id'] !== $my_account_person)) {
                 $anchor_id = (int)$relation['related_to_person_id'];
                 $anchor = 'p:' . $anchor_id;
                 if (!isset($anchor_seen[$anchor_id]) && ($anchor_person = Relatives_Database::get_person($anchor_id)) !== null) {
@@ -1288,6 +1302,9 @@ if ($action === 'add' || $action === 'edit') {
         $relatives_form_link_section = relatives_render_link_section($existing);
     }
     $relatives_form_incoming = $is_edit ? relatives_render_incoming_relations((int)$existing['id']) : '';
+    $relatives_form_incoming_hint = $relatives_form_incoming !== ''
+        ? '<p class="relatives_hint">' . htmlspecialchars_uni($lang->relatives_incoming_below) . '</p>'
+        : '';
     $relatives_form_extra_fields = relatives_person_form_extra_fields($is_edit ? (int)$existing['id'] : 0);
 
     $relatives_relationship_types_json = relatives_json_for_script(Relatives_RelationshipTypes::get_active_json_payload());

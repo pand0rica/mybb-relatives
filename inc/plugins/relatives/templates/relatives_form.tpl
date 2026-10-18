@@ -38,8 +38,11 @@
 		<div class="relatives_field relatives_field_relations">
 			<label>{$lang->relatives_field_relations}</label>
 			<p class="relatives_hint">{$lang->relatives_field_relations_hint}</p>
+			{$relatives_form_incoming_hint}
 			<p class="relatives_hint" id="relatives_relationship_hint" hidden>{$lang->relatives_relationship_missing_neutral}</p>
 			<div id="relatives-relations"
+				data-allow-self="{$relatives_form_allow_self}"
+				data-anchor-choose="{$lang->relatives_relation_anchor_choose}"
 				data-self-label="{$relatives_form_self_label}"
 				data-self-name="{$relatives_form_self_name}"
 				data-sentence="{$lang->relatives_relation_sentence}"
@@ -210,11 +213,16 @@
 		return 2;
 	}
 
+	// Gespielter Charakter: kein "zu meinem Charakter" -- jede Verbindung braucht eine
+	// ausdrueckliche Bezugsperson.
+	var allowSelf = container && container.getAttribute("data-allow-self") !== "0";
+	var defaultAnchor = allowSelf ? "0" : "";
+
 	function fillAnchor(select, value) {
-		var self = document.createElement("option");
-		self.value = "0";
-		self.textContent = container.getAttribute("data-self-label") || "";
-		select.appendChild(self);
+		var first = document.createElement("option");
+		first.value = defaultAnchor;
+		first.textContent = (allowSelf ? container.getAttribute("data-self-label") : container.getAttribute("data-anchor-choose")) || "";
+		select.appendChild(first);
 
 		if (persons.length) {
 			var personGroup = document.createElement("optgroup");
@@ -227,8 +235,8 @@
 			});
 			select.appendChild(personGroup);
 		}
-		select.value = value || "0";
-		if (select.value === "") { select.value = "0"; }
+		select.value = value && value !== "0" ? value : defaultAnchor;
+		if (select.value === "") { select.value = defaultAnchor; }
 	}
 
 	function fillTypes(row) {
@@ -287,7 +295,7 @@
 			sentence.style.display = "none";
 			return;
 		}
-		var target = anchor.value === "0"
+		var target = anchor.value === "0" && allowSelf
 			? (container.getAttribute("data-self-name") || "")
 			: (personNames[anchor.value] || "");
 		sentence.textContent = (container.getAttribute("data-sentence") || "")
