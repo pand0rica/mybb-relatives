@@ -346,7 +346,6 @@ class Relatives_TreeBuilder
         $frontier = [$this->root_key => 0];
         $reached_via = [];
         $settled = [];
-        $generation = [];
         while ($frontier) {
             asort($frontier);
             $key = (string)array_key_first($frontier);
@@ -360,9 +359,6 @@ class Relatives_TreeBuilder
                 $distance = min($distance, self::MAX_STEPS - self::EXPAND_STEPS);
             }
             $settled[$key] = $distance;
-            $generation[$key] = isset($reached_via[$key])
-                ? $generation[$reached_via[$key][0]] + $reached_via[$key][1]
-                : 0;
 
             foreach ($adjacency[$key] ?? [] as [$other, $index, $kind, $delta]) {
                 if (isset($settled[$other])) {
@@ -386,6 +382,7 @@ class Relatives_TreeBuilder
                 }
             }
         }
+        $generation = self::settle_generations($settled, $reached_via, $adjacency);
 
         $person_ids = [];
         $family_ids = [];
@@ -518,8 +515,95 @@ class Relatives_TreeBuilder
                 'style'   => $type !== null ? Relatives_RelationshipTypes::sanitize_line_style((string)$type['line_style']) : 'solid',
                 'secret'  => !empty($relation['is_secret']),
                 'primary' => !empty($relation['is_primary']),
+                'membership' => self::is_family_membership($relation, $type),
             ];
         }
+    }
+
+    /**
+     * Generation along the shortest paths, with one correction: a family box only says
+     * "belongs to this family", not where in the line. A person reached through a box who
+     * also has a direct statement to someone already in the tree ("entfernter Vorfahr von
+     * Tadgh") takes the generation from that statement -- otherwise Aidyn would stand
+     * beside every other member of the box. The box itself is placed above its highest
+     * member later (place_family_nodes()), so it follows.
+     *
+     * @param array $settled     key => distance, in settle order
+     * @param array $reached_via key => [previous key, delta]
+     * @param array $adjacency   key => [[other, relation index, kind, delta], ...]
+     * @return array key => generation
+     */
+    private static function settle_generations(array $settled, array $reached_via, array $adjacency): array
+    {
+        $order = array_keys($settled);
+
+        // Generation relative to the path start, used to measure positions inside a branch.
+        $base = [];
+        foreach ($order as $key) {
+            $base[$key] = isset($reached_via[$key]) ? $base[$reached_via[$key][0]] + $reached_via[$key][1] : 0;
+        }
+
+        // Every person reached directly through a box starts a branch (the person and all
+        // below them). A statement from anywhere in that branch to a person outside of it
+        // anchors the whole branch -- "Martha ist entfernte Vorfahrin von Caiomhe" places
+        // William two levels above Martha, too. The anchor closest to the root wins.
+        $anchor_of = [];
+        foreach ($order as $start) {
+            $via = $reached_via[$start] ?? null;
+            if ($via === null || strpos($via[0], 'family:') !== 0 || strpos($start, 'person:') !== 0) {
+                continue;
+            }
+            foreach ($order as $member) {
+                if ($member !== $start && !self::reached_through($member, $start, $reached_via)) {
+                    continue;
+                }
+                foreach ($adjacency[$member] ?? [] as [$other, , $kind, $delta]) {
+                    if ($kind === 'member' || strpos($other, 'person:') !== 0 || !isset($settled[$other])
+                        || $other === $start || self::reached_through($other, $start, $reached_via)) {
+                        continue;
+                    }
+                    if (!isset($anchor_of[$start]) || $settled[$other] < $settled[$anchor_of[$start][0]]) {
+                        // Generation(other) = Generation(member) + delta; the start sits
+                        // ($base[member] - $base[start]) above the member.
+                        $anchor_of[$start] = [$other, $delta + $base[$member] - $base[$start]];
+                    }
+                }
+            }
+        }
+
+        // An anchor may be settled after the branch it anchors, so repeat until stable.
+        $generation = [];
+        for ($round = 0; $round < 8; $round++) {
+            $previous = $generation;
+            $generation = [];
+            foreach ($order as $key) {
+                $anchor = $anchor_of[$key] ?? null;
+                $anchor_generation = $anchor !== null ? ($generation[$anchor[0]] ?? $previous[$anchor[0]] ?? null) : null;
+                if ($anchor_generation !== null) {
+                    $generation[$key] = $anchor_generation - $anchor[1];
+                } elseif (isset($reached_via[$key])) {
+                    $generation[$key] = $generation[$reached_via[$key][0]] + $reached_via[$key][1];
+                } else {
+                    $generation[$key] = 0;
+                }
+            }
+            if ($generation === $previous) {
+                break;
+            }
+        }
+        return $generation;
+    }
+
+    /** Liegt $ancestor auf dem Weg, ueber den $key erreicht wurde? */
+    private static function reached_through(string $key, string $ancestor, array $reached_via): bool
+    {
+        for ($steps = 0; isset($reached_via[$key]) && $steps < 100; $steps++) {
+            $key = $reached_via[$key][0];
+            if ($key === $ancestor) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -934,6 +1018,8 @@ class Relatives_TreeBuilder
                         'kind'   => 'other',
                         'style'  => $meta['style'],
                         'secret' => $meta['secret'],
+                        'concept' => $relation['concept'],
+                        'membership' => !empty($relation['membership']),
                     ];
                     break;
             }
@@ -1292,8 +1378,9 @@ class Relatives_TreeBuilder
      * dort gezeichnet, wo sie als einzige zeigen, wohin ein Knoten gehoert -- und dann nur
      * eine je Knoten, bevorzugt die zur Wurzel. Steht ein Knoten bereits in einer Familie
      * oder einem Paar, ist die Verbindung ueber Hervorhebung und Panel sichtbar; als Linie
-     * liefe sie nur quer ueber den ganzen Baum. Ausnahme: verbindet die lose Aussage als
-     * einzige zwei sonst getrennte Teile des Baums, wird sie trotzdem gezeichnet.
+     * liefe sie nur quer ueber den ganzen Baum. Ausnahme: verbindet die lose Aussage zwei
+     * sonst getrennte Teile des Baums, wird sie trotzdem gezeichnet (reine Familien-
+     * Mitgliedschaften nur, wenn sonst nichts die Teile verbindet).
      */
     private function needed_links(array $links, array $families, array $partners): array
     {
@@ -1327,8 +1414,8 @@ class Relatives_TreeBuilder
 
         // A loose statement between two nodes that both stand in families can still be the
         // only thing tying one part of the tree to the rest (a distant ancestor with their
-        // own family box above them). Keep one line per such island, root links first --
-        // otherwise the island floats in the tree without any visible connection.
+        // own family box above them) -- otherwise the island floats in the tree without any
+        // visible connection.
         $component = [];
         foreach ($families as $family) {
             $members = array_merge($family['parents'], $family['children']);
@@ -1342,10 +1429,25 @@ class Relatives_TreeBuilder
         foreach ($kept as $link) {
             self::uf_union($component, $link['from'], $link['to']);
         }
-        foreach ([true, false] as $root_links_first) {
+        // Distant ancestors/descendants are the line itself: each one between two separate
+        // parts is drawn (Martha -> Caiomhe AND Aidyn -> Tadgh, even if both tie the same
+        // island to the tree).
+        $parts = $component;
+        foreach ($links as $link) {
+            if (!in_array($link['concept'] ?? null, ['distant_ancestor', 'distant_descendant'], true)
+                || in_array($link, $kept, true)
+                || self::uf_find($parts, $link['from']) === self::uf_find($parts, $link['to'])) {
+                continue;
+            }
+            self::uf_union($component, $link['from'], $link['to']);
+            $kept[] = $link;
+        }
+        // Other statements: one line per island, a bare family membership only if nothing
+        // else connects it, root links first.
+        foreach ([[false, true], [false, false], [true, true], [true, false]] as [$membership, $root_links_first]) {
             foreach ($links as $link) {
                 $touches_root = $link['from'] === $this->root_key || $link['to'] === $this->root_key;
-                if ($touches_root !== $root_links_first
+                if ($touches_root !== $root_links_first || !empty($link['membership']) !== $membership
                     || self::uf_find($component, $link['from']) === self::uf_find($component, $link['to'])) {
                     continue;
                 }

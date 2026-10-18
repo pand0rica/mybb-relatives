@@ -42,23 +42,31 @@ const OFFSETS = [
 ];
 
 /**
- * @param array $generations person-id => Generation
- * @param array $statements  [[person-id, Konzept, Anker-id, geheim?], ...] -- "Person ist Konzept von Anker"
+ * @param array $generations person-id (oder 'family:<id>') => Generation
+ * @param array $statements  [[person-id, Konzept, Anker-id, geheim?], ...] -- "Person ist Konzept von Anker";
+ *                           Anker darf 'family:<id>' sein, Konzept 'member' = reine Mitgliedschaft
  */
 function tree(array $generations, array $statements): array
 {
     $builder = new Relatives_TreeBuilder();
     $nodes = [];
     foreach ($generations as $id => $generation) {
+        if (is_string($id)) {
+            $nodes[$id] = ['key' => $id, 'type' => 'family', 'name' => $id, 'generation' => $generation];
+            continue;
+        }
         $key = 'person:' . $id;
         $nodes[$key] = ['key' => $key, 'type' => $id === 1 ? 'self' : 'person', 'name' => 'P' . $id, 'gender' => 2, 'generation' => $generation];
     }
     $relations = [];
     foreach ($statements as $statement) {
+        $membership = $statement[1] === 'member';
         $relations[] = [
-            'node' => 'person:' . $statement[0], 'anchor' => 'person:' . $statement[2],
-            'concept' => $statement[1], 'offset' => OFFSETS[$statement[1]], 'label' => $statement[1],
-            'style' => 'solid', 'secret' => !empty($statement[3]), 'primary' => false,
+            'node' => 'person:' . $statement[0],
+            'anchor' => is_string($statement[2]) ? $statement[2] : 'person:' . $statement[2],
+            'concept' => $membership ? null : $statement[1], 'offset' => $membership ? 0 : OFFSETS[$statement[1]],
+            'label' => $statement[1], 'style' => 'solid', 'secret' => !empty($statement[3]), 'primary' => false,
+            'membership' => $membership,
         ];
     }
 
@@ -332,6 +340,55 @@ $t = tree([1 => 0, 2 => -1, 4 => -2, 8 => -1, 3 => 0], [
     [2, 'parent', 1], [4, 'parent', 2], [8, 'child', 4], [3, 'child', 8], [3, 'cousin', 1],
 ]);
 check('connected cousin gets no extra line', [], $t['links']);
+
+// Aidyn-Fall: 6 ist entfernter Vorfahr von 4 und Kind des Kastens family:5, die Wurzel ist
+// reines Mitglied desselben Kastens. Die Linie gehoert zu 4-6, nicht zur Mitgliedschaft.
+$is_link = static function (array $tree, string $a, string $b): bool {
+    return (bool)array_filter($tree['links'], static function ($link) use ($a, $b) {
+        return in_array($a, [$link['from'], $link['to']], true) && in_array($b, [$link['from'], $link['to']], true);
+    });
+};
+$t = tree([1 => 0, 2 => -1, 4 => -2, 6 => -6, 'family:5' => -7], [
+    [2, 'parent', 1], [4, 'parent', 2], [6, 'child', 'family:5'], [1, 'member', 'family:5'], [6, 'distant_ancestor', 4],
+]);
+check('kinship line beats membership line', [true, false], [
+    $is_link($t, 'person:6', 'person:4'), $is_link($t, 'family:5', 'person:1'),
+]);
+
+echo "=== Generation ueber Familien-Kasten ===\n";
+$settle = new ReflectionMethod(Relatives_TreeBuilder::class, 'settle_generations');
+if (PHP_VERSION_ID < 80100) {
+    $settle->setAccessible(true);
+}
+// Wurzel -> Kasten (Mitglied, -1) -> 6 (Kind, +1); Wurzel -> 2 -> 4 (Eltern); 6 ist
+// entfernter Vorfahr von 4 (Generation(4) = Generation(6) + 4).
+$generations = $settle->invoke(null,
+    // 6 wird ueber den Kasten FRUEHER erreicht als 4 (wie Aidyn vor Tadgh).
+    ['person:1' => 0, 'person:2' => 1, 'family:5' => 3, 'person:6' => 4, 'person:4' => 5, 'person:9' => 5],
+    ['person:2' => ['person:1', -1], 'family:5' => ['person:1', -1], 'person:4' => ['person:2', -1],
+     'person:6' => ['family:5', 1], 'person:9' => ['person:6', 1]],
+    ['person:6' => [['family:5', 0, 'child', -1], ['person:4', 1, 'other', 4]]]
+);
+check('statement beats family box for generation', -6, $generations['person:6']);
+check('descendants follow the corrected generation', -5, $generations['person:9']);
+$generations = $settle->invoke(null,
+    ['person:1' => 0, 'family:5' => 3, 'person:6' => 4],
+    ['family:5' => ['person:1', -1], 'person:6' => ['family:5', 1]],
+    ['person:6' => [['family:5', 0, 'child', -1]]]
+);
+check('without a statement the box decides', 0, $generations['person:6']);
+
+// William-Fall: 7 haengt am Kasten, 8 ist Kind von 7, 9 Kind von 8, und erst 9 ist
+// entfernte*r Vorfahr*in von 2 (Elternteil der Wurzel). Der ganze Zweig rueckt nach oben.
+$generations = $settle->invoke(null,
+    ['person:1' => 0, 'person:2' => 1, 'family:5' => 3, 'person:7' => 4, 'person:8' => 5, 'person:9' => 6],
+    ['person:2' => ['person:1', -1], 'family:5' => ['person:1', -1], 'person:7' => ['family:5', 1],
+     'person:8' => ['person:7', 1], 'person:9' => ['person:8', 1]],
+    ['person:9' => [['person:8', 0, 'child', -1], ['person:2', 1, 'other', 4]]]
+);
+check('statement deep in a box branch moves the whole branch', [-7, -6, -5], [
+    $generations['person:7'], $generations['person:8'], $generations['person:9'],
+]);
 
 echo "\n{$pass} passed, {$fail} failed\n";
 exit($fail > 0 ? 1 : 0);
