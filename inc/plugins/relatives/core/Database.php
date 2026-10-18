@@ -586,23 +586,58 @@ class Relatives_Database
             return;
         }
 
-        // Wer eine bestehende Kante angelegt hat, soll beim erneuten Speichern erhalten
-        // bleiben -- sonst "gehoert" nach jeder Bearbeitung alles der letzten Person.
-        $previous_creators = [];
+        // Unveraenderte Kanten (gleicher Anker + Grad) behalten ihre Zeile: id und
+        // created_by bleiben so stabil. Offene Aenderungsanfragen (replaces_relation_id)
+        // verweisen auf diese id -- wuerde jede Speicherung alles neu anlegen, zeigte
+        // die Anfrage beim Bestaetigen ins Leere.
+        $previous = [];
         foreach (self::get_relations_for_person($person_id) as $old) {
-            $previous_creators[self::relation_signature($old)] = (int)$old['created_by'];
+            $previous[self::relation_signature($old)][] = $old;
         }
 
-        $db->delete_query('relatives_relations', "person_id = " . (int)$person_id);
+        $rows = [];
+        foreach ($relations as $relation) {
+            $signature = self::relation_signature($relation);
+            $old = !empty($previous[$signature]) ? array_shift($previous[$signature]) : null;
+            $rows[] = [$relation, $old];
+        }
+
+        // Was im neuen Stand nicht mehr vorkommt, faellt weg.
+        foreach ($previous as $leftovers) {
+            foreach ($leftovers as $old) {
+                $db->delete_query('relatives_relations', "id = " . (int)$old['id'], 1);
+            }
+        }
 
         $sort = 0;
-        foreach ($relations as $relation) {
-            $relation['person_id'] = $person_id;
+        $preferred = 0;
+        foreach ($rows as [$relation, $old]) {
+            // Fehlende Felder wie bei einer neu angelegten Zeile behandeln (DB-Defaults).
+            $relation += [
+                'relationship_type_id'      => null,
+                'relationship_custom_label' => null,
+                'related_to_person_id'      => null,
+                'related_to_family_id'      => null,
+                'is_secret'                 => 0,
+                'is_primary'                => 0,
+            ];
             $relation['sort_order'] = $sort++;
-            $relation['created_by'] = $previous_creators[self::relation_signature($relation)] ?? $created_by;
-            self::add_relation($relation);
+            if ($old !== null) {
+                $id = (int)$old['id'];
+                $update = self::prepare_relation_row($relation);
+                unset($update['created_by']); // wer eine Kante angelegt hat, bleibt erhalten
+                $update['updated_at'] = TIME_NOW;
+                self::update_row('relatives_relations', $update, "id = " . $id);
+            } else {
+                $relation['person_id'] = $person_id;
+                $relation['created_by'] = $created_by;
+                $id = self::add_relation($relation);
+            }
+            if (!empty($relation['is_primary'])) {
+                $preferred = $id;
+            }
         }
-        self::normalize_primary($person_id, 0);
+        self::normalize_primary($person_id, $preferred);
     }
 
     /** Vergleichsschluessel einer Kante fuer replace_relations() (Anker + Grad). */
