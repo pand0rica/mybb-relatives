@@ -1517,8 +1517,30 @@
 		return wrap;
 	}
 
+	/**
+	 * Same concept in another label gender: "entfernte*r Vorfahr*in" becomes "entfernter
+	 * Vorfahr" when the gender is set afterwards, instead of silently falling back to
+	 * "Sonstige Verbindung".
+	 */
+	function typeIdForGender(typeId, labelGender) {
+		var concept = null;
+		for (var i = 0; i < relationshipTypes.length; i++) {
+			if (String(relationshipTypes[i].id) === String(typeId)) { concept = relationshipTypes[i].concept_key; break; }
+		}
+		if (!concept) { return null; }
+		for (var j = 0; j < relationshipTypes.length; j++) {
+			if (relationshipTypes[j].concept_key === concept && relationshipTypes[j].gender === labelGender) {
+				return relationshipTypes[j].id;
+			}
+		}
+		return null;
+	}
+
 	function rebuildRelationshipOptions(select, genderValue, selectedTypeId) {
 		var labelGender = mapGender(genderValue);
+		if (!selectedTypeId && select.value) {
+			selectedTypeId = typeIdForGender(select.value, labelGender);
+		}
 		select.innerHTML = "";
 		var otherOpt = document.createElement("option");
 		otherOpt.value = "";

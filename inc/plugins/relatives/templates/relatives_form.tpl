@@ -251,7 +251,14 @@
 			});
 
 		typeSelect.value = current;
-		if (typeSelect.value !== String(current)) { typeSelect.value = ""; }
+		if (current && typeSelect.value !== String(current)) {
+			// Gender changed: keep the same degree in the new gender instead of dropping it.
+			var previous = allTypes.filter(function (type) { return String(type.id) === String(current); })[0];
+			var match = previous ? allTypes.filter(function (type) {
+				return type.concept_key === previous.concept_key && type.gender === labelGender;
+			})[0] : null;
+			typeSelect.value = match ? String(match.id) : "";
+		}
 		toggleCustom(row);
 	}
 
