@@ -1132,6 +1132,24 @@ if ($action === 'add' || $action === 'edit') {
             'label' => (string)($tree_node['computed_label'] ?? ''),
         ];
     }
+    // The tree only shows a few steps around the character; persons further out (e.g.
+    // the husband of a distant ancestor) are still in the own list and must stay
+    // selectable, otherwise they can never be linked to anyone.
+    foreach (Relatives_Database::get_persons_by_owner($my_uid) as $owned) {
+        $owned_id = (int)$owned['id'];
+        if (isset($anchor_seen[$owned_id]) || $owned_id === $my_account_person || ($is_edit && $owned_id === $relatives_form_id)) {
+            continue;
+        }
+        $anchor_seen[$owned_id] = true;
+        $anchor_persons[] = [
+            'id'    => $owned_id,
+            'name'  => (string)$owned['name'],
+            'label' => (string)Relatives_Kinship::display_label(
+                $owned['computed_label'] !== null ? (string)$owned['computed_label'] : null,
+                $owned['computed_via_person_id'] ?? null
+            ),
+        ];
+    }
 
     $anchor_families = [];
     foreach (Relatives_Families::get_all() as $family) {
@@ -1165,6 +1183,16 @@ if ($action === 'add' || $action === 'edit') {
             ];
         }
     }
+    // Alphabetical (the own character is the separate "0" option and stays on top).
+    // Collator sorts umlauts correctly ("Ä" next to "A"); without intl a case-insensitive
+    // comparison is close enough. The id keeps equal names in a stable order.
+    $collator = class_exists('Collator') ? new Collator('de_DE') : null;
+    usort($anchor_persons, static function (array $a, array $b) use ($collator): int {
+        $by_name = $collator !== null
+            ? (int)$collator->compare($a['name'], $b['name'])
+            : strcmp(mb_strtolower($a['name']), mb_strtolower($b['name']));
+        return $by_name !== 0 ? $by_name : $a['id'] <=> $b['id'];
+    });
     $relatives_form_persons_json = relatives_json_for_script($anchor_persons);
     $relatives_form_families_json = relatives_json_for_script($anchor_families);
     $relatives_form_relations_json = relatives_json_for_script($form_relations);
