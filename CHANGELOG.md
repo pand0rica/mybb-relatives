@@ -118,6 +118,9 @@ new code base; 2.0 and 2.1 were internal development stages and are summarised h
   the family tree.
 
 ### Fixed
+- An aunt/uncle by marriage (or niece/nephew, great-aunt …) no longer gets a line from their own
+  origin family to the couple line of the other person's parents – the statement counts as
+  covered when their partner is a blood sibling of that person's parent (or grandparent).
 - Editing a played character (e.g. by staff) now works from that character's point of view:
   related persons come from its own tree, there is no "to your character" option, and a hint
   points to the connections stored with the other person.

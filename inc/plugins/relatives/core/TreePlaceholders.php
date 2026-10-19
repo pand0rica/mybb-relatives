@@ -134,6 +134,7 @@ class Relatives_TreePlaceholders
     public function resolve(): array
     {
         $resolved = [];
+        $this->resolve_by_marriage($resolved);
         $this->resolve_pass($resolved, true);
         $this->resolve_mutual_aunts($resolved);
         $this->resolve_combined_joins($resolved);
@@ -146,6 +147,57 @@ class Relatives_TreePlaceholders
             'edges'       => array_values($this->state['edges']),
             'attachments' => array_values($this->state['attachments']),
         ];
+    }
+
+    /**
+     * Angeheiratete Tanten/Onkel: Vilma ist "Tante von Freyja", weil sie mit Aleksi, dem
+     * Bruder von Freyjas Vater, verheiratet ist. Das ist durch die eingetragenen Personen
+     * schon abgebildet -- ohne diese Pruefung hielte join_ancestors() Vilma fuer ein
+     * leibliches Geschwister von Freyjas Eltern und haengte deren Paarlinie an Vilmas
+     * Herkunftsfamilie. Gilt genauso fuer Nichte/Neffe und die Gross-Stufen. Laeuft vor allen
+     * anderen Durchgaengen, damit auch die gegenseitigen/kombinierten Schluesse diese
+     * Aussagen nicht mehr sehen.
+     */
+    private function resolve_by_marriage(array &$resolved): void
+    {
+        foreach ($this->relations as $index => $relation) {
+            $concept = (string)($relation['concept'] ?? '');
+            $node = (string)$relation['node'];
+            $anchor = (string)$relation['anchor'];
+            if (!isset(self::SIBLING_JOINS[$concept]) || !empty($relation['synthetic']) || $node === $anchor
+                || !$this->is_person($node) || !$this->is_person($anchor)) {
+                continue;
+            }
+            [$up_anchor, $up_node] = self::SIBLING_JOINS[$concept];
+            if ($this->covered_by_marriage($anchor, $up_anchor, $node, $up_node)) {
+                $resolved[$index] = true;
+            }
+        }
+    }
+
+    /**
+     * Ist die Tante/Onkel-Seite (die ohne Stufen aufwaerts) Partner*in eines leiblichen
+     * Geschwisters der Vorfahr*innen der anderen Seite? Cousin*en (beide Seiten mit Stufen)
+     * zaehlen nicht -- angeheiratete Cousins gibt es nicht.
+     */
+    private function covered_by_marriage(string $a, int $up_a, string $x, int $up_x): bool
+    {
+        if (($up_a !== 0 && $up_x !== 0) || $this->generation($a) - $up_a !== $this->generation($x) - $up_x) {
+            return false;
+        }
+        [$in_law, $other, $levels] = $up_x === 0 ? [$x, $a, $up_a] : [$a, $x, $up_x];
+        $ancestors = $this->real_ancestors($other, $levels);
+        foreach (array_keys($this->partners[$in_law] ?? []) as $partner) {
+            if (!$this->is_person($partner)) {
+                continue;
+            }
+            foreach ($ancestors as $ancestor) {
+                if ($ancestor !== $partner && $this->share_blood_family($ancestor, $partner)) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     /** Loest die Aussagen des ersten (Halb-/Stiefgeschwister) bzw. des uebrigen Durchgangs einzeln auf. */
