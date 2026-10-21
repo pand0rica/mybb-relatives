@@ -87,7 +87,7 @@ class Relatives_Families
         $query = $db->simple_select(
             'relatives_families',
             '*',
-            "name = '" . $db->escape_string(trim($name)) . "'",
+            "name = '" . $db->escape_string(Relatives_Text::encode_4byte(trim($name))) . "'",
             ['order_by' => 'id', 'order_dir' => 'ASC']
         );
         while ($row = $db->fetch_array($query)) {
@@ -100,7 +100,7 @@ class Relatives_Families
 
     private static function normalize_name(string $name): string
     {
-        return mb_strtolower(trim($name));
+        return mb_strtolower(Relatives_Text::encode_4byte(trim($name)));
     }
 
     /**
@@ -131,9 +131,9 @@ class Relatives_Families
 
         $now = TIME_NOW;
         $insert = [
-            'name'        => $db->escape_string(trim((string)($data['name'] ?? ''))),
+            'name'        => $db->escape_string(Relatives_Text::encode_4byte(trim((string)($data['name'] ?? '')), 100)),
             'color'       => $db->escape_string(self::sanitize_color((string)($data['color'] ?? ''))),
-            'description' => $db->escape_string((string)($data['description'] ?? '')),
+            'description' => $db->escape_string(Relatives_Text::encode_4byte((string)($data['description'] ?? ''))),
             'welcomes_new_members' => array_key_exists('welcomes_new_members', $data) && empty($data['welcomes_new_members']) ? 0 : 1,
             'created_by'  => (int)($data['created_by'] ?? 0),
             'created_at'  => $now,
@@ -151,13 +151,13 @@ class Relatives_Families
 
         $update = [];
         if (isset($data['name'])) {
-            $update['name'] = $db->escape_string(trim((string)$data['name']));
+            $update['name'] = $db->escape_string(Relatives_Text::encode_4byte(trim((string)$data['name']), 100));
         }
         if (isset($data['color'])) {
             $update['color'] = $db->escape_string(self::sanitize_color((string)$data['color']));
         }
         if (isset($data['description'])) {
-            $update['description'] = $db->escape_string((string)$data['description']);
+            $update['description'] = $db->escape_string(Relatives_Text::encode_4byte((string)$data['description']));
         }
         if (isset($data['welcomes_new_members'])) {
             $update['welcomes_new_members'] = empty($data['welcomes_new_members']) ? 0 : 1;

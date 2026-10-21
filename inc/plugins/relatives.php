@@ -15,6 +15,7 @@ if (!defined("IN_MYBB")) {
 
 // Core-Klassen werden immer geladen (auch vor der Installation -- relatives_install()
 // braucht Relatives_Installer bereits beim allerersten Aufruf).
+require_once MYBB_ROOT . "inc/plugins/relatives/core/Text.php";
 require_once MYBB_ROOT . "inc/plugins/relatives/core/Installer.php";
 require_once MYBB_ROOT . "inc/plugins/relatives/core/Database.php";
 require_once MYBB_ROOT . "inc/plugins/relatives/core/RelationshipTypes.php";

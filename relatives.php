@@ -66,12 +66,14 @@ if (!Relatives_Graph::is_merged()) {
 function relatives_json_response(array $data): void
 {
     header('Content-Type: application/json; charset=UTF-8');
-    echo json_encode($data);
+    echo json_encode(Relatives_Text::decode_numeric_entities($data));
     exit;
 }
 
 /**
- * JSON fuer Einbettung in <script type="application/json"> Blocks in Templates. NICHT
+ * JSON fuer Einbettung in <script type="application/json"> Blocks in Templates. Gespeicherte
+ * Emoji-Entities (&#128142;) werden zu echten Zeichen, weil das Frontend per textContent
+ * rendert (siehe Relatives_Text). NICHT
  * mit htmlspecialchars_uni() nachbearbeiten -- <script>-Inhalte werden vom Browser nie
  * HTML-entity-dekodiert, das wuerde z.B. jedes " zu &quot; machen und JSON.parse() im
  * Frontend-JS lautlos scheitern lassen. Die JSON_HEX_*-Flags escapen stattdessen
@@ -80,7 +82,7 @@ function relatives_json_response(array $data): void
  */
 function relatives_json_for_script(array $data): string
 {
-    return json_encode($data, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+    return json_encode(Relatives_Text::decode_numeric_entities($data), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
 }
 
 function relatives_error_response(string $message): void
@@ -1438,7 +1440,8 @@ if ($action === 'family_add' || $action === 'family_edit') {
         if ($family_name === '') {
             relatives_error_response($lang->relatives_error_family_name_required);
         }
-        $family_name = mb_substr($family_name, 0, 100);
+        // Emojis als &#NNN; (utf8-Tabellen), erst danach auf die Spaltenlaenge kuerzen.
+        $family_name = Relatives_Text::encode_4byte($family_name, 100);
 
         $family_data = [
             'name'        => $family_name,

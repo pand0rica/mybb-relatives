@@ -250,7 +250,7 @@ class Relatives_Database
     public static function find_person_by_name(string $name): ?array
     {
         global $db;
-        $name = trim($name);
+        $name = Relatives_Text::encode_4byte(trim($name));
         if ($name === '') {
             return null;
         }
@@ -1035,7 +1035,7 @@ class Relatives_Database
         $row = [];
 
         if (isset($data['name'])) {
-            $row['name'] = $db->escape_string((string)$data['name']);
+            $row['name'] = $db->escape_string(Relatives_Text::encode_4byte((string)$data['name'], 255));
         }
         if (isset($data['gender'])) {
             $row['gender'] = (int)$data['gender'];
@@ -1048,7 +1048,7 @@ class Relatives_Database
         }
         foreach (['origin', 'avatar', 'description', 'wanted_thread_link', 'death_note', 'legacy_source'] as $field) {
             if (array_key_exists($field, $data)) {
-                $row[$field] = $data[$field] === null ? null : $db->escape_string((string)$data[$field]);
+                $row[$field] = $data[$field] === null ? null : $db->escape_string(Relatives_Text::encode_4byte((string)$data[$field]));
             }
         }
         if (isset($data['is_wanted'])) {
@@ -1086,7 +1086,7 @@ class Relatives_Database
         }
         foreach (['description', 'computed_concept_key', 'computed_label', 'computed_category'] as $field) {
             if (array_key_exists($field, $data)) {
-                $row[$field] = $data[$field] === null ? null : $db->escape_string((string)$data[$field]);
+                $row[$field] = $data[$field] === null ? null : $db->escape_string(Relatives_Text::encode_4byte((string)$data[$field]));
             }
         }
 
