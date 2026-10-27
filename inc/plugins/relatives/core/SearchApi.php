@@ -17,7 +17,8 @@ class Relatives_SearchApi
      * Filter-Keys (alle optional): gender, relationship_type_id, attribute_option_ids
      * (array), is_wanted (bool, Default true), age_min, age_max, query (Text Name/
      * Description), owner_uids (int[], Person gehoert mindestens einem dieser Accounts),
-     * ids (int[]), dazu limit, offset und order ("name" = Standard, "age", "newest").
+     * ids (int[]), dazu limit, offset und order ("name" = Standard, "age", "newest",
+     * "updated"). Jede Zeile enthaelt auch created_at/updated_at (Unix-Zeit).
      * Rueckgabe: eine Zeile je Person, sanitisiert, aber NICHT html-escaped
      * -- Escaping macht der Konsument beim Rendern. Eine Person kann mehreren
      * Charakteren gehoeren; deren Zuordnungen stehen in 'owners' (inkl.
@@ -36,6 +37,8 @@ class Relatives_SearchApi
         $order = isset($filters['order']) ? (string)$filters['order'] : 'name';
         if ($order === 'newest') {
             $options = ['order_by' => 'created_at DESC, id', 'order_dir' => 'DESC'];
+        } elseif ($order === 'updated') {
+            $options = ['order_by' => 'updated_at DESC, id', 'order_dir' => 'DESC'];
         } elseif ($order === 'age') {
             $age_sql = self::age_sql();
             $options = ['order_by' => $age_sql . ' IS NULL, ' . $age_sql . ', name', 'order_dir' => 'ASC'];
@@ -50,7 +53,7 @@ class Relatives_SearchApi
         $rows = [];
         $query = $db->simple_select(
             'relatives_persons',
-            'id, name, gender, age, birth_year, origin, avatar, description, is_wanted, wanted_thread_link',
+            'id, name, gender, age, birth_year, origin, avatar, description, is_wanted, wanted_thread_link, created_at, updated_at',
             $where,
             $options
         );
@@ -66,6 +69,8 @@ class Relatives_SearchApi
                 'description'        => $row['description'],
                 'is_wanted'          => (bool)$row['is_wanted'],
                 'wanted_thread_link' => $row['wanted_thread_link'],
+                'created_at'         => (int)$row['created_at'],
+                'updated_at'         => (int)$row['updated_at'],
                 'owners'             => [],
             ];
         }

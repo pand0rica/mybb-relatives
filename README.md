@@ -363,8 +363,9 @@ Other plugins must not read the `relatives_*` tables directly. Public contract:
   `gender`, `relationship_type_id`, `attribute_option_ids` (array), `is_wanted` (default
   `true`), `age_min`, `age_max` (calculated age), `query` (name/description), `owner_uids`
   (int list – persons added by at least one of these accounts), `ids` (int list), plus paging
-  `limit`, `offset` and `order` (`name` = default, `age`, `newest`). Each row contains `age`
-  (calculated from the year of birth when an in-play year is set) and `birth_year`; every entry
+  `limit`, `offset` and `order` (`name` = default, `age`, `newest`, `updated`). Each row contains
+  `age` (calculated from the year of birth when an in-play year is set), `birth_year`,
+  `created_at` and `updated_at`; every entry
   in `owners` also has `relationship_description` (the owner's own text about the person).
   Values are sanitized but **not** HTML-escaped – escape when rendering.
 - `relatives_count_persons(array $filters): int` – number of matches for the same filters

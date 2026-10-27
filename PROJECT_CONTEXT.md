@@ -582,7 +582,8 @@ relatives_search_persons(array $filters): array
 Filter-Keys (alle optional): `gender`, `relationship_type_id`, `attribute_option_ids` (array),
 `is_wanted` (bool, Default true für den Suchmaschinen-Use-Case), `age_min`, `age_max`, `query`
 (Textsuche Name/Description), `owner_uids` (int[]), `ids` (int[]) sowie (v2.2) `limit`, `offset`, `order`
-(`name` = Standard, `age`, `newest`). Leere `ids`/`owner_uids` = kein Treffer. Rückgabe: eine Zeile je Person (`id, name, gender, age, origin, avatar, description, is_wanted,
+(`name` = Standard, `age`, `newest`, `updated`). Leere `ids`/`owner_uids` = kein Treffer. Jede Zeile
+enthält zusätzlich `created_at`/`updated_at`. Rückgabe: eine Zeile je Person (`id, name, gender, age, origin, avatar, description, is_wanted,
 wanted_thread_link`) plus `owners` = Liste `['owner_uid', 'relationship_type_id',
 'relationship_custom_label', 'relationship_description']` (Beschreibungstext der Zuordnung); `relationship_type_id` trifft, sobald eine Zuordnung diesen Grad
 hat. Sanitisiert, aber **nicht** HTML-escaped (Escaping macht der Konsument beim Rendern). Diese Funktion ist die einzige erlaubte
