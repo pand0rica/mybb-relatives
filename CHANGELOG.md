@@ -72,6 +72,9 @@ new code base; 2.0 and 2.1 were internal development stages and are summarised h
 - **Expand all** / **Default view** button in the tree toolbar (`expand=all`, capped at 400
   persons with a notice).
 - `tests/cli-tree-layout.php`: visibility and layout checks on a real 100-person tree.
+- Public search API for other plugins (e.g. *Anschluss-Suchmaschine*): `relatives_search_persons()`
+  now supports `limit`, `offset`, `order` (`name`, `age`, `newest`) and the filters `owner_uids`
+  and `ids`; owner rows include `relationship_description`. New `relatives_count_persons()`.
 
 ### Changed
 - Family tree layout rebuilt (`Relatives_TreeLayout`): blocks laid out from the youngest rows

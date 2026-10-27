@@ -700,3 +700,12 @@ function relatives_search_persons(array $filters): array
 {
     return Relatives_SearchApi::search($filters);
 }
+
+/**
+ * Anzahl der Treffer von relatives_search_persons() mit denselben Filtern
+ * (limit/offset/order werden ignoriert) -- fuer Pagination in Fremdplugins.
+ */
+function relatives_count_persons(array $filters): int
+{
+    return Relatives_SearchApi::count($filters);
+}

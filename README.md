@@ -361,9 +361,14 @@ Other plugins must not read the `relatives_*` tables directly. Public contract:
 
 - `relatives_search_persons(array $filters): array` – search persons. Filters (all optional):
   `gender`, `relationship_type_id`, `attribute_option_ids` (array), `is_wanted` (default
-  `true`), `age_min`, `age_max` (calculated age), `query` (name/description). Each row contains
-  `age` (calculated from the year of birth when an in-play year is set) and `birth_year`. Values
-  are sanitized but **not** HTML-escaped – escape when rendering.
+  `true`), `age_min`, `age_max` (calculated age), `query` (name/description), `owner_uids`
+  (int list – persons added by at least one of these accounts), `ids` (int list), plus paging
+  `limit`, `offset` and `order` (`name` = default, `age`, `newest`). Each row contains `age`
+  (calculated from the year of birth when an in-play year is set) and `birth_year`; every entry
+  in `owners` also has `relationship_description` (the owner's own text about the person).
+  Values are sanitized but **not** HTML-escaped – escape when rendering.
+- `relatives_count_persons(array $filters): int` – number of matches for the same filters
+  (`limit`/`offset`/`order` are ignored), for pagination.
 - `relatives_get_relation(int $person_id, int $uid): array` – how a person relates to a
   character: `concept_key`, `label`, `category`, `up`, `down`, `owner_name`, `text`
   (e.g. "Uncle of Megan").

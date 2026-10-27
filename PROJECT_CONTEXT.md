@@ -581,11 +581,14 @@ relatives_search_persons(array $filters): array
 ```
 Filter-Keys (alle optional): `gender`, `relationship_type_id`, `attribute_option_ids` (array),
 `is_wanted` (bool, Default true für den Suchmaschinen-Use-Case), `age_min`, `age_max`, `query`
-(Textsuche Name/Description). Rückgabe: eine Zeile je Person (`id, name, gender, age, origin, avatar, description, is_wanted,
+(Textsuche Name/Description), `owner_uids` (int[]), `ids` (int[]) sowie (v2.2) `limit`, `offset`, `order`
+(`name` = Standard, `age`, `newest`). Leere `ids`/`owner_uids` = kein Treffer. Rückgabe: eine Zeile je Person (`id, name, gender, age, origin, avatar, description, is_wanted,
 wanted_thread_link`) plus `owners` = Liste `['owner_uid', 'relationship_type_id',
-'relationship_custom_label']`; `relationship_type_id` trifft, sobald eine Zuordnung diesen Grad
+'relationship_custom_label', 'relationship_description']` (Beschreibungstext der Zuordnung); `relationship_type_id` trifft, sobald eine Zuordnung diesen Grad
 hat. Sanitisiert, aber **nicht** HTML-escaped (Escaping macht der Konsument beim Rendern). Diese Funktion ist die einzige erlaubte
-Zugriffsart auf `relatives_*`-Daten für Fremdplugins – zusammen mit der folgenden Funktion (v2.1):
+Zugriffsart auf `relatives_*`-Daten für Fremdplugins – zusammen mit
+`relatives_count_persons(array $filters): int` (gleiche Filter ohne limit/offset/order, v2.2) und der
+folgenden Funktion (v2.1):
 
 ```php
 relatives_get_relation(int $person_id, int $uid): array

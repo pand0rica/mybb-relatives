@@ -335,7 +335,7 @@ class Relatives_Database
         }
         $owners = [];
         $query = $db->write_query(
-            "SELECT o.person_id, o.owner_uid, o.computed_concept_key, o.computed_label, o.computed_category, o.computed_via_person_id,"
+            "SELECT o.person_id, o.owner_uid, o.description, o.computed_concept_key, o.computed_label, o.computed_category, o.computed_via_person_id,"
             . " r.relationship_type_id, r.relationship_custom_label"
             . " FROM " . TABLE_PREFIX . "relatives_person_owners o"
             . " LEFT JOIN " . TABLE_PREFIX . "relatives_relations r"
@@ -346,6 +346,7 @@ class Relatives_Database
         while ($row = $db->fetch_array($query)) {
             $owners[(int)$row['person_id']][] = [
                 'owner_uid'                 => (int)$row['owner_uid'],
+                'relationship_description'  => (string)$row['description'],
                 'relationship_type_id'      => $row['relationship_type_id'] !== null ? (int)$row['relationship_type_id'] : null,
                 'relationship_custom_label' => $row['relationship_custom_label'],
                 'computed_concept_key'      => $row['computed_concept_key'],

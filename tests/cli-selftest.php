@@ -251,6 +251,24 @@ if ($uid_a > 0) {
     }
     check('search by relationship_type_id matches via owner assignment', true, $found_type);
 
+    // v2.2: paging, counting, ids/owner_uids filters, relationship_description
+    $marker_filter = ['query' => $marker . ' Wanted', 'is_wanted' => true];
+    check('count matches search', count(Relatives_SearchApi::search($marker_filter)), relatives_count_persons($marker_filter));
+    check('owner rows carry relationship_description', true, array_key_exists('relationship_description', $found['owners'][0] ?? []));
+    check('ids filter finds fixture', 1, count(relatives_search_persons(['ids' => [$search_person_id]])));
+    check('empty ids filter matches nothing', 0, relatives_count_persons(['ids' => []]));
+    check('owner_uids filter finds fixture', 1, relatives_count_persons($marker_filter + ['owner_uids' => [$uid_a]]));
+    check('foreign owner_uids excludes fixture', 0, relatives_count_persons($marker_filter + ['owner_uids' => [999999999]]));
+    $all_wanted = relatives_count_persons(['is_wanted' => true]);
+    if ($all_wanted >= 2) {
+        $first = relatives_search_persons(['is_wanted' => true, 'limit' => 1, 'offset' => 0]);
+        $second = relatives_search_persons(['is_wanted' => true, 'limit' => 1, 'offset' => 1]);
+        $both = relatives_search_persons(['is_wanted' => true, 'limit' => 2]);
+        check('limit/offset pages through the default order', [$both[0]['id'], $both[1]['id']], [$first[0]['id'], $second[0]['id']]);
+    }
+    $newest = relatives_search_persons(['is_wanted' => true, 'order' => 'newest', 'limit' => 1]);
+    check('order newest returns the latest fixture first', $search_person_id, (int)($newest[0]['id'] ?? 0));
+
     Relatives_Database::delete_person($search_person_id);
 } else {
     echo "  skip (no fixture)\n";
