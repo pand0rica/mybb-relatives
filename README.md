@@ -366,7 +366,8 @@ Other plugins must not read the `relatives_*` tables directly. Public contract:
   `limit`, `offset` and `order` (`name` = default, `age`, `newest`, `updated`). Each row contains
   `age` (calculated from the year of birth when an in-play year is set), `birth_year`,
   `created_at` and `updated_at`; every entry
-  in `owners` also has `relationship_description` (the owner's own text about the person).
+  in `owners` also has `relationship_description` (the owner's own text about the person) and `closeness`
+  (how close the relation is, lower = closer, see `Relatives_Kinship::closeness()`).
   Values are sanitized but **not** HTML-escaped – escape when rendering.
 - `relatives_count_persons(array $filters): int` – number of matches for the same filters
   (`limit`/`offset`/`order` are ignored), for pagination.

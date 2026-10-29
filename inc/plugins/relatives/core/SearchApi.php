@@ -22,7 +22,8 @@ class Relatives_SearchApi
      * Rueckgabe: eine Zeile je Person, sanitisiert, aber NICHT html-escaped
      * -- Escaping macht der Konsument beim Rendern. Eine Person kann mehreren
      * Charakteren gehoeren; deren Zuordnungen stehen in 'owners' (inkl.
-     * relationship_description = Beschreibung der Zuordnung). relationship_type_id
+     * relationship_description = Beschreibung der Zuordnung und closeness = Naehe der
+     * Verwandtschaft, kleiner = naeher, siehe Relatives_Kinship::closeness()). relationship_type_id
      * trifft, sobald mindestens eine Zuordnung diesen Grad hat.
      */
     public static function search(array $filters): array
@@ -77,6 +78,9 @@ class Relatives_SearchApi
 
         foreach (Relatives_Database::get_owners_bulk(array_keys($rows)) as $person_id => $owners) {
             if (isset($rows[$person_id])) {
+                foreach ($owners as $i => $owner) {
+                    $owners[$i]['closeness'] = Relatives_Kinship::closeness($owner['computed_concept_key'], $owner['computed_category']);
+                }
                 $rows[$person_id]['owners'] = $owners;
             }
         }

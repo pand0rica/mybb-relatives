@@ -171,7 +171,7 @@
 
 .relatives_profile_wanted_card_main {
 	display: flex;
-	align-items: center;
+	align-items: flex-start;
 	gap: 10px;
 	min-width: 0;
 }
@@ -218,8 +218,9 @@
 .relatives_profile_wanted_card_footer {
 	display: flex;
 	flex-wrap: wrap;
-	align-items: flex-start;
+	align-items: flex-end;
 	justify-content: space-between;
+	margin-top: auto;
 	gap: 4px 10px;
 	font-size: 0.85em;
 }

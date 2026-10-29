@@ -166,6 +166,47 @@ class Relatives_Kinship
         return $concept === null || !in_array($concept, self::NON_BLOOD_CONCEPTS, true);
     }
 
+    /** Naehe der nicht ueber (up, down) beschreibbaren Konzepte, Skala wie in closeness(). */
+    private const CLOSENESS_CONCEPTS = [
+        'step_parent'      => 11,
+        'step_child'       => 11,
+        'adoptive_parent'  => 11,
+        'adoptive_child'   => 11,
+        'foster_parent'    => 11,
+        'foster_child'     => 11,
+        'spouse'           => 12,
+        'partner'          => 12,
+        'fiance'           => 12,
+        'half_sibling'     => 22,
+        'step_sibling'     => 23,
+        'adoptive_sibling' => 23,
+        'sibling_in_law'   => 45,
+        'parent_in_law'    => 45,
+        'child_in_law'     => 45,
+        'ex_spouse'        => 50,
+        'distant_ancestor'   => 80,
+        'distant_descendant' => 80,
+        'distant_relative'   => 90,
+    ];
+
+    /**
+     * Wie nah steht eine Person dem Charakter (kleiner = naeher), aus dem gecachten
+     * computed_concept_key/-category. Blutsverwandte: 10 je Schritt (up + down), bei
+     * Gleichstand die naehere Generation nach oben zuerst. Freie Bezeichnungen und
+     * Unbekanntes kommen zuletzt.
+     */
+    public static function closeness(?string $concept, ?string $category): int
+    {
+        if ($category === self::CATEGORY_CUSTOM || $category === self::CATEGORY_VIA || $category === self::CATEGORY_UNKNOWN) {
+            return 100;
+        }
+        $degree = self::degree_for_concept($concept);
+        if ($degree !== null) {
+            return 10 * ($degree[0] + $degree[1]) + $degree[0];
+        }
+        return $concept !== null && isset(self::CLOSENESS_CONCEPTS[$concept]) ? self::CLOSENESS_CONCEPTS[$concept] : 100;
+    }
+
     /** concept_key, generation_offset, label, line_style je relationship_type_id. */
     public static function type_map(): array
     {

@@ -354,5 +354,25 @@ check('Adoptivelternteil -> Adoptivkind', 'adoptive_child', Relatives_Kinship::i
 check('Geschwister bleibt Geschwister', 'sibling', Relatives_Kinship::inverse_concept('sibling'));
 check('Ehepartner*in bleibt symmetrisch', 'spouse', Relatives_Kinship::inverse_concept('spouse'));
 
+// --- Naehe der Verwandtschaft (closeness) -------------------------------------------------
+
+echo "=== Naehe (closeness) ===\n";
+
+$closeness = static function (string $concept, string $category = 'exact'): int {
+    return Relatives_Kinship::closeness($concept, $category);
+};
+check('Kind vor Elternteil', true, $closeness('child') < $closeness('parent'));
+check('Elternteil vor Ehepartner*in', true, $closeness('parent') < $closeness('spouse'));
+check('Ehepartner*in vor Geschwister', true, $closeness('spouse') < $closeness('sibling'));
+check('Geschwister vor Grosseltern', true, $closeness('sibling') < $closeness('grandparent'));
+check('Halbgeschwister nach Geschwister', true, $closeness('sibling') < $closeness('half_sibling'));
+check('Grosseltern vor Tante/Onkel', true, $closeness('grandparent') < $closeness('aunt_uncle'));
+check('Tante/Onkel vor Cousin*e', true, $closeness('aunt_uncle') < $closeness('cousin'));
+check('Cousin*e vor Schwager/Schwaegerin', true, $closeness('cousin') < $closeness('sibling_in_law'));
+check('Angeheiratet vor Ex-Partner*in', true, $closeness('sibling_in_law') < $closeness('ex_spouse'));
+check('Ex-Partner*in vor entfernt verwandt', true, $closeness('ex_spouse') < $closeness('distant_relative', 'distant_relative'));
+check('Freie Bezeichnung zuletzt', true, $closeness('distant_relative', 'distant_relative') < Relatives_Kinship::closeness(null, 'custom'));
+check('Unbekannt = frei', Relatives_Kinship::closeness(null, 'custom'), Relatives_Kinship::closeness(null, 'unknown'));
+
 echo "\n{$pass} passed, {$fail} failed\n";
 exit($fail > 0 ? 1 : 0);
