@@ -259,6 +259,91 @@ check('Stiefschwester ist kein Mitglied', false, isset($members[$m['stepsis']][7
 check('Halbbruder bleibt Mitglied', true, isset($members[$m['halfbro']][7]));
 check('Vollgeschwister bleibt Mitglied', true, isset($members[$m['sister']][7]));
 
+// --- Halbgeschwister: nur ein gemeinsamer Elternteil, deshalb nicht transitiv -----------
+// Befund Paula: Phoebe ist Halbschwester von Crispin (ueber Simon) und von Kayley (ueber
+// Caiomhe). Crispin und Kayley sind nicht verwandt, wurden aber Geschwister.
+
+echo "=== Halbgeschwister ===\n";
+
+$h = ['crispin' => 1, 'milena' => 2, 'simon' => 3, 'phoebe' => 4, 'caiomhe' => 5, 'cathalain' => 6, 'kayley' => 7, 'lynn' => 8, 'phoebe_kid' => 9, 'phoebe_sister' => 10];
+$half_rows = [
+    [$h['milena'],  'parent',       $h['crispin']],
+    [$h['simon'],   'parent',       $h['crispin']],
+    [$h['phoebe'],  'half_sibling', $h['kayley']],
+    [$h['phoebe'],  'half_sibling', $h['crispin']],
+    [$h['phoebe'],  'child',        $h['caiomhe']],
+    [$h['phoebe'],  'child',        $h['simon']],
+    [$h['kayley'],  'child',        $h['caiomhe']],
+    [$h['kayley'],  'child',        $h['cathalain']],
+    [$h['lynn'],    'sibling',      $h['kayley']],
+    [$h['phoebe_kid'],    'child',   $h['phoebe']],
+    [$h['phoebe_sister'], 'sibling', $h['phoebe']],
+];
+$hgraph = Relatives_Kinship::structure_from(persons(array_values($h)), relations($half_rows, $type_of), $types);
+
+$hdegrees = Relatives_Kinship::blood_degrees($hgraph, 'p:' . $h['crispin']);
+check('Crispin: Kayley ist nicht verwandt', 'none', concept_of($hdegrees, $h['kayley']));
+check('Crispin: Lynn ist nicht verwandt', 'none', concept_of($hdegrees, $h['lynn']));
+check('Crispin: Caiomhe ist keine Mutter', 'none', concept_of($hdegrees, $h['caiomhe']));
+check('Crispin: Kind der Halbschwester bleibt Nichte/Neffe', 'niece_nephew', concept_of($hdegrees, $h['phoebe_kid']));
+check('Crispin: Vollschwester der Halbschwester bleibt verwandt', 'sibling', concept_of($hdegrees, $h['phoebe_sister']));
+
+$hdegrees = Relatives_Kinship::blood_degrees($hgraph, 'p:' . $h['kayley']);
+check('Kayley: Crispin ist nicht verwandt', 'none', concept_of($hdegrees, $h['crispin']));
+check('Kayley: Simon ist kein Vater', 'none', concept_of($hdegrees, $h['simon']));
+
+// Ohne die 2^n-Sperre: bei Crispin ist nur der Vater eingetragen.
+$hgraph_one_parent = Relatives_Kinship::structure_from(persons(array_values($h)), relations(array_slice($half_rows, 1), $type_of), $types);
+$hdegrees = Relatives_Kinship::blood_degrees($hgraph_one_parent, 'p:' . $h['crispin']);
+check('Nur Vater eingetragen: Caiomhe wird nicht zur Mutter', 'none', concept_of($hdegrees, $h['caiomhe']));
+check('Nur Vater eingetragen: Kayley bleibt unverwandt', 'none', concept_of($hdegrees, $h['kayley']));
+
+// Halbgeschwister in direkter Linie sind sicher verwandt.
+$hgraph_line = Relatives_Kinship::structure_from(persons([1, 2, 3, 4]), relations([
+    [2, 'parent',       1],
+    [3, 'half_sibling', 2],
+    [4, 'child',        3],
+], $type_of), $types);
+$hdegrees = Relatives_Kinship::blood_degrees($hgraph_line, 'p:1');
+check('Halbbruder der Mutter ist Onkel', 'aunt_uncle', concept_of($hdegrees, 3));
+check('Kind des Halbonkels ist Cousin*e', 'cousin', concept_of($hdegrees, 4));
+
+// Auch ganz ohne Elternangaben bleibt die Kette offen.
+$hgraph_chain = Relatives_Kinship::structure_from(persons([1, 2, 3]), relations([
+    [2, 'half_sibling', 1],
+    [3, 'half_sibling', 2],
+], $type_of), $types);
+$hdegrees = Relatives_Kinship::blood_degrees($hgraph_chain, 'p:1');
+check('Direkte Halbschwester behaelt Koordinate', 'sibling', concept_of($hdegrees, 2));
+check('Halbschwester der Halbschwester bleibt offen', 'none', concept_of($hdegrees, 3));
+
+// Familien-Zugehoerigkeit: Die Kette endet nach einem Halbgeschwister-Schritt.
+$half_members = static function (array $start_rows) use ($h, $half_rows, $types, $type_of): array {
+    return Relatives_Graph::memberships_from(Relatives_Kinship::structure_from(
+        persons(array_values($h)),
+        relations(array_merge($half_rows, $start_rows), $type_of),
+        $types
+    ));
+};
+
+$hmembers = $half_members([[$h['kayley'], 'child', null, 77]]);
+check('Kayley am Kasten: Lynn ist Mitglied', true, isset($hmembers[$h['lynn']][77]));
+check('Kayley am Kasten: Halbschwester Phoebe ist Mitglied', true, isset($hmembers[$h['phoebe']][77]));
+check('Kayley am Kasten: Phoebes Kind ist Mitglied', true, isset($hmembers[$h['phoebe_kid']][77]));
+check('Kayley am Kasten: Phoebes Vollschwester ist Mitglied', true, isset($hmembers[$h['phoebe_sister']][77]));
+check('Kayley am Kasten: Crispin ist kein Mitglied', false, isset($hmembers[$h['crispin']][77]));
+check('Kayley am Kasten: Simon ist kein Mitglied', false, isset($hmembers[$h['simon']][77]));
+
+$hmembers = $half_members([[$h['caiomhe'], 'child', null, 77]]);
+check('Caiomhe am Kasten: Kind Phoebe ist Mitglied', true, isset($hmembers[$h['phoebe']][77]));
+check('Caiomhe am Kasten: Kayley ist Mitglied', true, isset($hmembers[$h['kayley']][77]));
+check('Caiomhe am Kasten: Crispin (nur Simon gemeinsam) ist kein Mitglied', false, isset($hmembers[$h['crispin']][77]));
+
+$hmembers = $half_members([[$h['simon'], 'child', null, 78]]);
+check('Simon am Kasten: Crispin ist Mitglied', true, isset($hmembers[$h['crispin']][78]));
+check('Simon am Kasten: Phoebe ist Mitglied', true, isset($hmembers[$h['phoebe']][78]));
+check('Simon am Kasten: Kayley (nur Caiomhe gemeinsam) ist kein Mitglied', false, isset($hmembers[$h['kayley']][78]));
+
 // --- Struktur-Ableitung der Alt-Migration: keine Rateergebnisse bei offenen Graden -------
 // Befund Testforum: In Jolinas alter Liste stand nur Delia als Tante; alle "Cousins"
 // wurden deshalb zu Delias Kindern. Eine Tante mit Seitenangabe gehoert dagegen sicher zum

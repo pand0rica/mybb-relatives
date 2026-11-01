@@ -247,7 +247,9 @@ character or a person from your list, optionally tick **Show family as parents**
 - Assign families in the person form under **Family** or on the family page. Without *Show
   family as parents* it is a plain membership; with it the box takes the place of the parents.
 - Membership covers everyone attached to the box, their (half-)siblings, all descendants
-  (including adopted children) and their partners. Adoptive and step siblings do **not** carry
+  (including adopted children) and their partners. Half-siblings count for one step only: they
+  do not pass the membership on to their own half-siblings, and stay out if the parent they share
+  with a member is known not to belong to the family. Adoptive and step siblings do **not** carry
   the membership over – enter an adopted person as *adoptive child* of the family or of its
   parents instead.
 - If **This family welcomes new members** is off, no further *played* characters can join the

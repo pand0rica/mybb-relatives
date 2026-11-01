@@ -221,25 +221,22 @@ class Relatives_Graph
         }
 
         foreach ($direct as $family_id => $queue) {
-            $seen = [];
-            while ($queue) {
-                $key = (string)array_shift($queue);
-                if (isset($seen[$key]) || strpos($key, 'p:') !== 0) {
-                    continue;
-                }
-                $seen[$key] = true;
-                foreach (array_keys($graph['children'][$key] ?? []) as $next) {
-                    $queue[] = $next;
-                }
-                // Adoptiv- und Stiefgeschwister ziehen keine Familie mit: "Nick ist
-                // Adoptivbruder von Lenja" sagt nicht, wer in wessen Familie kam.
+            $core = self::membership_closure($graph, $queue, []);
+
+            // Halbgeschwister kommen in einem eigenen Schritt dazu und geben ueber ihre
+            // Halbgeschwister nichts weiter: Phoebe gehoert ueber Kayley zu den Sayres, ihr
+            // Halbbruder Crispin (gemeinsamer Vater, andere Familie) dadurch nicht.
+            $half_siblings = [];
+            foreach (array_keys($core) as $key) {
                 foreach ($graph['siblings'][$key] ?? [] as $next => $concept) {
-                    if (in_array($concept, self::MEMBERSHIP_EXCLUDED_SIBLINGS, true)) {
-                        continue;
+                    if ($concept === 'half_sibling' && !isset($core[$next])
+                        && self::half_sibling_joins($graph, (string)$key, (string)$next, $core)) {
+                        $half_siblings[] = (string)$next;
                     }
-                    $queue[] = $next;
                 }
             }
+            $seen = self::membership_closure($graph, $half_siblings, $core);
+
             // Partner*innen gehoeren dazu, werden aber nicht weiter aufgeloest.
             foreach (array_keys($seen) as $key) {
                 foreach (array_keys($graph['partners'][$key] ?? []) as $partner) {
@@ -254,6 +251,54 @@ class Relatives_Graph
         }
 
         return $members;
+    }
+
+    /**
+     * Mitglieder ab den Startpunkten: Nachkommen und Vollgeschwister. Adoptiv- und
+     * Stiefgeschwister ziehen keine Familie mit ("Nick ist Adoptivbruder von Lenja" sagt
+     * nicht, wer in wessen Familie kam), Halbgeschwister regelt memberships_from().
+     *
+     * @return array graph key => true, inklusive $seen
+     */
+    private static function membership_closure(array $graph, array $queue, array $seen): array
+    {
+        while ($queue) {
+            $key = (string)array_shift($queue);
+            if (isset($seen[$key]) || strpos($key, 'p:') !== 0) {
+                continue;
+            }
+            $seen[$key] = true;
+            foreach (array_keys($graph['children'][$key] ?? []) as $next) {
+                $queue[] = $next;
+            }
+            foreach ($graph['siblings'][$key] ?? [] as $next => $concept) {
+                if ($concept !== 'half_sibling' && !in_array($concept, self::MEMBERSHIP_EXCLUDED_SIBLINGS, true)) {
+                    $queue[] = $next;
+                }
+            }
+        }
+        return $seen;
+    }
+
+    /**
+     * Kommt ein Halbgeschwister eines Mitglieds in die Familie? Ja -- ausser das Mitglied
+     * gehoert ueber einen Elternteil zur Familie und der gemeinsame Elternteil der beiden
+     * ist nachweislich ein anderer (Phoebe ist ueber Caiomhe eine Sayre, teilt mit Crispin
+     * aber nur Simon).
+     */
+    private static function half_sibling_joins(array $graph, string $member, string $half_sibling, array $core): bool
+    {
+        $member_parents = array_filter(array_keys($graph['parents'][$member] ?? []), static function ($key) {
+            return strpos((string)$key, 'p:') === 0;
+        });
+        $shared = array_intersect($member_parents, array_keys($graph['parents'][$half_sibling] ?? []));
+        if (!$shared) {
+            return true;
+        }
+        $in_core = static function ($key) use ($core): bool {
+            return isset($core[$key]);
+        };
+        return (bool)array_filter($shared, $in_core) || !array_filter($member_parents, $in_core);
     }
 
     /**

@@ -384,6 +384,10 @@ Zwei Teamies haben das Plugin auf dem Testforum ausprobiert; daraus folgten dies
   Erklärtext. Eine Ausblenden-Option gibt es bewusst nicht.
 - **Adoptiv- und Stiefgeschwister ziehen keine Familie mit** (`Graph::memberships_from()`,
   `MEMBERSHIP_EXCLUDED_SIBLINGS`); Halbgeschwister, (Adoptiv-)Kinder und Partner*innen schon.
+  Halbgeschwister aber nur einen Schritt: Wer so dazukommt, gibt die Familie an eigene Kinder und
+  Vollgeschwister weiter, nicht an weitere Halbgeschwister. Gehört ein Mitglied über einen Elternteil
+  zur Familie und ist der gemeinsame Elternteil mit dem Halbgeschwister nachweislich ein anderer,
+  bleibt das Halbgeschwister draußen (Fall Crispin/Phoebe/Sayre, `half_sibling_joins()`).
 - **Familien:** eigener Formularabschnitt „Familie" (intern weiter `relations[i][anchor]=f:<id>`),
   Familienseite `action=family` (Gast-Zugriff wie `family_list`) mit Mitgliedergruppen und
   „Zu dieser Familie hinzufügen" (`action=family_join`, gleiche Prüfung geschlossener Familien).
@@ -416,6 +420,11 @@ Zwei Teamies haben das Plugin auf dem Testforum ausprobiert; daraus folgten dies
   (`blood_degrees()`: abwärts zu Kindern, aufwärts zu Eltern, seitwärts zu Geschwistern, bis
   stabil). Nur Blutskanten zählen für Koordinaten (`adoptive_*`, `step_*`, `foster_*` nicht); die
   kürzeste Koordinate gewinnt. Direkt an dir eingetragene Grade gelten immer.
+- **Halbgeschwister sind nicht transitiv:** Sie teilen nur einen Elternteil. `blood_degrees()` folgt
+  einer `half_sibling`-Kante deshalb nur von der Wurzel und von direkten Vorfahr*innen aus, und von
+  Halbgeschwistern dieser Linie führt kein Weg nach oben (`is_half_sibling_of_line()`). Fall Crispin/
+  Kayley: beide Halbgeschwister von Phoebe, aber untereinander nicht verwandt; Anzeige über `via`
+  („Halbschwester von Phoebe Barnes“). Der Baumumfang (`blood_keys()`) bleibt davon unberührt.
 - **Begrenzung** (`concept_for_degree()`): exakt benannt bis Urgroßeltern/Urenkel (3,0)/(0,3) und
   seitlich bis Großonkel (3,1), Großnichte (1,3), Großcousin*e (3,3). Darüber hinaus
   `distant_ancestor` („entfernte*r Vorfahr*in"), `distant_descendant`, sonst `distant_relative`

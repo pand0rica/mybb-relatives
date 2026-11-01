@@ -443,7 +443,7 @@ class Relatives_Kinship
                 // direkter Linie eine Generation hoeher. (0, 0) waere die Wurzel selbst.
                 $parent_up = $down === 0 ? $up + 1 : $up;
                 $parent_down = $down === 0 ? 0 : $down - 1;
-                if ($parent_up > 0 || $parent_down > 0) {
+                if (($parent_up > 0 || $parent_down > 0) && !self::is_half_sibling_of_line($graph, $degrees, $key)) {
                     foreach ($graph['parents'][$key] ?? [] as $parent => $edge) {
                         if ($edge['blood'] && empty($edge['inferred']) && $parent !== $root_key
                             && self::ancestor_slot_free($degrees, $parent, $parent_up, $parent_down)
@@ -455,9 +455,16 @@ class Relatives_Kinship
 
                 // Geschwister teilen sich die Eltern: aus (1,0) Mutter wird (2,1) Onkel;
                 // seitlich stehende Personen geben ihre Koordinate unveraendert weiter.
+                // Halbgeschwister teilen nur EINEN Elternteil: sicher verwandt ist das nur in
+                // direkter Linie ("Halbbruder meiner Mutter"). Bei allen anderen ist offen, ueber
+                // welchen Elternteil es laeuft -- Phoebe ist Halbschwester von Crispin (ueber den
+                // Vater) und von Kayley (ueber die Mutter), Crispin und Kayley sind nicht verwandt.
                 $sibling_up = $down === 0 ? $up + 1 : $up;
                 $sibling_down = $down === 0 ? 1 : $down;
                 foreach ($graph['siblings'][$key] ?? [] as $sibling => $concept) {
+                    if ($concept === 'half_sibling' && $down !== 0) {
+                        continue;
+                    }
                     if ($sibling !== $root_key && self::is_blood_concept($concept)
                         && self::keep_shortest($degrees, $sibling, $sibling_up, $sibling_down)) {
                         $changed = true;
@@ -486,6 +493,22 @@ class Relatives_Kinship
         }
         [$up, $down] = explode('|', (string)$key);
         return [(int)$up, (int)$down];
+    }
+
+    /**
+     * Halbgeschwister der Wurzel oder einer Person in direkter Linie: nur einer ihrer Eltern
+     * gehoert zur eigenen Linie, und welcher, ist offen. Von ihnen fuehrt deshalb kein Weg
+     * nach oben -- sonst wuerde Phoebes Mutter zu Crispins Mutter, sobald bei ihm nur der
+     * Vater eingetragen ist.
+     */
+    private static function is_half_sibling_of_line(array $graph, array $degrees, string $key): bool
+    {
+        foreach ($graph['siblings'][$key] ?? [] as $sibling => $concept) {
+            if ($concept === 'half_sibling' && isset($degrees[$sibling]) && (int)$degrees[$sibling]['down'] === 0) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
