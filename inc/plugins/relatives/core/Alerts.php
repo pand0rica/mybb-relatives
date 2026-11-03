@@ -173,7 +173,7 @@ class Relatives_Alerts
      */
     private static function send(string $code, array $uids, array $extra, int $object_id, int $from_uid): int
     {
-        global $mybb;
+        global $mybb, $db, $cache, $plugins;
 
         if (!self::is_available()) {
             return 0;
@@ -193,14 +193,12 @@ class Relatives_Alerts
         try {
             $type_manager = MybbStuff_MyAlerts_AlertTypeManager::getInstance();
             if (!$type_manager) {
-                global $db, $cache;
                 $type_manager = MybbStuff_MyAlerts_AlertTypeManager::createInstance($db, $cache);
             }
             $alert_manager = MybbStuff_MyAlerts_AlertManager::getInstance();
             if (!$alert_manager && $type_manager) {
                 // MyAlerts legt seine Instanzen erst bei global_start an; im ACP bzw.
                 // in fruehen Hooks (Account-Loeschung) tun wir das selbst.
-                global $db, $cache, $plugins;
                 $alert_manager = MybbStuff_MyAlerts_AlertManager::createInstance($mybb, $db, $cache, $plugins, $type_manager);
             }
             if (!$type_manager || !$alert_manager) {

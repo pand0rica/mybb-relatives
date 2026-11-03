@@ -9,6 +9,15 @@ All notable changes to this plugin are documented here. Format based on
 Complete rewrite of the legacy *relatives* / *wanted* plugin (v1.0). First public release of the
 new code base; 2.0 and 2.1 were internal development stages and are summarised here.
 
+### Security (review)
+- All ACP write handlers (attributes, relationship types, origin, graph, migration, delete
+  requests) check the return value of `verify_post_check()` via `relatives_acp_verify_key()`;
+  in the ACP the function does not abort on its own.
+
+### Changed (review)
+- `global` declarations in `Relatives_Alerts::send()` moved to the start of the method.
+- Plugin website points to `pand0rica/mybb-relatives`.
+
 ### Added
 - One person table and one form for relatives and other connections (friends, rivals …) – replaces
   the two separate legacy tables `relatives` and `wanted`.

@@ -26,7 +26,7 @@ $line_style_labels = [
 // --- do=recompute (POST) ----------------------------------------------------------------
 
 if ($do === 'recompute' && $mybb->request_method === 'post') {
-    verify_post_check($mybb->get_input('my_post_key'));
+    relatives_acp_verify_key();
     $updated = Relatives_Kinship::recompute_all();
     flash_message($lang->sprintf($lang->relatives_acp_recompute_done, $updated), 'success');
     admin_redirect('index.php?module=tools-relatives&action=relationship-types');
@@ -36,7 +36,7 @@ if ($do === 'recompute' && $mybb->request_method === 'post') {
 
 // Einmalig: fest eingetragene Alter -> Geburtsjahr (Inplay-Jahr - Alter).
 if ($do === 'convert_ages' && $mybb->request_method === 'post') {
-    verify_post_check($mybb->get_input('my_post_key'));
+    relatives_acp_verify_key();
     $inplay_year = Relatives_Database::inplay_year();
     if ($inplay_year === null) {
         flash_message($lang->relatives_acp_convert_ages_no_year, 'error');
@@ -50,7 +50,7 @@ if ($do === 'convert_ages' && $mybb->request_method === 'post') {
 // --- do=delete (POST) -----------------------------------------------------------------
 
 if ($do === 'delete' && $mybb->request_method === 'post') {
-    verify_post_check($mybb->get_input('my_post_key'));
+    relatives_acp_verify_key();
     Relatives_RelationshipTypes::delete($id);
     flash_message($lang->relatives_acp_deleted, 'success');
     admin_redirect('index.php?module=tools-relatives&action=relationship-types');
@@ -59,7 +59,7 @@ if ($do === 'delete' && $mybb->request_method === 'post') {
 // --- do=seed_defaults (POST) ------------------------------------------------------------
 
 if ($do === 'seed_defaults' && $mybb->request_method === 'post') {
-    verify_post_check($mybb->get_input('my_post_key'));
+    relatives_acp_verify_key();
     $created = Relatives_RelationshipTypes::create_common_defaults();
     if ($created > 0) {
         flash_message(sprintf($lang->relatives_acp_seed_defaults_done, $created), 'success');
@@ -82,7 +82,7 @@ if ($do === 'add' || $do === 'edit') {
     }
 
     if ($mybb->request_method === 'post') {
-        verify_post_check($mybb->get_input('my_post_key'));
+        relatives_acp_verify_key();
 
         $data = [
             'concept_key'       => trim($mybb->get_input('concept_key')),

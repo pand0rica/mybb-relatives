@@ -41,7 +41,7 @@ function relatives_info(): array
     return [
         "name"          => "Verwandtschaften & Stammbaum",
         "description"   => "Verwaltet pro Charakter Verwandte/verbundene Personen und bietet einen interaktiven, klickbaren Stammbaum mit Account-Verknuepfung.",
-        "website"       => "https://github.com/pand0rica/relatives",
+        "website"       => "https://github.com/pand0rica/mybb-relatives",
         "author"        => "pand0rica",
         "authorsite"    => "https://github.com/pand0rica",
         "version"       => "2.2.0",
