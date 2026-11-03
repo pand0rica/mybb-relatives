@@ -16,7 +16,6 @@ if (!defined("IN_MYBB")) {
 $report = null;
 
 if ($mybb->request_method === 'post') {
-    relatives_acp_verify_key();
 
     $force = $mybb->get_input('confirm_rerun', MyBB::INPUT_INT) ? true : false;
     $report = Relatives_Migration::run($force);

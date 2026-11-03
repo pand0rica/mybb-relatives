@@ -12,7 +12,6 @@ if (!defined("IN_MYBB")) {
 }
 
 if ($mybb->request_method === 'post') {
-    relatives_acp_verify_key();
 
     $mode = $mybb->get_input('relatives_origin_mode');
     if (!in_array($mode, ['freetext', 'profilefield'], true)) {

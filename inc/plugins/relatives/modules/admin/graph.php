@@ -17,7 +17,6 @@ $do = $mybb->get_input('do');
 $report = null;
 
 if ($mybb->request_method === 'post') {
-    relatives_acp_verify_key();
 
     if ($do === 'merge') {
         $report = Relatives_Graph::merge();

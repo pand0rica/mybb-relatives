@@ -14,7 +14,6 @@ $group_id = $mybb->get_input('group_id', MyBB::INPUT_INT);
 // --- Gruppen: add/edit/delete -----------------------------------------------------------
 
 if ($do === 'delete_group' && $mybb->request_method === 'post') {
-    relatives_acp_verify_key();
     Relatives_Attributes::delete_group($id);
     flash_message($lang->relatives_acp_deleted, 'success');
     admin_redirect('index.php?module=tools-relatives&action=attributes');
@@ -31,7 +30,6 @@ if ($do === 'add_group' || $do === 'edit_group') {
     }
 
     if ($mybb->request_method === 'post') {
-        relatives_acp_verify_key();
         $data = [
             'label'      => trim($mybb->get_input('label')),
             'applies_to' => $mybb->get_input('applies_to'),
@@ -107,7 +105,6 @@ if ($do === 'add_group' || $do === 'edit_group') {
 // --- Optionen: add/edit/delete -----------------------------------------------------------
 
 if ($do === 'delete_option' && $mybb->request_method === 'post') {
-    relatives_acp_verify_key();
     Relatives_Attributes::delete_option($id);
     flash_message($lang->relatives_acp_deleted, 'success');
     admin_redirect('index.php?module=tools-relatives&action=attributes');
@@ -131,7 +128,6 @@ if ($do === 'add_option' || $do === 'edit_option') {
     }
 
     if ($mybb->request_method === 'post') {
-        relatives_acp_verify_key();
         $data = [
             'group_id'   => $group_id,
             'label'      => trim($mybb->get_input('label')),

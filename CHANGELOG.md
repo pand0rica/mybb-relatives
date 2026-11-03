@@ -10,9 +10,9 @@ Complete rewrite of the legacy *relatives* / *wanted* plugin (v1.0). First publi
 new code base; 2.0 and 2.1 were internal development stages and are summarised here.
 
 ### Security (review)
-- All ACP write handlers (attributes, relationship types, origin, graph, migration, delete
-  requests) check the return value of `verify_post_check()` via `relatives_acp_verify_key()`;
-  in the ACP the function does not abort on its own.
+- ACP CSRF protection uses MyBB's native mechanism (dev kit `debugging.md` #23): write
+  handlers only act on POST and `admin/index.php` validates the `my_post_key` itself –
+  no own key check or helper.
 
 ### Changed (review)
 - `global` declarations in `Relatives_Alerts::send()` moved to the start of the method.
