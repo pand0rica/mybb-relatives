@@ -61,7 +61,7 @@
 
 .relatives_field input::placeholder,
 .relatives_field textarea::placeholder {
-	color: var(--h4w-text-subtle, #aaa);
+	color: #aaa;
 	opacity: 1;
 	font-style: italic;
 }
@@ -106,18 +106,18 @@
 }
 
 .relatives_badge_wanted {
-	background: var(--h4w-relatives-badge-wanted-bg, #e0a200);
-	color: var(--h4w-text-on-accent, #fff);
+	background: #e0a200;
+	color: #fff;
 }
 
 .relatives_badge_link_requested {
-	background: var(--h4w-surface-4, #999);
-	color: var(--h4w-text-on-accent, #fff);
+	background: #999;
+	color: #fff;
 }
 
 .relatives_badge_link_confirmed {
-	background: var(--h4w-relatives-badge-link-confirmed-bg, #3f9142);
-	color: var(--h4w-text-on-accent, #fff);
+	background: #3f9142;
+	color: #fff;
 }
 
 /* --- "Gesucht"-Box im Profil: kompakte Mini-Karten ----------------------------------
@@ -144,7 +144,7 @@
 	padding: 0 6px;
 	border-radius: 9px;
 	background: var(--relatives-wanted-color, #d79a1f);
-	color: var(--h4w-text-on-accent, #fff);
+	color: #fff;
 	font-size: 11px;
 	font-weight: bold;
 	line-height: 18px;
@@ -189,7 +189,7 @@
 	align-items: center;
 	justify-content: center;
 	background: var(--relatives-wanted-color, #d79a1f);
-	color: var(--h4w-text-on-accent, #fff);
+	color: #fff;
 	font-weight: bold;
 	font-size: 1.1em;
 }
@@ -294,7 +294,7 @@
 .relatives_relation_row {
 	margin: 0 0 10px;
 	padding: 8px 10px;
-	border: 1px solid var(--h4w-relatives-relation-row-border, #d5dbe1);
+	border: 1px solid #d5dbe1;
 	border-radius: 4px;
 }
 
@@ -316,7 +316,7 @@
 
 .relatives_deceased_mark {
 	margin-left: 4px;
-	color: var(--h4w-relatives-deceased-mark-color, #6b7178);
+	color: #6b7178;
 }
 
 .relatives_inline_form {
@@ -359,7 +359,7 @@
 
 .relatives_family_card {
 	padding: 10px 12px;
-	border: 1px solid var(--h4w-relatives-family-card-border, #d5dbe1);
+	border: 1px solid #d5dbe1;
 	border-left: 6px solid var(--relatives-family-color, #7d8894);
 	border-radius: 4px;
 }
@@ -370,7 +370,7 @@
 
 .relatives_family_card_members {
 	font-size: 11px;
-	color: var(--h4w-relatives-family-card-members-color, #6b7178);
+	color: #6b7178;
 	margin-bottom: 6px;
 }
 
@@ -379,9 +379,9 @@
 	margin-bottom: 6px;
 	padding: 1px 6px;
 	font-size: 11px;
-	color: var(--h4w-relatives-family-card-closed-color, #7a4b00);
-	background: var(--h4w-relatives-family-card-closed-bg, #fdf1dc);
-	border: 1px solid var(--h4w-relatives-family-card-closed-border, #ecd3a6);
+	color: #7a4b00;
+	background: #fdf1dc;
+	border: 1px solid #ecd3a6;
 	border-radius: 3px;
 }
 
@@ -683,8 +683,8 @@ fieldset.relatives_attribute_group {
 
 /* Deletion requests */
 .relatives_badge_delete_requested {
-	background: var(--h4w-relatives-badge-delete-requested-bg, #c0392b);
-	color: var(--h4w-text-on-accent, #fff);
+	background: #c0392b;
+	color: #fff;
 }
 
 .relatives_delete_requests_hint {
@@ -699,8 +699,8 @@ fieldset.relatives_attribute_group {
 	padding: 0 5px;
 	margin-left: 4px;
 	border-radius: 9px;
-	background: var(--h4w-relatives-nav-count-bg, #c0392b);
-	color: var(--h4w-text-on-accent, #ffffff);
+	background: #c0392b;
+	color: #ffffff;
 	font-size: 11px;
 	line-height: 18px;
 	text-align: center;

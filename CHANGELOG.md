@@ -4,6 +4,11 @@ All notable changes to this plugin are documented here. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Changed
+- Stylesheet uses plain colour/size values instead of the `--h4w-*` custom properties of one specific forum theme. (Forum-specific theming lives on the separate `h4w` branch.)
+
 ## [2.2.0] – unreleased
 
 Complete rewrite of the legacy *relatives* / *wanted* plugin (v1.0). First public release of the
