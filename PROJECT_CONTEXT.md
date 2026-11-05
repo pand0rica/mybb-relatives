@@ -12,7 +12,7 @@
 - **MyBB:** 1.8.x · **PHP:** 7.4 + 8.x
 
 ## Zweck & Zielgruppe
-RPG-Charakterforum (h4w-rpg.de): Spieler:innen sollen für ihren Charakter Familienmitglieder/
+RPG-Charakterforum: Spieler:innen sollen für ihren Charakter Familienmitglieder/
 sonstige nahestehende Personen anlegen, mit Aussehen/Beziehungsdetails beschreiben und bei Bedarf
 als „gesucht" markieren (mit Link zum Gesuchs-Thread). Neu gegenüber dem Altplugin: ein
 optisch ansprechender, interaktiver Stammbaum, der Personen-Einträge optional mit echten

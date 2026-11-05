@@ -14,7 +14,6 @@ if (!defined("IN_MYBB")) {
 $base_url = 'index.php?module=tools-relatives&action=delete-requests';
 
 if ($mybb->request_method === 'post') {
-    verify_post_check($mybb->get_input('my_post_key'));
 
     $request_id = $mybb->get_input('id', MyBB::INPUT_INT);
     $decision = $mybb->get_input('decision');

@@ -9,6 +9,15 @@ All notable changes to this plugin are documented here. Format based on
 Complete rewrite of the legacy *relatives* / *wanted* plugin (v1.0). First public release of the
 new code base; 2.0 and 2.1 were internal development stages and are summarised here.
 
+### Security (review)
+- ACP CSRF protection uses MyBB's native mechanism (dev kit `debugging.md` #23): write
+  handlers only act on POST and `admin/index.php` validates the `my_post_key` itself –
+  no own key check or helper.
+
+### Changed (review)
+- `global` declarations in `Relatives_Alerts::send()` moved to the start of the method.
+- Plugin website points to `pand0rica/mybb-relatives`.
+
 ### Added
 - One person table and one form for relatives and other connections (friends, rivals …) – replaces
   the two separate legacy tables `relatives` and `wanted`.

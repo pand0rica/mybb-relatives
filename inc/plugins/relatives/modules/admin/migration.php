@@ -16,7 +16,6 @@ if (!defined("IN_MYBB")) {
 $report = null;
 
 if ($mybb->request_method === 'post') {
-    verify_post_check($mybb->get_input('my_post_key'));
 
     $force = $mybb->get_input('confirm_rerun', MyBB::INPUT_INT) ? true : false;
     $report = Relatives_Migration::run($force);

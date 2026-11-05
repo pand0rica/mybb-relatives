@@ -16,7 +16,7 @@ nach. Bei Unklarheit gezielt nachfragen, aber nicht umplanen. Schritt nach Erled
 - **Vorlage:** `D:\mybb-plugin-dev-kit\standards\boilerplate.md` §1, §2
 - **Abnahme:** `php -l` sauber für alle neuen Dateien; Plugin erscheint in der ACP-Pluginliste.
 - **Nachweis:** `php -l` grün für alle Dateien (lokal + auf dem Testforum, PHP 8.5 lokal /
-  PHP 8.1.33 Server). Deployt auf test.h4w-rpg.de; `tests/cli-plugin.php install` bestätigt
+  PHP 8.1.33 Server). Deployt auf dem Test-Forum; `tests/cli-plugin.php install` bestätigt
   Erscheinen in der Plugin-Erkennung (siehe Schritt 2/11).
 
 ## Schritt 2 – Lifecycle (install/is_installed/uninstall)
@@ -29,7 +29,7 @@ nach. Bei Unklarheit gezielt nachfragen, aber nicht umplanen. Schritt nach Erled
   Spalten-/Typ-Konventionen `conventions.md` §4
 - **Abnahme:** CLI-Lifecycle `install` legt alle 5 Tabellen mit korrekten Spalten an
   (`D:\mybb-plugin-dev-kit\standards\testing.md` §3).
-- **Nachweis:** Live auf test.h4w-rpg.de verifiziert: zwei volle `install`→`status`→`uninstall`→
+- **Nachweis:** Live auf dem Test-Forum verifiziert: zwei volle `install`→`status`→`uninstall`→
   `status`-Zyklen gefahren, alle 5 Tabellen legen sich korrekt an (`status` zeigt EXISTS) und
   verschwinden nach `uninstall` vollständig (MISSING). Details siehe Abschlussbericht.
 
@@ -63,7 +63,7 @@ nach. Bei Unklarheit gezielt nachfragen, aber nicht umplanen. Schritt nach Erled
 - **Abnahme:** CLI-Selbsttest (`testing.md` §4): Relationship-Type mit `gender=0` erstellen,
   Filterfunktion mit `gender=0` aufrufen → erscheint; mit `gender=1` aufrufen → erscheint nicht.
 - **Nachweis:** `Relatives_RelationshipTypes::get_for_person_gender()` implementiert genau
-  diesen Test; live auf test.h4w-rpg.de gegen echte DB gelaufen (`tests/cli-selftest.php`,
+  diesen Test; live auf dem Test-Forum gegen echte DB gelaufen (`tests/cli-selftest.php`,
   Abschnitt "Relationship-Type gender filter") – alle 6 Assertions grün.
 
 ## Schritt 5 – Personen-CRUD (relatives_persons)
@@ -106,7 +106,7 @@ nach. Bei Unklarheit gezielt nachfragen, aber nicht umplanen. Schritt nach Erled
 - **Nachweis:** `Relatives_LinkManager` implementiert den PM-Versand exakt nach dem
   CLAUDE.md-Muster (`PMDataHandler` + manuelles `private_do_send_end`, **kein** `send_pm()`).
   Zustandsmaschine (request/accept/decline, Owner-/linked_uid-Berechtigung) + TreeBuilder live
-  auf test.h4w-rpg.de verifiziert (`tests/cli-selftest.php`) – alle 10 Assertions grün. Der
+  auf dem Test-Forum verifiziert (`tests/cli-selftest.php`) – alle 10 Assertions grün. Der
   `private_do_send_end`-Hook feuert nachweislich (er hat einen echten Bug in einem anderen
   installierten Plugin aufgedeckt, siehe Bugfix unten) – die PM wird also tatsächlich nativ
   verschickt, nicht nur simuliert.
@@ -143,10 +143,10 @@ nach. Bei Unklarheit gezielt nachfragen, aber nicht umplanen. Schritt nach Erled
   link_decline` + `ajax`-Varianten für Tree-Reload und Klick-Add/Edit) implementiert in
   `relatives.php`, Hook-Handler in `inc/plugins/relatives.php`, Templates + `relatives.css`/
   `relatives-tree.css`/`relatives-tree.js` (vanilla JS, keine externen Libraries). Deployt und
-  gelinted auf test.h4w-rpg.de (PHP 8.1.33). curl-Verifikation der einzelnen Actions **nicht**
+  gelinted auf dem Test-Forum (PHP 8.1.33). curl-Verifikation der einzelnen Actions **nicht**
   durchgeführt (nur die darunterliegende Business-Logik über `tests/cli-selftest.php`) –
   manueller Klicktest (Baum-Interaktion, Pan/Zoom/Ein-Ausklappen, Klick-Add im Baum) wurde
-  vom Nutzer auf test.h4w-rpg.de durchgeführt – erledigt.
+  vom Nutzer auf dem Test-Forum durchgeführt – erledigt.
 
 ## Schritt 8 – Öffentliche API & Provider-Hooks für Schwester-Plugins
 - [x] **Ziel:** `relatives_search_persons(array $filters): array` implementieren (Vertrag siehe
@@ -189,7 +189,7 @@ nach. Bei Unklarheit gezielt nachfragen, aber nicht umplanen. Schritt nach Erled
   `mybb_relatives_options.sql` erstellt (siehe Bericht). **Kein** Referenzmodul zum
   Methoden-Abgleich verfügbar (Blacklist/RPG-Maps-Repos nicht im Zugriff dieser Session) –
   Form/Table-API-Aufrufe sind Standardmuster, aber nicht gegen ein Referenzmodul verifiziert.
-  Manueller ACP-Klicktest vom Nutzer auf test.h4w-rpg.de durchgeführt – erledigt.
+  Manueller ACP-Klicktest vom Nutzer auf dem Test-Forum durchgeführt – erledigt.
 
 ## Schritt 10 – Sprachdateien (englisch + deutsch_du, Frontend + Admin getrennt)
 - [x] **Ziel:** Alle genutzten Keys definieren. UI-Texte konsequent genderneutral formulieren
@@ -218,7 +218,7 @@ nach. Bei Unklarheit gezielt nachfragen, aber nicht umplanen. Schritt nach Erled
       das Testforum ausgeführt**.
 - **Vorlage:** `testing.md` §3, §4
 - **Abnahme:** Lifecycle grün, Selbsttest 0 failed.
-- **Nachweis:** Auf test.h4w-rpg.de ausgeführt. Lifecycle: zwei volle install/uninstall-Zyklen,
+- **Nachweis:** Auf dem Test-Forum ausgeführt. Lifecycle: zwei volle install/uninstall-Zyklen,
   alle Zähler nach `uninstall` bei 0/MISSING (siehe Schritt 2). Selbsttest: **27 passed, 0
   failed** nach zwei im Zuge dieser Verifikation gefundenen und behobenen Bugs (siehe Schritt 5
   – NULL-Handling in `Database.php` – und Schritt 6 – Hook-Robustheit in `LinkManager.php`).

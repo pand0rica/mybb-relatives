@@ -29,6 +29,8 @@ $page->add_breadcrumb_item($lang->relatives, "index.php?module=tools-relatives")
  * Gemeinsame Tab-Navigation fuer alle vier ACP-Seiten (siehe globale CLAUDE.md
  * "ACP Page Structure").
  */
+
+
 function relatives_acp_nav_tabs(string $active): void
 {
     global $page, $lang;
