@@ -614,10 +614,10 @@ Such-API in `owners[]` zusätzlich `computed_label`, `computed_concept_key`, `co
 
 ## Abhängigkeiten
 - Keine Pflicht-Abhängigkeiten – Plugin funktioniert komplett eigenständig.
-- **Optionaler Konsument:** `jobliste` (Repo `F:\RPG\Mybb Plugins - eigene\jobliste`) – docke
+- **Optionaler Konsument:** `jobliste` (Repo `mybb-jobliste`) – docke
   über die oben genannten `jobliste_*`-Hooks an, wenn installiert.
 - **Harter Konsument:** `anschluss suchmaschine` (Repo
-  `F:\RPG\Mybb Plugins - eigene\anschluss suchmaschine`) – ruft `relatives_search_persons()` auf,
+  `mybb-anschlusssuche`) – ruft `relatives_search_persons()` auf,
   prüft vorher per Plugin-Cache, ob `relatives` aktiv ist.
 - **Umsetzungsreihenfolge:** Dieses Plugin muss **zuerst** fertig umgesetzt und (auf dem
   Testforum) migriert sein, bevor Jobliste-Migration und Anschluss-Suchmaschine sinnvoll

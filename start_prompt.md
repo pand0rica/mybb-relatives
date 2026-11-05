@@ -3,18 +3,18 @@
 Du setzt das MyBB-1.8-Plugin **Verwandtschaften & Stammbaum** (Codename `relatives`) um. Das
 Umsetzungs-Paket aus Phase 1 liegt bereits vollständig im Repo:
 
-  F:\RPG\Mybb Plugins - eigene\relatives
+  mybb-relatives
 
 Lies in dieser Reihenfolge, BEVOR du irgendetwas tust:
 1. `AGENTS.md` (dieses Repo) – Pointer aufs Dev-Kit, 5 goldene Regeln, Phasen-Zuordnung.
 2. `PROJECT_CONTEXT.md` (dieses Repo) – Architektur, Tabellen, Settings, Hooks, Abhängigkeiten,
    „What NOT to change".
 3. `IMPLEMENTATION_PLAN.md` (dieses Repo) – die nummerierten Arbeitsschritte.
-4. Aus dem Dev-Kit bei Bedarf: `D:\mybb-plugin-dev-kit\standards\boilerplate.md` (kopierfertige
-   Code-Vorlagen) und `D:\mybb-plugin-dev-kit\standards\conventions.md` (Naming, DB, Hooks,
+4. Aus dem Dev-Kit bei Bedarf: `<dev-kit>/standards/boilerplate.md` (kopierfertige
+   Code-Vorlagen) und `<dev-kit>/standards/conventions.md` (Naming, DB, Hooks,
    Security).
 
-Folge danach exakt `D:\mybb-plugin-dev-kit\workflows\2-implement.md`:
+Folge danach exakt `<dev-kit>/workflows/2-implement.md`:
 - Arbeite die Schritte aus `IMPLEMENTATION_PLAN.md` der Reihe nach ab und hake sie dort ab
   (`- [x]`), inklusive des jeweiligen Test-/Abnahmehinweises.
 - Halte bei jedem Schritt die 5 goldenen Regeln ein: keine Core-Dateien ändern, `TABLE_PREFIX`
@@ -30,10 +30,10 @@ Folge danach exakt `D:\mybb-plugin-dev-kit\workflows\2-implement.md`:
 **Abhängigkeiten:** Keine Abhängigkeiten zu anderen Plugins – kann unabhängig gestartet werden.
 Wichtig für die Gesamt-Roadmap: Zwei Schwester-Plugins bauen auf diesem hier auf und sollten
 erst **nach** diesem hier umgesetzt (und auf dem Testforum migriert) werden:
-- `F:\RPG\Mybb Plugins - eigene\jobliste` (optionaler Konsument, Provider-Hooks
+- `mybb-jobliste` (optionaler Konsument, Provider-Hooks
   `jobliste_collect_entities`/`jobliste_resolve_entity_label`; dessen Migrations-Schritt 3
   braucht bereits migrierte `relatives_persons.legacy_id`-Daten aus diesem Plugin).
-- `F:\RPG\Mybb Plugins - eigene\anschluss suchmaschine` (harter Konsument der öffentlichen API
+- `mybb-anschlusssuche` (harter Konsument der öffentlichen API
   `relatives_search_persons()`).
 
 Schreib **keinen** Code, bevor du die drei Repo-Dateien oben gelesen hast. Antworten auf
