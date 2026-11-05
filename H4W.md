@@ -8,4 +8,4 @@ nie umgekehrt. Deploy ins h4w-Test-/Live-Forum von diesem Branch.
 
 | Bereich | Dateien | Zweck |
 |---|---|---|
-| CSS-Variablen des h4w-Themes | `inc/plugins/relatives/assets/relatives-tree.css`,`` `inc/plugins/relatives/assets/relatives.css` | Farben/Größen als `var(--h4w-…, Fallback)` (73 Stellen), damit das h4w-Theme sie zentral steuert. Auf `main` stehen die Fallback-Werte direkt. |
+| CSS-Variablen des h4w-Themes | `inc/plugins/relatives/assets/relatives-tree.css`, `inc/plugins/relatives/assets/relatives.css` | Farben/Größen als `var(--h4w-…, Fallback)` (73 Stellen), damit das h4w-Theme sie zentral steuert. Auf `main` stehen die Fallback-Werte direkt. |
