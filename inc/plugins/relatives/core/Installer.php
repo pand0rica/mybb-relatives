@@ -825,7 +825,7 @@ class Relatives_Installer
 
     private static function usercp_nav_misc_row(): string
     {
-        return '<tr><td class="trow1 smalltext"><a href="relatives.php?action=list" class="usercp_nav_item usercp_nav_relatives" style="background-repeat: no-repeat; background-position: 0 50%; padding-left: 23px; background-image: url(\'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2216%22 height=%2216%22 viewBox=%220 0 16 16%22%3E%3Ccircle cx=%224%22 cy=%224%22 r=%222.2%22 fill=%22%23555%22/%3E%3Ccircle cx=%2212%22 cy=%224%22 r=%222.2%22 fill=%22%23555%22/%3E%3Ccircle cx=%228%22 cy=%2211%22 r=%222.6%22 fill=%22%23555%22/%3E%3Cpath d=%22M4 6.5V8a2 2 0 0 0 2 2M12 6.5V8a2 2 0 0 1-2 2%22 stroke=%22%23555%22 stroke-width=%221%22 fill=%22none%22/%3E%3C/svg%3E\');">{$lang->relatives_usercp_menu_item}</a></td></tr>';
+        return '<tr><td class="trow1 smalltext"><a href="relatives.php?action=list" class="usercp_nav_item usercp_nav_relatives" style="padding-left: 0;"><svg class="usercp_nav_icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" aria-hidden="true" style="vertical-align: -3px; margin-right: 6px;"><circle cx="4" cy="4" r="2.2" fill="currentColor" stroke="none"/><circle cx="12" cy="4" r="2.2" fill="currentColor" stroke="none"/><circle cx="8" cy="11" r="2.6" fill="currentColor" stroke="none"/><path d="M4 6.5V8a2 2 0 0 0 2 2M12 6.5V8a2 2 0 0 1-2 2" stroke-width="1"/></svg>{$lang->relatives_usercp_menu_item}</a></td></tr>';
     }
 
     private static function install_usercp_nav_misc_link(): void

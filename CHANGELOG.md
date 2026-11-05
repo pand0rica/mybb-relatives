@@ -6,6 +6,9 @@ All notable changes to this plugin are documented here. Format based on
 
 ## [Unreleased]
 
+### Fixed
+- **UserCP menu icon follows the link colour.** The icon is an inline SVG using `currentColor` instead of a fixed grey background image.
+
 ### Changed
 - Stylesheet uses plain colour/size values instead of the `--h4w-*` custom properties of one specific forum theme. (Forum-specific theming lives on the separate `h4w` branch.)
 
