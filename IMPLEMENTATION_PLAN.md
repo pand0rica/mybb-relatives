@@ -1,6 +1,6 @@
 # Verwandtschaften & Stammbaum – Implementation Plan
 
-**Umsetzung:** folge `D:\mybb-plugin-dev-kit\workflows\2-implement.md`. Schritte der Reihe
+**Umsetzung:** folge `<dev-kit>/workflows/2-implement.md`. Schritte der Reihe
 nach. Bei Unklarheit gezielt nachfragen, aber nicht umplanen. Schritt nach Erledigung auf
 `- [x]` setzen.
 
@@ -13,7 +13,7 @@ nach. Bei Unklarheit gezielt nachfragen, aber nicht umplanen. Schritt nach Erled
 - **Dateien:** `inc/plugins/relatives.php`, `inc/plugins/relatives/core/*.php` (leere Klassen-
   Gerüste: `Database`, `RelationshipTypes`, `Attributes`, `TreeBuilder`, `LinkManager`,
   `SearchApi`, `Installer`, `Migration`)
-- **Vorlage:** `D:\mybb-plugin-dev-kit\standards\boilerplate.md` §1, §2
+- **Vorlage:** `<dev-kit>/standards/boilerplate.md` §1, §2
 - **Abnahme:** `php -l` sauber für alle neuen Dateien; Plugin erscheint in der ACP-Pluginliste.
 - **Nachweis:** `php -l` grün für alle Dateien (lokal + auf dem Testforum, PHP 8.5 lokal /
   PHP 8.1.33 Server). Deployt auf dem Test-Forum; `tests/cli-plugin.php install` bestätigt
@@ -28,7 +28,7 @@ nach. Bei Unklarheit gezielt nachfragen, aber nicht umplanen. Schritt nach Erled
 - **Vorlage:** `boilerplate.md` §3 · Schema exakt aus `PROJECT_CONTEXT.md` „Datenbank-Tabellen" ·
   Spalten-/Typ-Konventionen `conventions.md` §4
 - **Abnahme:** CLI-Lifecycle `install` legt alle 5 Tabellen mit korrekten Spalten an
-  (`D:\mybb-plugin-dev-kit\standards\testing.md` §3).
+  (`<dev-kit>/standards/testing.md` §3).
 - **Nachweis:** Live auf dem Test-Forum verifiziert: zwei volle `install`→`status`→`uninstall`→
   `status`-Zyklen gefahren, alle 5 Tabellen legen sich korrekt an (`status` zeigt EXISTS) und
   verschwinden nach `uninstall` vollständig (MISSING). Details siehe Abschlussbericht.
@@ -199,7 +199,7 @@ nach. Bei Unklarheit gezielt nachfragen, aber nicht umplanen. Schritt nach Erled
 - **Dateien:** `inc/languages/english/relatives.lang.php` (+ `admin/relatives.lang.php`),
   `inc/languages/deutsch_du/relatives.lang.php` (+ `admin/relatives.lang.php`)
 - **Vorlage:** `boilerplate.md` §13
-- **Abnahme:** `D:\mybb-plugin-dev-kit\scripts\lang_check.ps1` ohne fehlende Keys.
+- **Abnahme:** `<dev-kit>/scripts/lang_check.ps1` ohne fehlende Keys.
 - **Nachweis:** Grep-Konsistenz-Check (Bash-Variante aus `testing.md` §6) lokal ausgeführt für
   Frontend- (68 Keys) und Admin-Set (63 genutzte / 64 definierte Keys je Sprache, siehe unten)
   in Englisch und Deutsch: 0 fehlende Keys, 0 tatsächlich ungenutzte Keys (der eine
@@ -213,8 +213,7 @@ nach. Bei Unklarheit gezielt nachfragen, aber nicht umplanen. Schritt nach Erled
 - [x] **Ziel:** `tests/cli-plugin.php` (Lifecycle) + `tests/cli-selftest.php`
       (Relationship-Type-Gender-Filter, Owner-Checks, Link-Workflow-Zustandsmaschine,
       `relatives_search_persons()`-Filterkombinationen, Migrations-Mapping-Wörterbuch gegen die
-      echten Beispieldaten aus `F:\RPG\Mybb Plugins - eigene\Alt und zu überarbeiten\Verwandte\
-      php5\SQL\mybb_relatives_options.sql`) sind geschrieben, `php -l`-sauber und **live gegen
+      echten Beispieldaten aus `<alter-plugin-ordner>/php5/SQL\mybb_relatives_options.sql`) sind geschrieben, `php -l`-sauber und **live gegen
       das Testforum ausgeführt**.
 - **Vorlage:** `testing.md` §3, §4
 - **Abnahme:** Lifecycle grün, Selbsttest 0 failed.
