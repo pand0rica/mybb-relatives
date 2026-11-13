@@ -277,6 +277,29 @@ class Relatives_DeleteRequests
     }
 
     /**
+     * Die antragstellende Person zieht ihren offenen Antrag zurueck: die Person bleibt
+     * unveraendert in der Liste, offene Antworten entfallen.
+     */
+    public static function withdraw(int $request_id, int $uid): bool
+    {
+        global $db;
+        $request = self::get($request_id);
+        if (
+            $request === null
+            || $uid <= 0
+            || (int)$request['requested_by'] !== $uid
+            || (int)$request['status'] !== self::STATUS_PENDING
+        ) {
+            return false;
+        }
+        $open_uids = self::get_open_voter_uids($request_id);
+        self::set_status($request_id, self::STATUS_CANCELLED);
+        $db->delete_query('relatives_delete_votes', "request_id = " . (int)$request_id . " AND vote = " . self::VOTE_OPEN);
+        Relatives_Alerts::send_delete_withdrawn($open_uids, $request_id, (string)$request['person_name']);
+        return true;
+    }
+
+    /**
      * Team-Entscheidung im ACP: sofort loeschen bzw. verwerfen, ohne auf offene
      * Antworten zu warten.
      */

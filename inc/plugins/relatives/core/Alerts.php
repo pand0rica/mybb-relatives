@@ -17,6 +17,7 @@ class Relatives_Alerts
     public const CODE_DELETE_REQUEST = 'relatives_delete_request';
     public const CODE_DELETE_COMPLETED = 'relatives_delete_completed';
     public const CODE_DELETE_DECLINED = 'relatives_delete_declined';
+    public const CODE_DELETE_WITHDRAWN = 'relatives_delete_withdrawn';
     public const CODE_RELATION_REQUEST = 'relatives_relation_request';
     public const CODE_RELATION_ACCEPTED = 'relatives_relation_accepted';
     public const CODE_RELATION_DECLINED = 'relatives_relation_declined';
@@ -28,6 +29,7 @@ class Relatives_Alerts
             self::CODE_DELETE_REQUEST,
             self::CODE_DELETE_COMPLETED,
             self::CODE_DELETE_DECLINED,
+            self::CODE_DELETE_WITHDRAWN,
             self::CODE_RELATION_REQUEST,
             self::CODE_RELATION_ACCEPTED,
             self::CODE_RELATION_DECLINED,
@@ -71,6 +73,15 @@ class Relatives_Alerts
             'reason'      => $reason,
             'link'        => 'relatives.php?action=list',
         ], $request_id, $reason === 'user' ? -1 : 0);
+    }
+
+    /** "X hat den Loeschantrag zurueckgezogen" an alle, die noch nicht geantwortet hatten. */
+    public static function send_delete_withdrawn(array $uids, int $request_id, string $person_name): int
+    {
+        return self::send(self::CODE_DELETE_WITHDRAWN, $uids, [
+            'person_name' => $person_name,
+            'link'        => 'relatives.php?action=list',
+        ], $request_id, -1);
     }
 
     /** "X hat eingetragen: <Aussage>. Bitte bestaetigen." an die Spieler*in des Charakters. */

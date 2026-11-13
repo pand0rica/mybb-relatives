@@ -271,7 +271,9 @@ sagen, gilt für Verbindungen jetzt dieser Abschnitt.
   dann wird er komplett gelöscht und die antragstellende Person bekommt
   `relatives_delete_completed`. Ein „Behalten“ lässt den Antrag platzen: der NPC bleibt, die
   antragstellende Person wird ausgetragen (`relatives_delete_declined`). Keine Frist; das Team
-  entscheidet hängende Anträge im ACP-Tab „Löschanträge“. Wer die Person während eines offenen
+  entscheidet hängende Anträge im ACP-Tab „Löschanträge“. Die antragstellende Person kann
+  ihren offenen Antrag in der Liste zurückziehen (`delete_withdraw`): Person bleibt, offene
+  Stimmen entfallen, wer noch nicht geantwortet hat bekommt `relatives_delete_withdrawn`. Wer die Person während eines offenen
   Antrags übernimmt, wird beim Abschluss nachträglich gefragt.
 - **Rechte (`Relatives_Graph::can_edit_person()`):** nicht bespielte Person → alle, die sie in
   ihrer Liste haben **oder deren Charakter derselben Familie angehört**; gespielter Charakter →
