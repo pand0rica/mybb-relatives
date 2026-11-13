@@ -639,6 +639,16 @@ if ($action === 'delete') {
 
 // --- action: delete_vote (POST) --------------------------------------------------------
 
+// Eigenen offenen Loeschantrag zurueckziehen: die Person bleibt in der Liste.
+if ($action === 'delete_withdraw') {
+    relatives_verify_post();
+    $request_id = $mybb->get_input('id', MyBB::INPUT_INT);
+    if (!Relatives_DeleteRequests::withdraw($request_id, $my_uid)) {
+        relatives_error_response($lang->relatives_error_delete_withdraw);
+    }
+    redirect('relatives.php?action=list', $lang->relatives_delete_withdrawn);
+}
+
 // Antwort auf einen Loeschantrag: vote=confirm stimmt zu, alles andere lehnt ab.
 if ($action === 'delete_vote') {
     relatives_verify_post();
@@ -2320,12 +2330,18 @@ foreach ($persons as $person) {
     $relatives_row_delete_status = '';
     if (isset($my_delete_requests[$relatives_row_id])) {
         $state = $my_delete_requests[$relatives_row_id];
+        // Own pending request: offer to withdraw it instead of a second "delete".
+        $relatives_row_delete_request_id = (int)$state['id'];
+        eval('$relatives_row_delete_action = "' . $templates->get('relatives_list_row_withdraw') . '";');
         $relatives_row_delete_status = '<span class="relatives_badge relatives_badge_delete_requested">'
             . htmlspecialchars_uni($lang->sprintf($lang->relatives_badge_delete_requested, $state['confirmed'], $state['total']))
             . '</span>';
-    } elseif (isset($open_delete_person_ids[$relatives_row_id])) {
-        $relatives_row_delete_status = '<span class="relatives_badge relatives_badge_delete_requested">'
-            . htmlspecialchars_uni($lang->relatives_badge_delete_vote_open) . '</span>';
+    } else {
+        eval('$relatives_row_delete_action = "' . $templates->get('relatives_list_row_delete') . '";');
+        if (isset($open_delete_person_ids[$relatives_row_id])) {
+            $relatives_row_delete_status = '<span class="relatives_badge relatives_badge_delete_requested">'
+                . htmlspecialchars_uni($lang->relatives_badge_delete_vote_open) . '</span>';
+        }
     }
     $relatives_row_wanted_badge = (int)$person['is_wanted'] === 1
         ? '<span class="relatives_badge relatives_badge_wanted">' . htmlspecialchars_uni($lang->relatives_badge_wanted) . '</span>'
