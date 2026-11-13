@@ -362,6 +362,34 @@ class Relatives_TreeBuilder
             }
         }
 
+        // A loose statement straight to the root ("Thore ist entfernter Verwandter von
+        // Marjatta") is redundant when the person hangs on a blood parent who is already in
+        // the core ("Thore ist Sohn von Arvi", Arvi ist Marjattas Cousin). Left in, the cheap
+        // direct link would win the shortest-path search and pull the person away from
+        // their parents. The label still comes from the statement.
+        $redundant = [];
+        foreach ($keys_of_relation as $index => [$subject, $anchor, $type]) {
+            if ($subject !== $this->root_key && $anchor !== $this->root_key) {
+                continue;
+            }
+            $concept = $type !== null ? $type['concept'] : null;
+            $offset = $type !== null ? $type['offset'] : 0;
+            if (self::classify_relation($concept, $offset) !== 'other' || self::is_family_membership($world['relations'][$index], $type)) {
+                continue;
+            }
+            $other = $subject === $this->root_key ? $anchor : $subject;
+            if (strpos($other, 'person:') !== 0) {
+                continue;
+            }
+            foreach ($world['graph']['parents']['p:' . substr($other, 7)] ?? [] as $parent => $edge) {
+                if (!empty($edge['blood']) && empty($edge['inferred']) && $parent !== 'p:' . $root_person
+                    && isset($core[self::tree_key((string)$parent)])) {
+                    $redundant[$index] = true;
+                    break;
+                }
+            }
+        }
+
         $frontier = [$this->root_key => 0];
         $reached_via = [];
         $settled = [];
@@ -380,7 +408,7 @@ class Relatives_TreeBuilder
             $settled[$key] = $distance;
 
             foreach ($adjacency[$key] ?? [] as [$other, $index, $kind, $delta]) {
-                if (isset($settled[$other]) || ($allowed !== null && !isset($allowed[$other]))) {
+                if (isset($settled[$other]) || ($allowed !== null && !isset($allowed[$other])) || isset($redundant[$index])) {
                     continue;
                 }
                 // Lose Angaben ("Ravena ist Tante von Kjartan") beschreiben keinen Weg
@@ -550,6 +578,9 @@ class Relatives_TreeBuilder
                 continue;
             }
             $relation = $world['relations'][$index];
+            if (isset($redundant[$index])) {
+                continue;
+            }
             $this->relations[] = [
                 'id'      => (int)($relation['id'] ?? 0),
                 'node'    => $subject,
