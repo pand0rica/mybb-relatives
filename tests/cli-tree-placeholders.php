@@ -417,5 +417,31 @@ check('co-parent of the other child stands beside the father', 1, abs($at['perso
 check('partner without children stands outside', true, in_array('person:6', [$order[0], $order[3]], true));
 check('blood parents get a partner line', true, has_pair($t['partner_pairs'], 'person:2', 'person:8'));
 
+echo "\n=== Family box repeated on every generation (Malfoy case) ===\n";
+// 1 Scorpius, 2 Draco, 3 Astoria, 4 Lucius, 5 Narcissa; 1, 2 and 4 are all entered as
+// "child of the Malfoy box". The box must only stay the parent of Lucius.
+$t = tree([1 => 0, 2 => -1, 3 => -1, 4 => -2, 5 => -2, 'family:26' => -3], [
+    [2, 'parent', 1], [3, 'parent', 1], [4, 'parent', 2], [5, 'parent', 2], [4, 'spouse', 5],
+    [1, 'child', 'family:26'], [2, 'child', 'family:26'], [4, 'child', 'family:26'],
+]);
+check('box is no third parent of the root', true, find_family($t, ['person:2', 'person:3'], ['person:1']) !== null);
+check('box is no third parent of Draco', true, find_family($t, ['person:4', 'person:5'], ['person:2']) !== null);
+check('box stays the parent of Lucius', true, find_family($t, ['family:26'], ['person:4']) !== null);
+
+// Two blood parents + two adoptive parents, the box repeated for the blood line: all four
+// named parents stay, only the redundant box edge goes.
+$t = tree([1 => 0, 2 => -1, 3 => -1, 4 => -1, 5 => -1, 6 => -2, 'family:9' => -3], [
+    [2, 'parent', 1], [3, 'parent', 1], [4, 'adoptive_parent', 1], [5, 'adoptive_parent', 1],
+    [2, 'child', 6], [6, 'child', 'family:9'], [1, 'child', 'family:9'],
+]);
+check('both blood parents stay together', true, find_family($t, ['person:2', 'person:3'], ['person:1']) !== null);
+check('both adoptive parents stay together', true, find_family($t, ['person:4', 'person:5'], ['person:1']) !== null);
+
+// A box that is the only link to a family stays as the nameless second parent.
+$t = tree([1 => 0, 2 => -1, 'family:9' => -1], [
+    [2, 'parent', 1], [1, 'child', 'family:9'],
+]);
+check('box without a named ancestor stays a parent', true, find_family($t, ['person:2', 'family:9'], ['person:1']) !== null);
+
 echo "\n{$pass} passed, {$fail} failed\n";
 exit($fail > 0 ? 1 : 0);

@@ -362,6 +362,54 @@ class Relatives_TreeBuilder
             }
         }
 
+        // A loose statement straight to the root ("Thore ist entfernter Verwandter von
+        // Marjatta") is redundant when the person hangs on a blood parent who is already in
+        // the core ("Thore ist Sohn von Arvi", Arvi ist Marjattas Cousin). Left in, the cheap
+        // direct link would win the shortest-path search and pull the person away from
+        // their parents. The label still comes from the statement.
+        $redundant = [];
+        foreach ($keys_of_relation as $index => [$subject, $anchor, $type]) {
+            if ($subject !== $this->root_key && $anchor !== $this->root_key) {
+                continue;
+            }
+            $concept = $type !== null ? $type['concept'] : null;
+            $offset = $type !== null ? $type['offset'] : 0;
+            if (self::classify_relation($concept, $offset) !== 'other' || self::is_family_membership($world['relations'][$index], $type)) {
+                continue;
+            }
+            $other = $subject === $this->root_key ? $anchor : $subject;
+            if (strpos($other, 'person:') !== 0) {
+                continue;
+            }
+            foreach ($world['graph']['parents']['p:' . substr($other, 7)] ?? [] as $parent => $edge) {
+                if (!empty($edge['blood']) && empty($edge['inferred']) && $parent !== 'p:' . $root_person
+                    && isset($core[self::tree_key((string)$parent)])) {
+                    $redundant[$index] = true;
+                    break;
+                }
+            }
+        }
+
+        // "X ist Kind der Familie Malfoy" is redundant when X already hangs on named parents
+        // who sit below that box (the graph dropped the edge, see
+        // Relatives_Kinship::drop_redundant_box_parents()). As a shortcut it would put the
+        // box one generation above X and, with it, everyone else on the box (Lavinia, born
+        // Malfoy) next to X instead of next to Lucius.
+        foreach ($keys_of_relation as $index => [$subject, $anchor, $type]) {
+            if (strpos($anchor, 'family:') !== 0 || strpos($subject, 'person:') !== 0) {
+                continue;
+            }
+            $concept = $type !== null ? $type['concept'] : null;
+            $offset = $type !== null ? $type['offset'] : 0;
+            if (self::classify_relation($concept, $offset) !== 'child' || self::is_family_membership($world['relations'][$index], $type)) {
+                continue;
+            }
+            if (!isset($world['graph']['parents']['p:' . substr($subject, 7)]['f:' . substr($anchor, 7)])
+                && !empty($world['graph']['parents']['p:' . substr($subject, 7)])) {
+                $redundant[$index] = true;
+            }
+        }
+
         $frontier = [$this->root_key => 0];
         $reached_via = [];
         $settled = [];
@@ -380,7 +428,7 @@ class Relatives_TreeBuilder
             $settled[$key] = $distance;
 
             foreach ($adjacency[$key] ?? [] as [$other, $index, $kind, $delta]) {
-                if (isset($settled[$other]) || ($allowed !== null && !isset($allowed[$other]))) {
+                if (isset($settled[$other]) || ($allowed !== null && !isset($allowed[$other])) || isset($redundant[$index])) {
                     continue;
                 }
                 // Lose Angaben ("Ravena ist Tante von Kjartan") beschreiben keinen Weg
@@ -550,6 +598,9 @@ class Relatives_TreeBuilder
                 continue;
             }
             $relation = $world['relations'][$index];
+            if (isset($redundant[$index])) {
+                continue;
+            }
             $this->relations[] = [
                 'id'      => (int)($relation['id'] ?? 0),
                 'node'    => $subject,
@@ -1249,6 +1300,77 @@ class Relatives_TreeBuilder
      *
      * @return array Schluessel: partners, families, links
      */
+    /**
+     * A family box ("Kind der Familie Malfoy") acts like a nameless parent. When the child
+     * also has named parents in the same lineage group and the box is already an ancestor of
+     * one of them, the box edge only repeats what the named parents say (Scorpius, Draco and
+     * Lucius are all entered as "child of Malfoy"). Left in, the box would occupy a parent
+     * slot next to Draco and push Astoria out of the couple. Only the redundant box edge is
+     * dropped: named parents (any number, blood or adoptive) are never touched, and a box
+     * that is the only link to that family (a nameless second parent, or the child without
+     * named parents) stays.
+     *
+     * @param array $parents_of child => group => [parent => true]
+     * @param array $edge_meta  "child|parent" => meta
+     */
+    private static function drop_redundant_box_parents(array &$parents_of, array &$edge_meta): void
+    {
+        $is_box = static function (string $key): bool {
+            return strpos($key, 'family:') === 0;
+        };
+
+        $ancestors_of = static function (string $start) use ($parents_of): array {
+            $seen = [];
+            $queue = [$start];
+            while ($queue) {
+                $current = (string)array_shift($queue);
+                foreach ($parents_of[$current] ?? [] as $group_parents) {
+                    foreach (array_keys($group_parents) as $parent) {
+                        $parent = (string)$parent;
+                        if (!isset($seen[$parent])) {
+                            $seen[$parent] = true;
+                            $queue[] = $parent;
+                        }
+                    }
+                }
+            }
+            return $seen;
+        };
+
+        $drop = [];
+        foreach ($parents_of as $child_key => $groups) {
+            foreach ($groups as $group => $parent_keys) {
+                foreach (array_keys($parent_keys) as $box_key) {
+                    $box_key = (string)$box_key;
+                    if (!$is_box($box_key)) {
+                        continue;
+                    }
+                    foreach (array_keys($parent_keys) as $person_key) {
+                        $person_key = (string)$person_key;
+                        if ($is_box($person_key)) {
+                            continue;
+                        }
+                        $ancestors = $ancestors_of($person_key);
+                        if (isset($ancestors[$box_key])) {
+                            $drop[] = [(string)$child_key, $group, $box_key];
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        foreach ($drop as [$child_key, $group, $box_key]) {
+            unset($parents_of[$child_key][$group][$box_key], $edge_meta[$child_key . '|' . $box_key]);
+            if (empty($parents_of[$child_key][$group])) {
+                unset($parents_of[$child_key][$group]);
+            }
+            if (empty($parents_of[$child_key])) {
+                unset($parents_of[$child_key]);
+            }
+        }
+    }
+
     private function build_structure(): array
     {
         $partner_pairs = [];
@@ -1323,6 +1445,8 @@ class Relatives_TreeBuilder
                     break;
             }
         }
+
+        self::drop_redundant_box_parents($parents_of, $edge_meta);
 
         $partner_of = [];
         foreach ($partner_pairs as $pair) {
