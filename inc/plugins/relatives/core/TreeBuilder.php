@@ -2091,9 +2091,21 @@ class Relatives_TreeBuilder
             }
         }
 
+        // A box above the oldest person row is the top of the tree (the oldest generation
+        // known): it stays a real box instead of shrinking to a label.
+        $oldest = null;
+        foreach ($this->nodes as $node) {
+            if (in_array($node['type'] ?? '', ['person', 'self'], true)) {
+                $oldest = $oldest === null ? (int)$node['generation'] : min($oldest, (int)$node['generation']);
+            }
+        }
+
         $tags = [];
         foreach ($persons_of as $box => $persons) {
             if (isset($blocked[$box])) {
+                continue;
+            }
+            if ($oldest !== null && (int)($this->nodes[$box]['generation'] ?? 0) < $oldest) {
                 continue;
             }
             $people = array_values(array_filter(array_keys($persons), function ($person) {
