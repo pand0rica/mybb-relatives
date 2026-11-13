@@ -333,6 +333,8 @@ class Relatives_Kinship
             }
         }
 
+        self::drop_redundant_box_parents($graph);
+
         // Ein Kind mit nur EINEM eingetragenen leiblichen Elternteil bekommt dessen einzige*n
         // Partner*in als zweiten Elternteil ("Ethan ist Sohn von Ava", Ava ist Olivers
         // Ehefrau -> Oliver ist Ethans Vater). Dieselbe Annahme trifft der Baum. Bei mehreren
@@ -353,6 +355,58 @@ class Relatives_Kinship
         }
 
         return $graph;
+    }
+
+    /**
+     * A family box acts like a nameless parent. When a child also has named parents of the
+     * same kind (blood / not blood) and the box is already an ancestor of one of them, the
+     * child's own box edge only repeats that ("Scorpius, Draco and Lucius are all child of
+     * Malfoy"). Left in, it makes the box a parent of every generation, which skews degrees,
+     * labels and generations of everyone else hanging on the box. Only the parent/child
+     * entries go; 'edges' keep the statement (family membership still reads it). Named
+     * parents -- any number, blood or adoptive -- are never touched; a box without a named
+     * ancestor stays as the nameless parent.
+     */
+    private static function drop_redundant_box_parents(array &$graph): void
+    {
+        $ancestors_of = static function (string $start) use ($graph): array {
+            $seen = [];
+            $queue = [$start];
+            while ($queue) {
+                $current = (string)array_shift($queue);
+                foreach (array_keys($graph['parents'][$current] ?? []) as $parent) {
+                    $parent = (string)$parent;
+                    if (!isset($seen[$parent])) {
+                        $seen[$parent] = true;
+                        $queue[] = $parent;
+                    }
+                }
+            }
+            return $seen;
+        };
+
+        $drop = [];
+        foreach ($graph['parents'] as $child => $parents) {
+            foreach ($parents as $box => $box_edge) {
+                if (strpos((string)$box, 'f:') !== 0 || !empty($box_edge['inferred'])) {
+                    continue;
+                }
+                foreach ($parents as $person => $person_edge) {
+                    if (strpos((string)$person, 'p:') !== 0 || !empty($person_edge['inferred'])
+                        || (bool)$person_edge['blood'] !== (bool)$box_edge['blood']) {
+                        continue;
+                    }
+                    $ancestors = $ancestors_of((string)$person);
+                    if (isset($ancestors[(string)$box])) {
+                        $drop[] = [(string)$child, (string)$box];
+                        break;
+                    }
+                }
+            }
+        }
+        foreach ($drop as [$child, $box]) {
+            unset($graph['parents'][$child][$box], $graph['children'][$box][$child]);
+        }
     }
 
     private static function anchor_key(array $relation, array $persons): ?string

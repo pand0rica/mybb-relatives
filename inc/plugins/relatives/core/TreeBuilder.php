@@ -390,6 +390,26 @@ class Relatives_TreeBuilder
             }
         }
 
+        // "X ist Kind der Familie Malfoy" is redundant when X already hangs on named parents
+        // who sit below that box (the graph dropped the edge, see
+        // Relatives_Kinship::drop_redundant_box_parents()). As a shortcut it would put the
+        // box one generation above X and, with it, everyone else on the box (Lavinia, born
+        // Malfoy) next to X instead of next to Lucius.
+        foreach ($keys_of_relation as $index => [$subject, $anchor, $type]) {
+            if (strpos($anchor, 'family:') !== 0 || strpos($subject, 'person:') !== 0) {
+                continue;
+            }
+            $concept = $type !== null ? $type['concept'] : null;
+            $offset = $type !== null ? $type['offset'] : 0;
+            if (self::classify_relation($concept, $offset) !== 'child' || self::is_family_membership($world['relations'][$index], $type)) {
+                continue;
+            }
+            if (!isset($world['graph']['parents']['p:' . substr($subject, 7)]['f:' . substr($anchor, 7)])
+                && !empty($world['graph']['parents']['p:' . substr($subject, 7)])) {
+                $redundant[$index] = true;
+            }
+        }
+
         $frontier = [$this->root_key => 0];
         $reached_via = [];
         $settled = [];

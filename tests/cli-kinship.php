@@ -133,6 +133,31 @@ check('Ava ist nicht blutsverwandt', 'none', concept_of($degrees, $ids['ava']));
 check('Ava ist Partnerin von Oliver', true, isset($graph['partners']['p:' . $ids['ava']]['p:' . $ids['oliver']]));
 check('Megan selbst hat keine Koordinate', false, isset($degrees['p:' . $megan]));
 
+// --- Familien-Kasten auf jeder Generation (Malfoy-Fall) ----------------------------------
+// Scorpius (root), Draco und Lucius sind alle "Kind der Familie 26"; Lavinia ebenfalls
+// (Lucius' Schwester). Der Kasten ist nur Lucius' Elternteil -- sonst waere Lavinia
+// ueber Scorpius' eigene Kante seine Tante.
+
+echo "=== Familien-Kasten auf jeder Generation ===\n";
+
+$scorpius = 40; $draco = 41; $astoria = 42; $lucius = 43; $narcissa = 44; $lavinia = 45;
+$graph = Relatives_Kinship::structure_from(persons([$scorpius, $draco, $astoria, $lucius, $narcissa, $lavinia]), relations([
+    [$draco,    'parent', $scorpius], [$astoria, 'parent', $scorpius],
+    [$lucius,   'parent', $draco],    [$narcissa, 'parent', $draco],
+    [$scorpius, 'child',  null, 26],  [$draco,    'child',  null, 26],
+    [$lucius,   'child',  null, 26],  [$lavinia,  'child',  null, 26],
+], $type_of), $types);
+$degrees = Relatives_Kinship::blood_degrees($graph, 'p:' . $scorpius);
+
+check('box is no parent of the root', false, isset($graph['parents']['p:' . $scorpius]['f:26']));
+check('box is no parent of Draco', false, isset($graph['parents']['p:' . $draco]['f:26']));
+check('box stays the parent of Lucius', true, isset($graph['parents']['p:' . $lucius]['f:26']));
+check('the statements stay in the edge list', true, count(array_filter($graph['edges'], static function ($edge) {
+    return $edge[1] === 'f:26';
+})) === 4);
+check('Lavinia is a great-aunt, not an aunt', 'great_aunt_uncle', concept_of($degrees, $lavinia));
+check('both named parents of the root stay', true, isset($graph['parents']['p:' . $scorpius]['p:' . $draco], $graph['parents']['p:' . $scorpius]['p:' . $astoria]));
+
 // --- Neuer Bruder von Oliver: automatisch Geschwister aller anderen ------------------------
 
 echo "=== Neuer Bruder von Oliver ===\n";
