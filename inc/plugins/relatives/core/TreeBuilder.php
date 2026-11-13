@@ -1280,6 +1280,77 @@ class Relatives_TreeBuilder
      *
      * @return array Schluessel: partners, families, links
      */
+    /**
+     * A family box ("Kind der Familie Malfoy") acts like a nameless parent. When the child
+     * also has named parents in the same lineage group and the box is already an ancestor of
+     * one of them, the box edge only repeats what the named parents say (Scorpius, Draco and
+     * Lucius are all entered as "child of Malfoy"). Left in, the box would occupy a parent
+     * slot next to Draco and push Astoria out of the couple. Only the redundant box edge is
+     * dropped: named parents (any number, blood or adoptive) are never touched, and a box
+     * that is the only link to that family (a nameless second parent, or the child without
+     * named parents) stays.
+     *
+     * @param array $parents_of child => group => [parent => true]
+     * @param array $edge_meta  "child|parent" => meta
+     */
+    private static function drop_redundant_box_parents(array &$parents_of, array &$edge_meta): void
+    {
+        $is_box = static function (string $key): bool {
+            return strpos($key, 'family:') === 0;
+        };
+
+        $ancestors_of = static function (string $start) use ($parents_of): array {
+            $seen = [];
+            $queue = [$start];
+            while ($queue) {
+                $current = (string)array_shift($queue);
+                foreach ($parents_of[$current] ?? [] as $group_parents) {
+                    foreach (array_keys($group_parents) as $parent) {
+                        $parent = (string)$parent;
+                        if (!isset($seen[$parent])) {
+                            $seen[$parent] = true;
+                            $queue[] = $parent;
+                        }
+                    }
+                }
+            }
+            return $seen;
+        };
+
+        $drop = [];
+        foreach ($parents_of as $child_key => $groups) {
+            foreach ($groups as $group => $parent_keys) {
+                foreach (array_keys($parent_keys) as $box_key) {
+                    $box_key = (string)$box_key;
+                    if (!$is_box($box_key)) {
+                        continue;
+                    }
+                    foreach (array_keys($parent_keys) as $person_key) {
+                        $person_key = (string)$person_key;
+                        if ($is_box($person_key)) {
+                            continue;
+                        }
+                        $ancestors = $ancestors_of($person_key);
+                        if (isset($ancestors[$box_key])) {
+                            $drop[] = [(string)$child_key, $group, $box_key];
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        foreach ($drop as [$child_key, $group, $box_key]) {
+            unset($parents_of[$child_key][$group][$box_key], $edge_meta[$child_key . '|' . $box_key]);
+            if (empty($parents_of[$child_key][$group])) {
+                unset($parents_of[$child_key][$group]);
+            }
+            if (empty($parents_of[$child_key])) {
+                unset($parents_of[$child_key]);
+            }
+        }
+    }
+
     private function build_structure(): array
     {
         $partner_pairs = [];
@@ -1354,6 +1425,8 @@ class Relatives_TreeBuilder
                     break;
             }
         }
+
+        self::drop_redundant_box_parents($parents_of, $edge_meta);
 
         $partner_of = [];
         foreach ($partner_pairs as $pair) {
