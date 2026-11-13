@@ -2028,7 +2028,7 @@ class Relatives_TreeBuilder
             $unit = $layout->unit($unit_id);
             $count = count($unit['members']);
             foreach ($unit['members'] as $offset => $key) {
-                $this->nodes[$key]['x'] = ($xs[$unit_id] ?? 0.0) + ($offset - ($count - 1) / 2);
+                $this->nodes[$key]['x'] = ($xs[$unit_id] ?? 0.0) + ($offset - ($count - 1) / 2) * $layout->member_spacing($unit_id);
                 $this->nodes[$key]['y'] = (int)$this->nodes[$key]['generation'];
             }
         }

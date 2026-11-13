@@ -72,6 +72,9 @@ class Relatives_TreeLayout
     /** floating key => anchor key (loose node standing beside its anchor in a sibling group) */
     private array $floating;
 
+    /** unit_id => distance between the members of a couple (default 1) */
+    private array $spread = [];
+
     /** unit_id => centre x */
     private array $x = [];
 
@@ -132,6 +135,33 @@ class Relatives_TreeLayout
                 }
             }
         }
+
+        // A couple whose partners each hang on their own family box: the two boxes stand
+        // above them and need UNIT_GAP between them, so the partners are moved apart by
+        // that much -- otherwise one box is pushed sideways and its line runs crooked.
+        foreach ($units as $unit_id => $unit) {
+            if (count($unit['members']) !== 2) {
+                continue;
+            }
+            $boxes = [];
+            foreach ($unit['members'] as $member) {
+                $origin = $this->origin[$member] ?? null;
+                $parents = $origin !== null ? $this->families[$origin]['parents'] : [];
+                if (count($parents) !== 1 || strpos((string)$parents[0], 'family:') !== 0) {
+                    continue 2;
+                }
+                $boxes[(string)$parents[0]] = true;
+            }
+            if (count($boxes) === 2) {
+                $this->spread[$unit_id] = 1.0 + self::UNIT_GAP;
+            }
+        }
+    }
+
+    /** Distance between the members of a unit (1 = directly side by side). */
+    public function member_spacing(string $unit_id): float
+    {
+        return $this->spread[$unit_id] ?? 1.0;
     }
 
     /**
@@ -617,7 +647,7 @@ class Relatives_TreeLayout
     /** [left, right] edge of a unit centred at $x (one node is one unit wide). */
     private function interval(string $unit_id, float $x): array
     {
-        $half = (count($this->units[$unit_id]['members']) - 1) / 2 + 0.5;
+        $half = (count($this->units[$unit_id]['members']) - 1) / 2 * $this->member_spacing($unit_id) + 0.5;
         return [$x - $half, $x + $half];
     }
 
@@ -625,7 +655,7 @@ class Relatives_TreeLayout
     {
         $unit_id = $this->unit_of[$key];
         $members = $this->units[$unit_id]['members'];
-        return (int)array_search($key, $members, true) - (count($members) - 1) / 2;
+        return ((int)array_search($key, $members, true) - (count($members) - 1) / 2) * $this->member_spacing($unit_id);
     }
 
     private function member_x(string $key): float

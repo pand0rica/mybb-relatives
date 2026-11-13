@@ -288,11 +288,14 @@ check('tree is clearly narrower than before', true, $width < 34);
 
 $apart = [];
 foreach ([[2, 1], [32, 83], [207, 208], [93, 130], [125, 124], [127, 126], [212, 213], [300, 301], [294, 295], [292, 293], [46, 45], [304, 309], [310, 311]] as [$a, $b]) {
-    if (abs(abs($x($a) - $x($b)) - 1.0) > 0.001) {
+    // Partners that each hang on their own family box stand 1 + UNIT_GAP apart, so both boxes fit above them.
+    $distance = abs($x($a) - $x($b));
+    if (abs($distance - 1.0) > 0.001 && abs($distance - (1.0 + Relatives_TreeLayout::UNIT_GAP)) > 0.001) {
         $apart[] = PEOPLE[$a][0] . '/' . PEOPLE[$b][0];
     }
 }
 check('couples stand side by side', [], $apart);
+check('partners with their own family boxes are moved apart', 1.0 + Relatives_TreeLayout::UNIT_GAP, round(abs($x(127) - $x(126)), 3));
 
 $order = static function (array $ids) use ($x): array {
     usort($ids, static function ($a, $b) use ($x) {
